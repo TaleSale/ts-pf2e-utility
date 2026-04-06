@@ -15,6 +15,12 @@ const MODULE_MACRO_ICON_UPDATES = Object.freeze({
 const gameRegistry = new Map();
 const openApps = new Map();
 const seenOpenSignals = new Map();
+const PARTIAL_REFRESH_SCROLL_SELECTORS = [
+  ".tsu-rule-list",
+  ".tsu-player-list",
+  ".tsu-log-list",
+  ".kb-log-list",
+].join(", ");
 
 function gameFlagKey(gameId) {
   return `gameState-${gameId}`;
@@ -87,6 +93,51 @@ export function randomChoice(values, fallback = "") {
 export function formatSignedNumber(value) {
   const numeric = Number(value) || 0;
   return numeric >= 0 ? `+${numeric}` : `${numeric}`;
+}
+
+function actorHasUntrainedImprovisation(actor) {
+  if (!actor || actor.type !== "character") return false;
+  return actor.items.some((item) => {
+    if (item.type !== "feat") return false;
+    const slug = String(item.slug ?? item.system?.slug ?? "").toLowerCase();
+    const sourceId = String(item.sourceId ?? item.flags?.core?.sourceId ?? "").toLowerCase();
+    const name = String(item.name ?? "").toLowerCase();
+    return slug === "untrained-improvisation"
+      || sourceId.includes(".item.untrained-improvisation")
+      || name.includes("untrained improvisation");
+  });
+}
+
+function matchesLoreSelector(item, loreSelector) {
+  if (item?.type !== "lore") return false;
+  if (!loreSelector) return true;
+  if (typeof loreSelector === "function") return loreSelector(item);
+
+  const selectors = Array.isArray(loreSelector) ? loreSelector : [loreSelector];
+  const name = String(item.name ?? "").toLowerCase();
+  const slug = String(item.slug ?? item.system?.slug ?? "").toLowerCase();
+
+  return selectors.some((selector) => {
+    const value = String(selector ?? "").toLowerCase();
+    return value && (name.includes(value) || slug.includes(value));
+  });
+}
+
+export function getActorLoreModifier(actor, loreSelector = null) {
+  if (!actor) return 0;
+
+  const isNpc = actor.type === "npc";
+  const system = actor.system ?? {};
+  const level = system.details?.level?.value || 0;
+  const intelligence = system.abilities?.int?.mod || 0;
+  const untrainedModifier = intelligence + (actorHasUntrainedImprovisation(actor) ? Math.max(level - 2, 0) : 0);
+  const lore = actor.items.find((item) => matchesLoreSelector(item, loreSelector));
+
+  if (!lore) return untrainedModifier;
+  if (isNpc) return lore.system.mod?.value || intelligence;
+
+  const rank = lore.system.proficient?.value || 0;
+  return rank > 0 ? (rank * 2 + level + intelligence) : untrainedModifier;
 }
 
 export function registerGame(definition) {
@@ -283,6 +334,62 @@ function attachAppLifecycle(gameId, app) {
   return app;
 }
 
+function getScrollableElements(root) {
+  if (!(root instanceof HTMLElement)) return [];
+  const elements = [root, ...Array.from(root.querySelectorAll(PARTIAL_REFRESH_SCROLL_SELECTORS))];
+  return elements.filter((element, index, list) => list.indexOf(element) === index);
+}
+
+function captureScrollState(root) {
+  return getScrollableElements(root).map((element) => ({
+    left: element.scrollLeft,
+    top: element.scrollTop,
+  }));
+}
+
+function restoreScrollState(root, scrollState) {
+  const elements = getScrollableElements(root);
+  for (let index = 0; index < elements.length; index += 1) {
+    const state = scrollState[index];
+    if (!state) continue;
+    elements[index].scrollLeft = state.left;
+    elements[index].scrollTop = state.top;
+  }
+}
+
+export function patchApplicationRegions(app, rootSelector, regionSelectors, nextRendered) {
+  const appElement = app?.element?.[0];
+  const nextRoot = nextRendered?.[0] ?? nextRendered;
+  if (!(appElement instanceof HTMLElement) || !(nextRoot instanceof HTMLElement)) return false;
+
+  const currentRoot = appElement.querySelector(rootSelector);
+  const replacementRoot = nextRoot.matches?.(rootSelector) ? nextRoot : nextRoot.querySelector(rootSelector);
+  if (!(currentRoot instanceof HTMLElement) || !(replacementRoot instanceof HTMLElement)) return false;
+
+  for (const selector of regionSelectors) {
+    const currentRegion = currentRoot.querySelector(selector);
+    const nextRegion = replacementRoot.querySelector(selector);
+    if (!(currentRegion instanceof HTMLElement) || !(nextRegion instanceof HTMLElement)) continue;
+    if (currentRegion.outerHTML === nextRegion.outerHTML) continue;
+
+    const scrollState = captureScrollState(currentRegion);
+    const replacement = nextRegion.cloneNode(true);
+    currentRegion.replaceWith(replacement);
+    restoreScrollState(replacement, scrollState);
+  }
+
+  return true;
+}
+
+export async function refreshApplication(app) {
+  if (!app?.rendered) return;
+  if (typeof app.refresh === "function") {
+    await app.refresh();
+    return;
+  }
+  app.render(false);
+}
+
 export function getOpenGameWindow(gameId) {
   return openApps.get(gameId) ?? null;
 }
@@ -351,7 +458,7 @@ export async function openGameForEveryone(gameId) {
   await saveGameState(gameId, state, scene);
   seenOpenSignals.set(gameId, state.openSignal);
   const app = await ensureGameWindow(gameId);
-  if (app?.rendered) app.render(false);
+  await refreshApplication(app);
 }
 
 export async function requestGameAction(gameId, action, data = {}) {
@@ -396,7 +503,7 @@ async function processGameAction(message) {
   if (changed) {
     await saveGameState(payload.gameId, state, scene);
     const app = getOpenGameWindow(payload.gameId);
-    if (app?.rendered) app.render(false);
+    await refreshApplication(app);
   }
 }
 
@@ -410,7 +517,7 @@ function handleSceneUpdate(scene, change) {
     const app = getOpenGameWindow(definition.id);
 
     if (app?.rendered) {
-      app.render(false);
+      void refreshApplication(app);
     }
 
     if (openSignal && seenOpenSignals.get(definition.id) !== openSignal) {

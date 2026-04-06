@@ -10,7 +10,7 @@
         "BlackDie": "Черная Кость",
         "RerollsLeft": "🎲 × {count}",
         "CrownRerollLabel": "👑 Прикуп",
-        "CrownRerollPrompt": "👑 Сначала замените куб в прикупе",
+        "CrownRerollPrompt": "👑 Сначала замените куб в прикупе или откажитесь",
         "Winner": "🏆 ПОБЕДИТЕЛЬ",
         "Disqualified": "🚨 ДИСКВАЛИФИЦИРОВАН",
         "NoHand": "?",
@@ -42,7 +42,8 @@
           "Reported": "🚨 ВЫ СДАЛИ",
           "Help": "ПРАВИЛА",
           "CloseRules": "Да начнется игра!",
-          "Accept": "Принять"
+          "Accept": "Принять",
+          "Decline": "Отказаться"
         },
         "Dialogs": {
           "SetDieTitle": "Установить грань"
@@ -162,6 +163,7 @@
           "Empty": "Хроника стола пуста.",
           "Reroll": "🎲 {name} заменил кость №{die}",
           "CrownReroll": "👑 {name} заменил куб прикупа №{die}",
+          "CrownRerollDeclined": "👑 {name} отказался менять прикуп",
           "Complaint": "🚨 {reporter} сдал шулера {target}!",
           "NextRound": "Начинается раунд {round}/{total}.",
           "DealStart": "КОН НАЧАТ! В центре стола: {center}.",

@@ -4,12 +4,14 @@ import {
   MODULE_ID,
   escapeHtml,
   formatSignedNumber,
+  getActorLoreModifier,
   getGameState,
   getNonGmCharacters,
   gobj,
   gt,
   gtf,
   notify,
+  patchApplicationRegions,
   randomChoice,
   requestGameAction,
   t,
@@ -24,6 +26,7 @@ const DEFAULT_BASE_DC = 15;
 const PLAYER_TARGET_PREFIX = "player:";
 const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
 const OUTCOME_KEYS_BY_RANK = ["UberFailure", "CriticalFailure", "Failure", "Success", "CriticalSuccess", "UberCrit"];
+const GAMES_LORE_SELECTOR = ["game", "games", "\u0438\u0433\u0440"];
 
 const TARGETS = Object.freeze({
   tongue: { dcOffset: 0, points: 1, key: "Tongue" },
@@ -183,16 +186,27 @@ async function getDartModifierForCharacter(actor) {
 }
 
 function getLoreModifier(actor) {
+  return getActorLoreModifier(actor, GAMES_LORE_SELECTOR);
   if (!actor) return 0;
   const isNpc = actor.type === "npc";
   const system = actor.system ?? {};
   const level = system.details?.level?.value || 0;
   const intelligence = system.abilities?.int?.mod || 0;
+  const hasUntrainedImprovisation = actor.type === "character" && actor.items.some((item) => {
+    if (item.type !== "feat") return false;
+    const slug = String(item.slug ?? item.system?.slug ?? "").toLowerCase();
+    const sourceId = String(item.sourceId ?? item.flags?.core?.sourceId ?? "").toLowerCase();
+    const name = String(item.name ?? "").toLowerCase();
+    return slug === "untrained-improvisation"
+      || sourceId.includes(".item.untrained-improvisation")
+      || name.includes("untrained improvisation");
+  });
+  const untrainedModifier = intelligence + (hasUntrainedImprovisation ? Math.max(level - 2, 0) : 0);
   const lore = actor.items.find((item) => item.type === "lore" && ["game", "games", "����", "����"].some((term) => item.name.toLowerCase().includes(term)));
-  if (!lore) return intelligence;
+  if (!lore) return untrainedModifier;
   if (isNpc) return lore.system.mod?.value || intelligence;
   const rank = lore.system.proficient?.value || 0;
-  return rank > 0 ? (rank * 2 + level + intelligence) : intelligence;
+  return rank > 0 ? (rank * 2 + level + intelligence) : untrainedModifier;
 }
 
 function getAttackModifierForNpc(actor) {
@@ -211,14 +225,14 @@ function calculateModifiers(actor, playerData) {
       atk: getAttackModifierForNpc(actor),
       per: actor.system.perception?.mod || 0,
       thi: actor.system.skills?.thievery?.base || actor.system.skills?.thievery?.value || 0,
-      lore: getLoreModifier(actor),
+      lore: getActorLoreModifier(actor, GAMES_LORE_SELECTOR),
     };
   }
   return {
     atk: playerData.cachedAtk || 0,
     per: actor.perception?.mod || 0,
     thi: actor.skills?.thievery?.mod || 0,
-    lore: getLoreModifier(actor),
+    lore: getActorLoreModifier(actor, GAMES_LORE_SELECTOR),
   };
 }
 
@@ -426,8 +440,8 @@ function buildSummaryUi(definition, state) {
     helpHtml: gt(definition, "Rules.HelpHtml", "<p>No rules available.</p>"),
     footerButtons: {
       start: gt(definition, "Buttons.Start", "Start"),
-      clear: gt(definition, "Buttons.Clear", "Clear"),
-      resetRound: gt(definition, "Buttons.ResetRound", "Reset Round"),
+      clear: gt(definition, "Buttons.Clear", "Clear Table"),
+      resetRound: gt(definition, "Buttons.ResetRound", "Round"),
       resetGame: gt(definition, "Buttons.ResetGame", "Full Reset"),
       refresh: gt(definition, "Buttons.RefreshAttack", "Refresh attack"),
       remove: gt(definition, "Buttons.Remove", "Remove"),
@@ -1166,7 +1180,7 @@ const template = `
     <div>{{#if isGM}}<label class="tsu-checkbox dp-debug-label"><input type="checkbox" id="dp-debug-mode" {{#if state.debugMode}}checked{{/if}}> {{ui.debugLabel}}</label>{{/if}}</div>
     <div class="tsu-footer-actions">
       {{#each footerButtons}}
-        <button type="button" class="tsu-button dp-btn {{classes}}" data-action="{{action}}" {{#if disabled}}disabled{{/if}}>
+        <button type="button" class="tsu-button dp-btn {{classes}}" data-action="{{action}}" title="{{title}}" {{#if disabled}}disabled{{/if}}>
           {{#if icon}}<i class="{{icon}}"></i> {{/if}}{{label}}
         </button>
       {{/each}}
@@ -1198,6 +1212,18 @@ class DevilsPinApplication extends Application {
 
   async _renderInner(data) {
     return $(Handlebars.compile(template)(data));
+  }
+
+  async refresh() {
+    if (!this.rendered || !this.element?.length) return;
+    const nextRoot = await this._renderInner(this.getData());
+    const patched = patchApplicationRegions(this, "#devils-pin-app", [
+      ".dp-col-rules",
+      "#dp-main-area",
+      "#dp-log-area",
+      ".dp-footer",
+    ], nextRoot);
+    if (!patched) this.render(false);
   }
 
   getData() {
@@ -1244,32 +1270,34 @@ class DevilsPinApplication extends Application {
 
       const footerButtons = [];
       if (game.user.isGM) {
-        if (state.phase === "join") {
-          footerButtons.push({
-            action: "start-game",
-            label: ui.footerButtons.start,
-            title: ui.footerButtons.start,
-            icon: "fas fa-play",
-            classes: "is-start",
-            disabled: participatingCount === 0,
-          });
-        }
-        if (state.phase !== "join") {
-          footerButtons.push({
-            action: "clear",
-            label: ui.footerButtons.clear,
-            title: ui.footerButtons.clear,
-            icon: "fas fa-rotate-left",
-            classes: "is-clear",
-          });
-        }
-        footerButtons.push({
+        const roundButton = {
           action: "reset-round",
           label: ui.footerButtons.resetRound,
           title: ui.footerButtons.resetRound,
           icon: "fas fa-broom",
           classes: "is-round",
-          disabled: state.phase === "playing" ? !readyToResolve : false,
+          disabled: false,
+        };
+
+        if (state.phase === "join") {
+          roundButton.action = "start-game";
+          roundButton.title = ui.footerButtons.start;
+          roundButton.icon = "fas fa-play";
+          roundButton.classes = "is-start";
+          roundButton.disabled = participatingCount === 0;
+        } else if (state.phase === "playing") {
+          roundButton.disabled = !readyToResolve;
+        } else {
+          roundButton.disabled = true;
+        }
+
+        footerButtons.push(roundButton);
+        footerButtons.push({
+          action: "clear",
+          label: ui.footerButtons.clear,
+          title: ui.footerButtons.clear,
+          icon: "fas fa-rotate-left",
+          classes: "is-clear",
         });
         footerButtons.push({
           action: "reset-game",
@@ -1412,7 +1440,6 @@ class DevilsPinApplication extends Application {
     const uuid = getActorUuidFromDropData(data);
     if (!uuid) return;
     await requestGameAction(GAME_ID, "add-actor", { uuid });
-    if (game.user?.isGM && this.rendered) this.render(false);
   }
 }
 

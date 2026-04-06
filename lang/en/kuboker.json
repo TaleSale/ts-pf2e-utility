@@ -10,7 +10,7 @@
         "BlackDie": "Skull",
         "RerollsLeft": "Rerolls left: {count}",
         "CrownRerollLabel": "Crown die",
-        "CrownRerollPrompt": "👑 Replace a stock die first",
+        "CrownRerollPrompt": "👑 Replace a stock die first or decline",
         "Winner": "Winner",
         "Disqualified": "Disqualified",
         "NoHand": "No hand",
@@ -42,7 +42,8 @@
           "Reported": "Reported",
           "Help": "Rules",
           "CloseRules": "Let the game begin!",
-          "Accept": "Accept"
+          "Accept": "Accept",
+          "Decline": "Decline"
         },
         "Dialogs": {
           "SetDieTitle": "Set a die"
@@ -162,6 +163,7 @@
           "Empty": "No entries yet.",
           "Reroll": "<div><b>{name}</b> changes die {die}.</div>",
           "CrownReroll": "<div><b>{name}</b> replaces stock die {die}.</div>",
+          "CrownRerollDeclined": "<div><b>{name}</b> declines to replace a stock die.</div>",
           "Complaint": "<div><b>{reporter}</b> reports <b>{target}</b>.</div>",
           "NextRound": "<div><b>Round {round}/{total} begins.</b></div>",
           "DealStart": "<div><b>The table opens.</b> Base DC: <b>{dc}</b>.</div>",

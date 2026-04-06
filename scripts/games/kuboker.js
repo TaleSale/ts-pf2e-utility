@@ -4,12 +4,14 @@
   MODULE_ID,
   escapeHtml,
   formatSignedNumber,
+  getActorLoreModifier,
   getGameState,
   getNonGmCharacters,
   gobj,
   gt,
   gtf,
   notify,
+  patchApplicationRegions,
   randomChoice,
   requestGameAction,
   t,
@@ -42,6 +44,7 @@ const SKILL_KEYS = Object.freeze({
   itm: "Intimidation",
   lore: "GamesLore",
 });
+const GAMES_LORE_SELECTOR = ["game", "games", "\u0438\u0433\u0440"];
 
 const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
 const HAND_PREVIEW_LAYOUTS = Object.freeze({
@@ -84,6 +87,16 @@ function getActorModifiers(actor) {
   const system = actor.system ?? {};
   const level = system.details?.level?.value || 0;
   const intelligence = system.abilities?.int?.mod || 0;
+  const hasUntrainedImprovisation = actor.type === "character" && actor.items.some((item) => {
+    if (item.type !== "feat") return false;
+    const slug = String(item.slug ?? item.system?.slug ?? "").toLowerCase();
+    const sourceId = String(item.sourceId ?? item.flags?.core?.sourceId ?? "").toLowerCase();
+    const name = String(item.name ?? "").toLowerCase();
+    return slug === "untrained-improvisation"
+      || sourceId.includes(".item.untrained-improvisation")
+      || name.includes("untrained improvisation");
+  });
+  const untrainedLoreModifier = intelligence + (hasUntrainedImprovisation ? Math.max(level - 2, 0) : 0);
   const getValue = (slug) => {
     if (slug === "perception") {
       return isNpc ? (system.perception?.mod || 0) : (actor.perception?.mod || 0);
@@ -94,12 +107,12 @@ function getActorModifiers(actor) {
   };
 
   const lore = actor.items.find((item) => item.type === "lore" && ["game", "games", "пїЅпїЅпїЅпїЅ", "пїЅпїЅпїЅпїЅ"].some((term) => item.name.toLowerCase().includes(term)));
-  let loreMod = intelligence;
+  let loreMod = untrainedLoreModifier;
   if (lore) {
     if (isNpc) loreMod = lore.system.mod?.value || intelligence;
     else {
       const rank = lore.system.proficient?.value || 0;
-      loreMod = rank > 0 ? (rank * 2 + level + intelligence) : intelligence;
+      loreMod = rank > 0 ? (rank * 2 + level + intelligence) : untrainedLoreModifier;
     }
   }
 
@@ -110,7 +123,7 @@ function getActorModifiers(actor) {
     dec: getValue("deception"),
     per: getValue("perception"),
     itm: getValue("intimidation"),
-    lore: loreMod,
+    lore: getActorLoreModifier(actor, GAMES_LORE_SELECTOR),
   };
 }
 
@@ -550,7 +563,8 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
   const canPlan = showStrategyControls && playerData.isParticipating && isVisualOwner && !isLockedOut;
   const canUseCrownReroll = state.phase === "locked" && playerData.isParticipating && isVisualOwner && hasPendingCrownReroll(playerData) && !isLockedOut;
   const canReroll = state.phase === "locked" && playerData.isParticipating && isVisualOwner && playerData.changesLeft > 0 && !hasPendingCrownReroll(playerData) && !hasPendingCrownLock && !isLockedOut;
-  const showConfirm = ["deal", "locked"].includes(state.phase) && canSeeChoices && !isObserverCard;
+  const canSeeConfirmState = game.user?.isGM || canSeeChoices;
+  const showConfirm = ["deal", "locked"].includes(state.phase) && canSeeConfirmState && !isObserverCard;
   const confirmDisabled = !showConfirm || !playerData.isParticipating || isLockedOut || !canPlayerControl || (state.phase === "locked" && hasPendingCrownLock);
   const classes = [
     playerData.isParticipating ? "" : "tsu-player-card--spectator",
@@ -679,6 +693,7 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
     dice,
     showCrownControls: canUseCrownReroll,
     crownLabel: gt(definition, "CrownRerollLabel", "Crown die"),
+    crownDeclineLabel: gt(definition, "Buttons.Decline", "Decline"),
     crownDice,
     displayDice: dice.map((die) => ({
       ...die,
@@ -1000,6 +1015,9 @@ const template = `
                     <button type="button" class="tsu-die {{classes}}" data-action="reroll-center-die" data-actor-id="{{../id}}" data-actor="{{../id}}" data-center-index="{{index}}" {{#if disabled}}disabled{{/if}}>{{value}}</button>
                   {{/each}}
                 </div>
+                <div class="tsu-grid-buttons">
+                  <button type="button" class="tsu-small-button kb-btn-sm" data-action="decline-crown-reroll" data-actor-id="{{id}}" data-actor="{{id}}">{{crownDeclineLabel}}</button>
+                </div>
               {{/if}}
 
               {{#if showStrategyControls}}
@@ -1058,7 +1076,7 @@ const template = `
     </div>
     <div class="tsu-footer-actions">
       {{#each footerButtons}}
-        <button type="button" class="tsu-button kb-btn-main {{classes}}" data-action="{{action}}">
+        <button type="button" class="tsu-button kb-btn-main {{classes}}" data-action="{{action}}" title="{{title}}" {{#if disabled}}disabled{{/if}}>
           {{#if icon}}<i class="{{icon}}"></i> {{/if}}{{label}}
         </button>
       {{/each}}
@@ -1090,6 +1108,18 @@ class KubokerApplication extends Application {
 
   async _renderInner(data) {
     return $(Handlebars.compile(template)(data));
+  }
+
+  async refresh() {
+    if (!this.rendered || !this.element?.length) return;
+    const nextRoot = await this._renderInner(this.getData());
+    const patched = patchApplicationRegions(this, "#kuboker-app", [
+      ".kb-col-rules",
+      "#kb-main-area",
+      ".kb-col-log",
+      ".kb-footer",
+    ], nextRoot);
+    if (!patched) this.render(false);
   }
 
   getData() {
@@ -1124,29 +1154,42 @@ class KubokerApplication extends Application {
     const footerButtons = [];
     const hasPendingCrownLock = state.phase === "locked" && hasAnyPendingCrownRerolls(state);
     if (game.user.isGM) {
-      if (state.phase === "join") footerButtons.push({ action: "deal", label: ui.buttons.start, title: ui.buttons.start, icon: "fas fa-dice", classes: "is-deal" });
-      if (state.phase === "deal") footerButtons.push({ action: "run-lock", label: ui.buttons.round, title: ui.buttons.round, icon: "fas fa-broom", classes: "is-resolve" });
-      if (state.phase === "locked" && getLockedRound(state) < LOCKED_ROUNDS_TOTAL) {
-        footerButtons.push({
-          action: "advance-round",
-          label: ui.buttons.round,
-          title: ui.buttons.round,
-          icon: "fas fa-arrow-right",
-          classes: `is-resolve${hasPendingCrownLock ? " is-disabled disabled" : ""}`,
-          disabled: hasPendingCrownLock,
-        });
+      const roundButton = {
+        action: "deal",
+        label: ui.buttons.round,
+        title: ui.buttons.start,
+        icon: "fas fa-dice",
+        classes: "is-deal",
+        disabled: participatingCount === 0,
+      };
+
+      if (state.phase === "deal") {
+        roundButton.action = "run-lock";
+        roundButton.title = ui.buttons.round;
+        roundButton.icon = "fas fa-broom";
+        roundButton.classes = "is-resolve";
+        roundButton.disabled = false;
+      } else if (state.phase === "locked" && getLockedRound(state) < LOCKED_ROUNDS_TOTAL) {
+        roundButton.action = "advance-round";
+        roundButton.title = ui.buttons.round;
+        roundButton.icon = "fas fa-arrow-right";
+        roundButton.classes = `is-resolve${hasPendingCrownLock ? " is-disabled disabled" : ""}`;
+        roundButton.disabled = hasPendingCrownLock;
+      } else if (state.phase === "locked" && getLockedRound(state) >= LOCKED_ROUNDS_TOTAL) {
+        roundButton.action = "reveal";
+        roundButton.title = ui.buttons.reveal;
+        roundButton.icon = "fas fa-eye";
+        roundButton.classes = `is-reveal${hasPendingCrownLock ? " is-disabled disabled" : ""}`;
+        roundButton.disabled = hasPendingCrownLock;
+      } else if (state.phase === "reveal") {
+        roundButton.title = ui.buttons.reveal;
+        roundButton.icon = "fas fa-eye";
+        roundButton.classes = "is-reveal is-disabled disabled";
+        roundButton.disabled = true;
       }
-      if (state.phase === "locked" && getLockedRound(state) >= LOCKED_ROUNDS_TOTAL) {
-        footerButtons.push({
-          action: "reveal",
-          label: ui.buttons.reveal,
-          title: ui.buttons.reveal,
-          icon: "fas fa-eye",
-          classes: `is-reveal${hasPendingCrownLock ? " is-disabled disabled" : ""}`,
-          disabled: hasPendingCrownLock,
-        });
-      }
-      if (state.phase !== "join") footerButtons.push({ action: "clear", label: ui.buttons.clear, title: ui.buttons.clear, icon: "fas fa-rotate-left", classes: "is-clear" });
+
+      footerButtons.push(roundButton);
+      footerButtons.push({ action: "clear", label: ui.buttons.clear, title: ui.buttons.clear, icon: "fas fa-rotate-left", classes: "is-clear" });
       footerButtons.push({ action: "reset-game", label: ui.buttons.resetGame, title: ui.buttons.resetGame, icon: "fas fa-redo", classes: "is-reset" });
     }
 
@@ -1262,6 +1305,12 @@ class KubokerApplication extends Application {
         const centerIndex = Number(button.dataset.centerIndex);
         if (!playerData || playerData.crownChangesLeft <= 0 || !Number.isInteger(centerIndex) || centerIndex < 0 || centerIndex > 1) return;
         await requestGameAction(GAME_ID, "reroll-center-die", { actorId, centerIndex });
+        break;
+      }
+      case "decline-crown-reroll": {
+        const playerData = this.getState().players?.[actorId];
+        if (!playerData || playerData.crownChangesLeft <= 0) return;
+        await requestGameAction(GAME_ID, "decline-crown-reroll", { actorId });
         break;
       }
       case "report-cheater":
@@ -1405,6 +1454,22 @@ const definition = {
           ({ name, die }) => `<b>${escapeHtml(name)}</b> replaces stock die ${die}.`
         ));
         state.log.unshift(buildChronicleNote(content, { color: "#ffd98a" }));
+        return true;
+      }
+      case "decline-crown-reroll": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || !playerData.isParticipating || isPlayerLockedOut(state, playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor) || state.phase !== "locked") return false;
+        if (playerData.crownChangesLeft <= 0) return false;
+
+        playerData.crownChangesLeft = 0;
+        playerData.isConfirmed = false;
+        const content = unwrapChronicleEntry(gtf(
+          definition,
+          "Log.CrownRerollDeclined",
+          { name: playerData.name },
+          ({ name }) => `<b>${escapeHtml(name)}</b> declines to replace a stock die.`
+        ));
+        state.log.unshift(buildChronicleNote(content, { color: "#d7c6a3" }));
         return true;
       }
       case "report-cheater": {
