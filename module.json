@@ -1,0 +1,75 @@
+{
+  "id": "ts-pf2e-utility",
+  "title": "TS-PF2E-UTILITY",
+  "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Tale Sale",
+      "flags": {}
+    }
+  ],
+  "socket": true,
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/module.css"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "ru",
+      "name": "Russian",
+      "path": "lang/ru.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "games",
+      "label": "Games",
+      "path": "packs/games",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "99.TS-PF2E-UTILITY",
+      "sorting": "m",
+      "color": null,
+      "packs": [
+        "games"
+      ],
+      "folders": []
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "url": "https://github.com/TaleSale/ts-dj-utility",
+  "manifest": "https://raw.githubusercontent.com/TaleSale/ts-dj-utility/main/module.json",
+  "download": "https://github.com/TaleSale/ts-dj-utility/archive/refs/heads/main.zip",
+  "flags": {}
+}
+
+}

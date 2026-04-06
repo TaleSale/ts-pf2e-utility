@@ -1,0 +1,19 @@
+{
+  "TS_PF2E_UTILITY": {
+    "Common": {
+      "Empty": {
+        "NoPlayers": "No players found. Assign characters to users or drag actors into the game window."
+      }
+    },
+    "Notifications": {
+      "SceneRequired": "An active scene is required.",
+      "OnlyGM": "Only the GM can open this game.",
+      "DevilsPinChoiceRequired": "Choose a skill and a legal target first.",
+      "DevilsPinNoPlayers": "Add at least one participant before starting.",
+      "DevilsPinNoConfirmedChoices": "There are no confirmed throws to resolve.",
+      "DevilsPinAllChoicesRequired": "All participants must choose and confirm before the round can resolve.",
+      "DevilsPinRepeatResolvedTarget": "One of the throws repeats the previous round's resolved target.",
+      "KubokerNoPlayers": "Add at least one participant before the deal."
+    }
+  }
+}

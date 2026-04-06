@@ -1,0 +1,27 @@
+{
+  "name": "Open Devil's Pin",
+  "type": "script",
+  "author": "ts-pf2e-utility",
+  "img": "icons/magic/death/skull-horned-goat-pentagram-red.webp",
+  "scope": "global",
+  "command": "if (!game.user?.isGM) { ui.notifications?.warn(game.i18n.localize('TS_PF2E_UTILITY.Notifications.OnlyGM')); return; }\nconst mod = game.modules.get('ts-pf2e-utility');\nif (!mod?.api?.openGame) { ui.notifications?.error('ts-pf2e-utility API is not available.'); return; }\nawait mod.api.openGame('devils-pin');",
+  "folder": null,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "pf2e",
+    "systemVersion": "7.11.3",
+    "createdTime": 0,
+    "modifiedTime": 0,
+    "lastModifiedBy": "ts-pf2e-utility",
+    "exportSource": null
+  },
+  "_id": "YwNQfY3G4kP1mL2a",
+  "sort": 0,
+  "_key": "!macros!YwNQfY3G4kP1mL2a"
+}
