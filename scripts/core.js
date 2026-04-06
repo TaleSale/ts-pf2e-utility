@@ -5,12 +5,33 @@ export const I18N_PREFIX = "TS_PF2E_UTILITY";
 const SOCKET_ACTIONS = Object.freeze({
   playerAction: "player-action",
 });
-const MODULE_COMPENDIUM_ID = `${MODULE_ID}.games`;
-const MODULE_COMPENDIUM_ROOT_FOLDER = "99.TS-PF2E-UTILITY";
-const MODULE_MACRO_ICON_UPDATES = Object.freeze({
-  uK8pV4mX2rQ7nHs5: "icons/skills/trades/gaming-gambling-dice-gray.webp",
-  YwNQfY3G4kP1mL2a: "icons/magic/death/skull-horned-goat-pentagram-red.webp",
-});
+const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
+  {
+    packId: `${MODULE_ID}.games`,
+    rootFolder: "99.TS-PF2E-UTILITY",
+    sourceFiles: Object.freeze([
+      "pack-src/games/Open_Kuboker_uK8pV4mX2rQ7nHs5.json",
+      "pack-src/games/Open_Devils_Pin_YwNQfY3G4kP1mL2a.json",
+    ]),
+    iconUpdates: Object.freeze({
+      uK8pV4mX2rQ7nHs5: "icons/skills/trades/gaming-gambling-dice-gray.webp",
+      YwNQfY3G4kP1mL2a: "icons/magic/death/skull-horned-goat-pentagram-red.webp",
+    }),
+  },
+  {
+    packId: `${MODULE_ID}.mechanics`,
+    rootFolder: "99.TS-PF2E-UTILITY",
+    legacyRootFolders: Object.freeze([
+      "99.TS-PF2E-UTILITY Mechanics",
+    ]),
+    sourceFiles: Object.freeze([
+      "pack-src/games/Open_Duel_Combat_D7m3oX9QaL2cV8pR.json",
+    ]),
+    iconUpdates: Object.freeze({
+      D7m3oX9QaL2cV8pR: "icons/skills/melee/weapons-crossed-swords-pink.webp",
+    }),
+  },
+]);
 
 const gameRegistry = new Map();
 const openApps = new Map();
@@ -548,58 +569,95 @@ async function ensureModuleCompendiumFolderStructure() {
   if (!game.user?.isGM) return;
 
   try {
-    const pack = game.packs?.get(MODULE_COMPENDIUM_ID);
     const folders = game.packs?.folders;
-    if (!pack || !folders) return;
+    if (!folders) return;
 
-    let rootFolder = folders.find((folder) => (
-      isCompendiumFolder(folder)
-      && folder.name === MODULE_COMPENDIUM_ROOT_FOLDER
-      && !getCompendiumFolderParentId(folder)
-    ));
+    for (const config of MODULE_COMPENDIUM_CONFIGS) {
+      const pack = game.packs?.get(config.packId);
+      if (!pack) continue;
 
-    if (!rootFolder) {
-      rootFolder = await Folder.create({
-        name: MODULE_COMPENDIUM_ROOT_FOLDER,
-        type: "Compendium",
-        folder: null,
-        sorting: "m",
-        color: null,
-      });
-    }
+      let rootFolder = folders.find((folder) => (
+        isCompendiumFolder(folder)
+        && folder.name === config.rootFolder
+        && !getCompendiumFolderParentId(folder)
+      ));
 
-    const previousFolder = pack.folder;
-    if (pack.folder?.id !== rootFolder.id) {
-      await pack.setFolder(rootFolder);
-    }
+      if (!rootFolder) {
+        rootFolder = await Folder.create({
+          name: config.rootFolder,
+          type: "Compendium",
+          folder: null,
+          sorting: "m",
+          color: null,
+        });
+      }
 
-    const previousFolderWasLegacyChild = previousFolder
-      && previousFolder.id !== rootFolder.id
-      && isCompendiumFolder(previousFolder)
-      && getCompendiumFolderParentId(previousFolder) === rootFolder.id;
+      const previousFolder = pack.folder;
+      if (pack.folder?.id !== rootFolder.id) {
+        await pack.setFolder(rootFolder);
+      }
 
-    const shouldDeletePreviousFolder = previousFolderWasLegacyChild
-      && !previousFolder.contents?.length
-      && !previousFolder.getSubfolders?.(false)?.length;
+      const previousFolderWasLegacyChild = previousFolder
+        && previousFolder.id !== rootFolder.id
+        && isCompendiumFolder(previousFolder)
+        && getCompendiumFolderParentId(previousFolder) === rootFolder.id;
 
-    if (shouldDeletePreviousFolder) {
-      await previousFolder.delete();
+      const shouldDeletePreviousFolder = previousFolderWasLegacyChild
+        && !previousFolder.contents?.length
+        && !previousFolder.getSubfolders?.(false)?.length;
+
+      if (shouldDeletePreviousFolder) {
+        await previousFolder.delete();
+      }
+
+      const duplicateRootFolders = folders.filter((folder) => (
+        isCompendiumFolder(folder)
+        && folder.name === config.rootFolder
+        && !getCompendiumFolderParentId(folder)
+        && folder.id !== rootFolder.id
+      ));
+
+      for (const duplicateRootFolder of duplicateRootFolders) {
+        const canDeleteDuplicateRoot = !duplicateRootFolder.contents?.length
+          && !duplicateRootFolder.getSubfolders?.(false)?.length;
+
+        if (canDeleteDuplicateRoot) {
+          await duplicateRootFolder.delete();
+        }
+      }
+
+      for (const legacyRootName of config.legacyRootFolders ?? []) {
+        const legacyRootFolder = folders.find((folder) => (
+          isCompendiumFolder(folder)
+          && folder.name === legacyRootName
+          && !getCompendiumFolderParentId(folder)
+        ));
+
+        const canDeleteLegacyRoot = legacyRootFolder
+          && legacyRootFolder.id !== rootFolder.id
+          && !legacyRootFolder.contents?.length
+          && !legacyRootFolder.getSubfolders?.(false)?.length;
+
+        if (canDeleteLegacyRoot) {
+          await legacyRootFolder.delete();
+        }
+      }
     }
   } catch (error) {
     console.warn(`${MODULE_ID} | failed to ensure compendium folder structure`, error);
   }
 }
 
-async function syncModuleMacroCompendiumMetadata() {
+async function syncModuleMacroCompendiumMetadata(config) {
   if (!game.user?.isGM) return;
 
-  const pack = game.packs?.get(MODULE_COMPENDIUM_ID);
+  const pack = game.packs?.get(config.packId);
   if (!pack) return;
 
   const index = await pack.getIndex({ fields: ["img"] });
   const updates = [];
 
-  for (const [id, img] of Object.entries(MODULE_MACRO_ICON_UPDATES)) {
+  for (const [id, img] of Object.entries(config.iconUpdates ?? {})) {
     const entry = index.get(id);
     if (!entry || entry.img === img) continue;
     updates.push({ _id: id, img });
@@ -612,9 +670,94 @@ async function syncModuleMacroCompendiumMetadata() {
   try {
     if (wasLocked) await pack.configure({ locked: false });
     await pack.documentClass.updateDocuments(updates, { pack: pack.collection });
-    console.log(`${MODULE_ID} | updated macro icons in ${MODULE_COMPENDIUM_ID}`, updates);
+    console.log(`${MODULE_ID} | updated macro icons in ${config.packId}`, updates);
   } catch (error) {
-    console.warn(`${MODULE_ID} | failed to update macro icons in ${MODULE_COMPENDIUM_ID}`, error);
+    console.warn(`${MODULE_ID} | failed to update macro icons in ${config.packId}`, error);
+  } finally {
+    if (wasLocked) await pack.configure({ locked: true });
+  }
+}
+
+function getMacroSourceUrl(path) {
+  return `modules/${MODULE_ID}/${path}`;
+}
+
+function normalizeMacroSourceDocument(source) {
+  const data = foundry.utils.deepClone(source);
+  delete data._stats;
+  delete data._key;
+  if (/^[A-Za-z0-9]{16}$/.test(String(data.author ?? ""))) {
+    return data;
+  }
+  data.author = game.user?.id ?? null;
+  return data;
+}
+
+async function syncModuleMacroCompendiumDocuments(config) {
+  if (!game.user?.isGM) return;
+
+  const pack = game.packs?.get(config.packId);
+  if (!pack) return;
+
+  const index = await pack.getIndex({ fields: ["name", "img", "command", "scope"] });
+  const creates = [];
+  const deletes = [];
+  const updates = [];
+  const expectedIds = new Set();
+
+  for (const path of config.sourceFiles ?? []) {
+    try {
+      const source = normalizeMacroSourceDocument(await foundry.utils.fetchJsonWithTimeout(getMacroSourceUrl(path)));
+      expectedIds.add(source._id);
+      const existing = index.get(source._id);
+      if (!existing) {
+        creates.push(source);
+        continue;
+      }
+
+      const patch = { _id: source._id };
+      let changed = false;
+      for (const key of ["name", "img", "command", "scope"]) {
+        if (existing[key] === source[key]) continue;
+        patch[key] = source[key];
+        changed = true;
+      }
+      if (changed) updates.push(patch);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | failed to load compendium source ${path}`, error);
+    }
+  }
+
+  for (const existingId of index.keys()) {
+    if (expectedIds.has(existingId)) continue;
+    deletes.push(existingId);
+  }
+
+  if (!creates.length && !updates.length && !deletes.length) return;
+
+  const wasLocked = Boolean(pack.locked);
+
+  try {
+    if (wasLocked) await pack.configure({ locked: false });
+    if (creates.length) {
+      await pack.documentClass.createDocuments(creates, {
+        pack: pack.collection,
+        keepId: true,
+      });
+    }
+    if (deletes.length) {
+      await pack.documentClass.deleteDocuments(deletes, { pack: pack.collection });
+    }
+    if (updates.length) {
+      await pack.documentClass.updateDocuments(updates, { pack: pack.collection });
+    }
+    console.log(`${MODULE_ID} | synced compendium entries in ${config.packId}`, {
+      created: creates.map((entry) => entry._id),
+      deleted: deletes,
+      updated: updates.map((entry) => entry._id),
+    });
+  } catch (error) {
+    console.warn(`${MODULE_ID} | failed to sync compendium entries in ${config.packId}`, error);
   } finally {
     if (wasLocked) await pack.configure({ locked: true });
   }
@@ -641,11 +784,39 @@ export function initializeModuleRuntime() {
   Hooks.once("init", installModuleApi);
   Hooks.once("setup", installModuleApi);
 
+  Hooks.on("renderSettingsConfig", (_app, element) => {
+    const root = element instanceof HTMLElement ? element : element[0];
+    if (!root) return;
+
+    const firstGroup = root.querySelector(`[name^="${MODULE_ID}."]`)?.closest(".form-group");
+    if (!firstGroup) return;
+
+    const supportMsg = document.createElement("p");
+    supportMsg.className = "tsu-support-message notes";
+    supportMsg.innerHTML = `Поддержите автора и модуль по ссылке — <a href="https://boosty.to/tale_sale" target="_blank" rel="noopener noreferrer">https://boosty.to/tale_sale</a>`;
+    firstGroup.before(supportMsg);
+
+    function insertSectionHeader(settingKey, text) {
+      const group = root.querySelector(`[name="${MODULE_ID}.${settingKey}"]`)?.closest(".form-group");
+      if (!(group instanceof HTMLElement)) return;
+      const header = document.createElement("h3");
+      header.className = "tsu-settings-section-header";
+      header.textContent = text;
+      group.before(header);
+    }
+
+    insertSectionHeader("enableSceneEye", "===Сцена===");
+    insertSectionHeader("enableSpellAtWill", "===Существа===");
+  });
+
   Hooks.once("ready", () => {
     installModuleApi();
     registerSocket();
     void ensureModuleCompendiumFolderStructure();
-    void syncModuleMacroCompendiumMetadata();
+    for (const config of MODULE_COMPENDIUM_CONFIGS) {
+      void syncModuleMacroCompendiumDocuments(config);
+      void syncModuleMacroCompendiumMetadata(config);
+    }
     Hooks.on("updateScene", handleSceneUpdate);
     for (const definition of getRegisteredGames()) {
       seenOpenSignals.set(definition.id, getGameState(definition.id)?.openSignal ?? null);

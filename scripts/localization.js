@@ -3,6 +3,7 @@ import { MODULE_ID } from "./core.js";
 const SUPPORTED_LANGUAGES = Object.freeze(["en", "ru"]);
 const LOCALIZATION_FILES = Object.freeze([
   "devils-pin.json",
+  "duel-combat.json",
   "kuboker.json",
 ]);
 

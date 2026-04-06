@@ -2,10 +2,10 @@
   "id": "ts-pf2e-utility",
   "title": "TS-PF2E-UTILITY",
   "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "compatibility": {
-    "minimum": "13",
-    "verified": "13"
+    "minimum": "13.348",
+    "verified": "13.351"
   },
   "authors": [
     {
@@ -44,6 +44,16 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       }
+    },
+    {
+      "name": "mechanics",
+      "label": "Mechanics",
+      "path": "packs/mechanics",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -52,7 +62,8 @@
       "sorting": "m",
       "color": null,
       "packs": [
-        "games"
+        "games",
+        "mechanics"
       ],
       "folders": []
     }

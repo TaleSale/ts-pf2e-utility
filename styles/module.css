@@ -2513,3 +2513,126 @@
   gap: 4px;
   padding: 0;
 }
+
+.tsu-scene-eye {
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+  margin-inline: 2px;
+  border: 1px solid var(--color-border-dark);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-btn-minor);
+}
+
+.tsu-scene-eye-link.content-link {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tsu-scene-eye-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border: 0;
+  border-left: 1px dashed var(--color-border-dark);
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+}
+
+.tsu-scene-eye-button:hover {
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-table {
+  --tsu-spell-mod-tag-width: 7rem;
+  display: grid;
+  justify-content: start;
+  row-gap: 0;
+  width: 100%;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row {
+  align-items: center;
+  column-gap: 0.5rem;
+  display: grid;
+  grid-template-columns: 11em max-content;
+  justify-content: start !important;
+  margin: 0;
+  width: 100%;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row {
+  justify-items: start;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row > label {
+  flex: none;
+  margin: 0;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-fields {
+  align-items: center;
+  column-gap: 0.35rem;
+  display: grid;
+  grid-template-columns:
+    1.25rem
+    var(--tsu-spell-mod-tag-width)
+    1.25rem
+    var(--tsu-spell-mod-tag-width)
+    1.25rem;
+  justify-content: flex-start;
+  min-height: var(--font-size-20);
+  row-gap: 0;
+}
+
+.tsu-spell-mod-text {
+  white-space: nowrap;
+}
+
+.tsu-spell-mod-input {
+  justify-self: start;
+}
+
+.tsu-spell-mod-input--native {
+  grid-column: 1;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--counteraction .tsu-spell-mod-text:first-of-type,
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--ritual .tsu-spell-mod-text:first-of-type {
+  grid-column: 2;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--counteraction .tsu-spell-mod-input:not(.tsu-spell-mod-input--native):first-of-type,
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--ritual .tsu-spell-mod-input:not(.tsu-spell-mod-input--native):first-of-type {
+  grid-column: 3;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--counteraction .tsu-spell-mod-text:last-of-type {
+  grid-column: 4;
+}
+
+.pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--counteraction .tsu-spell-mod-input:not(.tsu-spell-mod-input--native):last-of-type {
+  grid-column: 5;
+}
+
+.tsu-spell-mod-text,
+.tsu-spell-mod-input {
+  align-self: center;
+}
+
+.tsu-spell-mod-text {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tsu-spell-mod-table input[type=checkbox] {
+  margin: 0;
+}
