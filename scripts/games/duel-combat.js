@@ -6,6 +6,7 @@ import {
   getNonGmCharacters,
   gt,
   MODULE_ID,
+  notify,
   patchApplicationRegions,
   requestGameAction,
   userCanControlActor,
@@ -230,6 +231,14 @@ function canSenderToggleJoin(actorId, senderId, canUserControlActor) {
   return canUserControlActor(actorId, senderId);
 }
 
+function getParticipatingActorIds(state) {
+  return Object.keys(state.players ?? {}).filter((actorId) => state.players?.[actorId]?.isParticipating);
+}
+
+function canStartDuelWithState(state) {
+  return getParticipatingActorIds(state).length === 2;
+}
+
 function startDuel(state) {
   state.phase = "play";
   state.round = 1;
@@ -256,7 +265,7 @@ function clearDuel(state) {
 }
 
 async function resolveRound(state) {
-  const activeIds = Object.keys(state.players ?? {}).filter((actorId) => state.players[actorId]?.isParticipating);
+  const activeIds = getParticipatingActorIds(state);
   if (activeIds.length !== 2) {
     ui.notifications?.warn("Для раунда нужно ровно 2 активных дуэлянта!");
     return false;
@@ -515,6 +524,7 @@ class DuelCombatApplication extends Application {
     const state = this.getState();
     const players = [];
     const activeCombatants = Object.values(state.players ?? {}).filter((entry) => entry.isParticipating);
+    const participatingCount = activeCombatants.length;
     const isSpectator = !activeCombatants.some((entry) => userCanControlActor(game.actors.get(entry.id), game.user));
 
     const entries = Object.entries(state.players ?? {}).sort((left, right) => {
@@ -534,6 +544,8 @@ class DuelCombatApplication extends Application {
       const wounds = playerData.wounds || 0;
       const woundPct = Math.min(100, (wounds / stats.maxWounds) * 100);
       const isOwner = canCurrentUserOperateActor(actor, state);
+      const isObserverCard = !playerData.isParticipating;
+      const isOwnerParticipant = isOwner && playerData.isParticipating;
       const showStats = game.user.isGM || isOwner || (isSpectator && actor.type === "character");
       const actionSlots = [];
       const availableSlots = 3 - (playerData.lostActions || 0);
@@ -550,6 +562,9 @@ class DuelCombatApplication extends Application {
         ...playerData,
         id: actorId,
         isOwner,
+        isOwnerParticipant,
+        isObserverCard,
+        spectatorLabel: isObserverCard ? gt(definition, "Spectator", "Наблюдает") : "",
         showStats,
         wounds,
         woundPct,
@@ -564,6 +579,7 @@ class DuelCombatApplication extends Application {
       isGM: game.user.isGM,
       isJoinPhase: state.phase === "join",
       isPlayingPhase: state.phase === "play",
+      canStartDuel: participatingCount === 2,
     };
   }
 
@@ -663,12 +679,20 @@ const definition = {
       case "toggle-join": {
         const playerData = state.players?.[data.actorId];
         if (!playerData || state.phase !== "join" || !canSenderToggleJoin(data.actorId, senderId, canUserControlActor)) return false;
-        playerData.isParticipating = Boolean(data.isParticipating);
+        const nextParticipating = Boolean(data.isParticipating);
+        if (nextParticipating) {
+          const activeIds = getParticipatingActorIds(state).filter((actorId) => actorId !== data.actorId);
+          if (activeIds.length >= 2) {
+            notify("warn", "Games.DuelCombat.StartNeedsTwo", {}, "В дуэли должно быть ровно 2 участника.");
+            return false;
+          }
+        }
+        playerData.isParticipating = nextParticipating;
         return true;
       }
       case "select-strike": {
         const playerData = state.players?.[data.actorId];
-        if (!playerData || playerData.isReady || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        if (!playerData || !playerData.isParticipating || playerData.isReady || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
         playerData.selectedStrikeId = String(data.strikeId ?? "");
         return true;
       }
@@ -698,6 +722,10 @@ const definition = {
       }
       case "start-duel": {
         if (!senderIsGM) return false;
+        if (!canStartDuelWithState(state)) {
+          notify("warn", "Games.DuelCombat.StartNeedsTwo", {}, "В дуэли должно быть ровно 2 участника.");
+          return false;
+        }
         startDuel(state);
         return true;
       }

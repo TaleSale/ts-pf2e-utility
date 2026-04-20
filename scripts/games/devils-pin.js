@@ -27,11 +27,17 @@ const PLAYER_TARGET_PREFIX = "player:";
 const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
 const OUTCOME_KEYS_BY_RANK = ["UberFailure", "CriticalFailure", "Failure", "Success", "CriticalSuccess", "UberCrit"];
 const GAMES_LORE_SELECTOR = ["game", "games", "\u0438\u0433\u0440"];
+const COIN_CURRENCIES = Object.freeze({
+  cp: { shortKey: "CopperShort", longKey: "CopperLong", fallbackShort: "cp", fallbackLong: "Copper" },
+  sp: { shortKey: "SilverShort", longKey: "SilverLong", fallbackShort: "sp", fallbackLong: "Silver" },
+  gp: { shortKey: "GoldShort", longKey: "GoldLong", fallbackShort: "gp", fallbackLong: "Gold" },
+  pp: { shortKey: "PlatinumShort", longKey: "PlatinumLong", fallbackShort: "pp", fallbackLong: "Platinum" },
+});
 
 const TARGETS = Object.freeze({
-  tongue: { dcOffset: 0, points: 1, key: "Tongue" },
-  nose: { dcOffset: 4, points: 2, key: "Nose" },
-  horns: { dcOffset: 8, points: 3, key: "Horns" },
+  tongue: { levelOffset: -2, manualDcOffset: 0, points: 1, key: "Tongue" },
+  nose: { levelOffset: 2, manualDcOffset: 4, points: 2, key: "Nose" },
+  horns: { levelOffset: 6, manualDcOffset: 8, points: 3, key: "Horns" },
 });
 
 const SKILLS = Object.freeze({
@@ -52,7 +58,38 @@ function createInitialState() {
     results: null,
     debugMode: false,
     openSignal: null,
+    currency: "sp",
+    payoutClaimed: false,
+    awardedWinners: {},
   };
+}
+
+function normalizeCoinCurrency(currency) {
+  return COIN_CURRENCIES[currency] ? currency : "sp";
+}
+
+function ensureCurrencyState(state) {
+  state.currency = normalizeCoinCurrency(state.currency);
+  state.payoutClaimed = Boolean(state.payoutClaimed);
+  state.awardedWinners = (state.awardedWinners && typeof state.awardedWinners === "object")
+    ? state.awardedWinners
+    : {};
+}
+
+function getCurrencyShort(definition, currency) {
+  const normalized = normalizeCoinCurrency(currency);
+  const config = COIN_CURRENCIES[normalized];
+  return gt(definition, `Currency.${config.shortKey}`, config.fallbackShort);
+}
+
+function getCurrencyLong(definition, currency) {
+  const normalized = normalizeCoinCurrency(currency);
+  const config = COIN_CURRENCIES[normalized];
+  return gt(definition, `Currency.${config.longKey}`, config.fallbackLong);
+}
+
+function formatCurrencyAmount(definition, state, amount) {
+  return `${Math.max(0, Math.trunc(Number(amount) || 0))} ${getCurrencyShort(definition, state.currency)}`;
 }
 
 function ensurePlayerActionState(playerData) {
@@ -98,16 +135,24 @@ function getActivePlayerEntries(state) {
   });
 }
 
-function getSuggestedBaseDc(state) {
+function getLevelBasedDc(level) {
+  const safeLevel = Math.max(0, Math.min(PF2E_DC_BY_LEVEL.length - 1, Math.trunc(Number(level) || 0)));
+  return PF2E_DC_BY_LEVEL[safeLevel] || DEFAULT_BASE_DC;
+}
+
+function getSuggestedBaseLevel(state) {
   const activePlayers = getActivePlayerEntries(state);
-  if (!activePlayers.length) return DEFAULT_BASE_DC;
-  const minimumLevel = Math.min(...activePlayers.map(([actorId, playerData]) => {
+  if (!activePlayers.length) return 0;
+  return Math.min(...activePlayers.map(([actorId, playerData]) => {
     const actor = game.actors?.get(actorId);
     const level = actor?.level || actor?.system?.details?.level?.value || Number(playerData.level) || 0;
     playerData.level = level;
     return level;
   }));
-  return PF2E_DC_BY_LEVEL[minimumLevel] || DEFAULT_BASE_DC;
+}
+
+function getSuggestedBaseDc(state) {
+  return getLevelBasedDc(getSuggestedBaseLevel(state));
 }
 
 function getBaseDc(state) {
@@ -128,7 +173,8 @@ function hasManualBaseDcOverride(state) {
 function getTargetDc(state, targetOrId) {
   const target = typeof targetOrId === "string" ? TARGETS[targetOrId] : targetOrId;
   if (!target) return DEFAULT_BASE_DC;
-  return getBaseDc(state) + (target.dcOffset || 0);
+  if (hasManualBaseDcOverride(state)) return getBaseDc(state) + (target.manualDcOffset || 0);
+  return getLevelBasedDc(getSuggestedBaseLevel(state) + (target.levelOffset || 0));
 }
 
 function getDcLabel(definition) {
@@ -292,6 +338,7 @@ function getChronicleLogVisual(outcomeKey) {
 }
 
 function buildThrowLogEntry(definition, outcomeKey, {
+  state,
   label,
   d20,
   mod,
@@ -313,8 +360,8 @@ function buildThrowLogEntry(definition, outcomeKey, {
   const debtLine = gtf(
     definition,
     "Log.DebtLine",
-    { oldDebt, newDebt, delta },
-    ({ oldDebt: from, newDebt: to, delta: diff }) => `Debt: ${from} -> <b>${to}</b> (${diff})`
+    { oldDebt, newDebt, delta, currency: getCurrencyShort(definition, state.currency) },
+    ({ oldDebt: from, newDebt: to, delta: diff, currency }) => `Debt: ${from} -> <b>${to}</b> (${diff} ${currency})`
   );
 
   return `<div class="tsu-log-entry" style="padding:6px; margin-bottom:5px; border-radius:4px; ${visual.wrapperStyle}">
@@ -336,6 +383,7 @@ function getFlavor(definition, category, actorName) {
 }
 
 async function addActorToState(state, actor, { isParticipating = false, source = "manual" } = {}) {
+  ensureCurrencyState(state);
   if (!actor) return;
   state.players ||= {};
 
@@ -619,13 +667,13 @@ function buildPlayerStatusText(definition, state, playerData, { canChoose, isWin
   }
   if (state.phase === "results") {
     if (isWinner) return gt(definition, "Status.Winner", "Winner");
-    if (isLoser && !playerData.hasPaid) return gt(definition, "Status.PayDebt", "Pay the debt");
-    if (isLoser && playerData.hasPaid) return gt(definition, "Status.DebtPaid", "Debt paid");
+    if (isLoser) return gt(definition, "Status.Lost", "Lost");
   }
   return "";
 }
 
 function createPlayerPresentation(definition, state, actorId, playerData) {
+  ensureCurrencyState(state);
   ensurePlayerActionState(playerData);
   const actor = game.actors.get(actorId);
   const isWinner = (state.results?.winners || []).includes(actorId);
@@ -655,7 +703,14 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
     isLoser ? "is-loser" : "",
   ].filter(Boolean).join(" ");
 
-  const badgeText = playerData.isParticipating ? gtf(definition, "DebtBadge", { debt: playerData.debt }, ({ debt }) => `${debt} SP`) : "";
+  const badgeText = playerData.isParticipating
+    ? gtf(
+      definition,
+      "DebtBadge",
+      { debt: playerData.debt, currency: getCurrencyShort(definition, state.currency) },
+      ({ debt, currency }) => `${debt} ${currency}`
+    )
+    : "";
   const showPrivateSelection = !isObserverCard && (canPlayerControl || isSpectatorViewer);
   const selectionState = showPrivateSelection ? buildSelectionText(definition, state, playerData) : { current: "", last: "", resolved: "" };
   const statusText = isObserverCard ? "" : buildPlayerStatusText(definition, state, playerData, { canChoose, isWinner, isLoser });
@@ -694,27 +749,6 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
       ].filter(Boolean).join(" "),
     }));
 
-  let showPayButton = false;
-  let payLabel = "";
-  let payClasses = playerData.hasPaid ? "is-disabled disabled paid" : "";
-  let payDisabled = playerData.hasPaid;
-  if (state.phase === "results" && !isWinner && playerData.isParticipating) {
-    if (actor?.type === "character") {
-      showPayButton = true;
-      payLabel = playerData.hasPaid
-        ? gt(definition, "Buttons.Paid", "Paid")
-        : gtf(definition, "Buttons.PayAmount", { amount: playerData.debt }, ({ amount }) => `Pay ${amount} SP`);
-      payDisabled ||= !canPlayerControl;
-    }
-    if (actor?.type === "npc") {
-      showPayButton = true;
-      payLabel = playerData.hasPaid
-        ? gt(definition, "Buttons.Collected", "Collected")
-        : gtf(definition, "Buttons.CollectAmount", { amount: playerData.debt }, ({ amount }) => `Collect ${amount} SP`);
-      payDisabled ||= !game.user.isGM;
-    }
-  }
-
   return {
     id: actorId,
     name: playerData.name,
@@ -726,6 +760,12 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
     joinCheckbox: state.phase === "join" && canCurrentUserToggleJoin(actor, state),
     isActorOwner: canPlayerControl,
     spectatorLabel: !playerData.isParticipating ? gt(definition, "Spectator", "Spectating") : "",
+    showAwardMoneyButton: game.user.isGM
+      && state.phase === "results"
+      && isWinner
+      && !state.awardedWinners?.[actorId]
+      && (Number(state.results?.totalPot) || 0) > 0,
+    awardMoneyLabel: gt(definition, "Buttons.AwardMoney", "Award Money"),
     selectionText: selectionState.current,
     historyText: selectionState.last,
     resolvedText: selectionState.resolved,
@@ -750,31 +790,33 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
     skillButtons,
     targetButtons,
     playerTargetButtons,
-    showPayButton,
-    payLabel,
-    payClasses,
-    payDisabled,
-    payAmount: playerData.debt,
   };
 }
 
-async function executePayment(definition, state, actorId, amount) {
-  const payer = game.actors.get(actorId);
-  if (!payer || !amount) return;
-  if (payer.type === "character") {
-    await payer.inventory.removeCoins({ sp: amount });
-  }
-
+async function awardMoneyToWinners(definition, state, actorId) {
+  ensureCurrencyState(state);
   const winnerIds = state.results?.winners || [];
-  for (const winnerId of winnerIds) {
-    const winner = game.actors.get(winnerId);
-    if (winner?.type !== "character") continue;
-    const share = Math.floor(amount / winnerIds.length);
-    if (share > 0) await winner.inventory.addCoins({ sp: share });
-  }
+  if (!winnerIds.length || !actorId || !winnerIds.includes(actorId) || state.awardedWinners?.[actorId]) return false;
+  const amount = Math.max(0, Math.trunc(Number(state.results?.totalPot) || 0));
+  if (!amount) return false;
 
-  state.players[actorId].hasPaid = true;
-  state.log.unshift(gtf(definition, "Log.Payment", { name: payer.name, amount }, ({ name, amount: value }) => `<div class="tsu-log-entry">${escapeHtml(name)} paid ${value} SP.</div>`));
+  const share = Math.floor(amount / winnerIds.length);
+  if (share <= 0) return false;
+
+  const winner = game.actors.get(actorId);
+  if (!winner?.inventory?.addCoins) return false;
+  await winner.inventory.addCoins({ [state.currency]: share });
+
+  state.awardedWinners[actorId] = true;
+  state.payoutClaimed = winnerIds.every((winnerId) => state.awardedWinners?.[winnerId]);
+  const names = state.players[actorId]?.name || winner.name || actorId;
+  state.log.unshift(gtf(
+    definition,
+    "Log.Payment",
+    { names, amount: share, currency: getCurrencyShort(definition, state.currency) },
+    ({ names: winnerNames, amount: payout, currency }) => `<div class="tsu-log-entry"><b>${escapeHtml(winnerNames)}</b> receives ${payout} ${currency}.</div>`
+  ));
+  return true;
 }
 
 function clearPlayerChoice(playerData) {
@@ -850,10 +892,11 @@ function applyOutcomeToDebt(playerData, target, rank) {
   };
 }
 
-function formatDebtDelta(diff) {
+function formatDebtDelta(definition, state, diff) {
+  const currency = getCurrencyShort(definition, state.currency);
   return diff < 0
-    ? `<b style="color:#2ecc71">${diff} SP</b>`
-    : `<b style="color:#e74c3c">+${diff} SP</b>`;
+    ? `<b style="color:#2ecc71">${diff} ${currency}</b>`
+    : `<b style="color:#e74c3c">+${diff} ${currency}</b>`;
 }
 
 function prependChronologyEntries(state, entries) {
@@ -997,6 +1040,7 @@ async function resolveConfirmedRound(definition, state) {
     const meta = getOutcomeMeta(definition, penalty.outcomeKey);
 
     chronology.push(buildThrowLogEntry(definition, penalty.outcomeKey, {
+      state,
       label: meta.label,
       d20: action.d20,
       mod: action.modifier,
@@ -1006,7 +1050,7 @@ async function resolveConfirmedRound(definition, state) {
       flavor: getFlavor(definition, penalty.outcomeKey, playerData.name),
       oldDebt: penalty.oldDebt,
       newDebt: penalty.newDebt,
-      delta: formatDebtDelta(penalty.diff),
+      delta: formatDebtDelta(definition, state, penalty.diff),
       target: getTargetLabel(definition, "tongue"),
       skill: action.skillName,
       extraHtml: [
@@ -1041,7 +1085,12 @@ async function resolveConfirmedRound(definition, state) {
       resolution.newDebt = playerData.debt;
       resolution.diff = playerData.debt - resolution.oldDebt;
       extraHtml.push(`<div>${beforeBonus !== playerData.debt
-        ? gt(definition, "Log.FairPlayBonus", "Fair play bonus: -1 SP.")
+        ? gtf(
+          definition,
+          "Log.FairPlayBonus",
+          { currency: getCurrencyShort(definition, state.currency) },
+          ({ currency }) => `Fair play bonus: -1 ${currency}.`
+        )
         : gt(definition, "Log.FairPlayBonusZero", "Fair play bonus applied.")}</div>`);
     }
 
@@ -1049,6 +1098,7 @@ async function resolveConfirmedRound(definition, state) {
     const meta = getOutcomeMeta(definition, action.adjustedOutcomeKey);
 
     chronology.push(buildThrowLogEntry(definition, action.adjustedOutcomeKey, {
+      state,
       label: meta.label,
       d20: action.d20,
       mod: action.modifier,
@@ -1058,7 +1108,7 @@ async function resolveConfirmedRound(definition, state) {
       flavor: getFlavor(definition, action.adjustedOutcomeKey, playerData.name),
       oldDebt: resolution.oldDebt,
       newDebt: resolution.newDebt,
-      delta: formatDebtDelta(resolution.diff),
+      delta: formatDebtDelta(definition, state, resolution.diff),
       target: action.targetActorId ? action.directTargetLabel : getTargetLabel(definition, finalTargetId),
       skill: action.skillName,
       extraHtml: extraHtml.join(""),
@@ -1072,8 +1122,14 @@ async function resolveConfirmedRound(definition, state) {
     const winnerIds = activePlayers.filter(([, playerData]) => playerData.debt === minimumDebt).map(([id]) => id);
     const totalPot = activePlayers.filter(([, playerData]) => playerData.debt > minimumDebt).reduce((sum, [, playerData]) => sum + playerData.debt, 0);
     state.results = { winners: winnerIds, totalPot };
+    state.payoutClaimed = false;
     const names = winnerIds.map((id) => state.players[id]?.name).filter(Boolean).join(", ");
-    chronology.push(gtf(definition, "Log.Win", { names, totalPot }, ({ names, totalPot }) => `<div class="tsu-log-entry" style="background:linear-gradient(135deg,#123e1f,#2d8f45,#123e1f);color:white;border:1px solid gold;"><b>${escapeHtml(names)}</b> win the pot: <b>${totalPot} SP</b></div>`));
+    chronology.push(gtf(
+      definition,
+      "Log.Win",
+      { names, totalPot, currency: getCurrencyShort(definition, state.currency) },
+      ({ names: winnerNames, totalPot: pot, currency }) => `<div class="tsu-log-entry" style="background:linear-gradient(135deg,#123e1f,#2d8f45,#123e1f);color:white;border:1px solid gold;"><b>${escapeHtml(winnerNames)}</b> win the pot: <b>${pot} ${currency}</b></div>`
+    ));
   } else {
     state.round += 1;
     for (const [, playerData] of activePlayers) {
@@ -1161,7 +1217,7 @@ const template = `
             </div>
             {{/if}}
           {{/if}}
-          {{#if showPayButton}}<button type="button" class="tsu-button dp-pay-btn {{payClasses}}" data-action="pay" data-actor-id="{{id}}" data-amount="{{payAmount}}" {{#if payDisabled}}disabled{{/if}}>{{payLabel}}</button>{{/if}}
+          {{#if showAwardMoneyButton}}<button type="button" class="tsu-button dp-pay-btn" data-action="award-money" data-actor-id="{{id}}">{{awardMoneyLabel}}</button>{{/if}}
         </article>
       {{/each}}
     </div>
@@ -1177,7 +1233,28 @@ const template = `
   </section>
 
   <div class="tsu-footer dp-footer">
-    <div>{{#if isGM}}<label class="tsu-checkbox dp-debug-label"><input type="checkbox" id="dp-debug-mode" {{#if state.debugMode}}checked{{/if}}> {{ui.debugLabel}}</label>{{/if}}</div>
+    <div class="dp-footer-settings">
+      {{#if isGM}}
+        <label class="tsu-checkbox dp-debug-label"><input type="checkbox" id="dp-debug-mode" {{#if state.debugMode}}checked{{/if}}> {{ui.debugLabel}}</label>
+        <label class="dp-currency-field">
+          <span>{{currencyLabel}}</span>
+          <div class="dp-currency-dropdown">
+            <button type="button" class="dp-currency-select" data-action="toggle-currency-dropdown">
+              <span class="dp-currency-select__pad" aria-hidden="true"></span>
+              <span class="dp-currency-select__value">{{selectedCurrencyLabel}}</span>
+              <span class="dp-currency-select__arrow" aria-hidden="true"></span>
+            </button>
+            <div class="dp-currency-dropdown-menu">
+              {{#each currencyOptions}}
+                <button type="button" class="dp-currency-option {{#if selected}}is-selected{{/if}}" data-action="set-currency-option" data-currency="{{value}}">
+                  {{label}}
+                </button>
+              {{/each}}
+            </div>
+          </div>
+        </label>
+      {{/if}}
+    </div>
     <div class="tsu-footer-actions">
       {{#each footerButtons}}
         <button type="button" class="tsu-button dp-btn {{classes}}" data-action="{{action}}" title="{{title}}" {{#if disabled}}disabled{{/if}}>
@@ -1229,6 +1306,7 @@ class DevilsPinApplication extends Application {
   getData() {
     try {
       const state = this.getState();
+      ensureCurrencyState(state);
       const ui = {
         ...buildSummaryUi(definition, state),
         logTitle: gt(definition, "Log.PanelTitle", "Journal"),
@@ -1318,6 +1396,13 @@ class DevilsPinApplication extends Application {
         dcInputValue: hasManualBaseDcOverride(state) ? `${getBaseDc(state)}` : "",
         dcPlaceholder: formatDcPlaceholder(definition, getBaseDc(state)),
         footerButtons,
+        currencyLabel: gt(definition, "Currency.Label", "Currency"),
+        selectedCurrencyLabel: getCurrencyShort(definition, state.currency),
+        currencyOptions: Object.keys(COIN_CURRENCIES).map((currency) => ({
+          value: currency,
+          label: getCurrencyShort(definition, currency),
+          selected: state.currency === currency,
+        })),
         isGM: game.user.isGM,
       };
     } catch (error) {
@@ -1344,6 +1429,10 @@ class DevilsPinApplication extends Application {
   activateListeners(html) {
     super.activateListeners(html);
 
+    html.on("click", (event) => {
+      if ($(event.target).closest(".dp-currency-dropdown").length) return;
+      html.find(".dp-currency-dropdown.is-open").removeClass("is-open");
+    });
     html.on("click", "[data-action]", (event) => this.onActionClick(event));
     html.on("dragover", (event) => {
       event.preventDefault();
@@ -1385,7 +1474,6 @@ class DevilsPinApplication extends Application {
     const button = event.currentTarget;
     const action = button.dataset.action;
     const actorId = button.dataset.actorId;
-    const amount = Number(button.dataset.amount) || 0;
 
     switch (action) {
       case "help":
@@ -1394,6 +1482,21 @@ class DevilsPinApplication extends Application {
           content: `<div class="tsu-dialog-content">${gt(definition, "Rules.HelpHtml", "")}</div>`,
           buttons: { ok: { label: gt(definition, "Buttons.CloseRules", "Close") } },
         }, { width: 560 }).render(true);
+        break;
+      case "toggle-currency-dropdown": {
+        event.preventDefault();
+        event.stopPropagation();
+        const dropdown = button.closest(".dp-currency-dropdown");
+        if (!dropdown) break;
+        this.element?.find(".dp-currency-dropdown.is-open").not(dropdown).removeClass("is-open");
+        dropdown.classList.toggle("is-open");
+        break;
+      }
+      case "set-currency-option":
+        event.preventDefault();
+        event.stopPropagation();
+        button.closest(".dp-currency-dropdown")?.classList.remove("is-open");
+        await requestGameAction(GAME_ID, "set-currency", { currency: button.dataset.currency });
         break;
       case "skill":
         await requestGameAction(GAME_ID, "set-skill", { actorId, skill: button.dataset.skill });
@@ -1410,11 +1513,11 @@ class DevilsPinApplication extends Application {
       case "refresh-attack":
         await requestGameAction(GAME_ID, "refresh-attack", { actorId });
         break;
-      case "pay":
-        await requestGameAction(GAME_ID, "pay", { actorId, amount });
-        break;
       case "start-game":
         await requestGameAction(GAME_ID, "start-game", {});
+        break;
+      case "award-money":
+        await requestGameAction(GAME_ID, "award-money", { actorId });
         break;
       case "clear":
         await requestGameAction(GAME_ID, "clear", {});
@@ -1451,6 +1554,7 @@ const definition = {
   syncDefaultPlayers,
   createApplication: () => new DevilsPinApplication(),
   async handleAction({ action, data, state, senderId, canUserControlActor }) {
+    ensureCurrencyState(state);
     const senderIsGM = game.users?.get(senderId)?.isGM ?? false;
     switch (action) {
       case "toggle-join": {
@@ -1527,6 +1631,8 @@ const definition = {
         state.phase = "join";
         state.round = 1;
         state.results = null;
+        state.payoutClaimed = false;
+        state.awardedWinners = {};
         state.log = [gt(definition, "Log.Cleared", "<div class='tsu-log-entry'><b>Journal cleared.</b></div>")];
         for (const playerData of Object.values(state.players)) {
           ensurePlayerActionState(playerData);
@@ -1542,15 +1648,6 @@ const definition = {
         }
         return true;
       }
-      case "pay": {
-        const playerData = state.players[data.actorId];
-        const actor = game.actors.get(data.actorId);
-        if (!playerData || !actor) return false;
-        if (actor.type === "character" && !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
-        if (actor.type === "npc" && !senderIsGM) return false;
-        await executePayment(definition, state, data.actorId, Number(data.amount) || 0);
-        return true;
-      }
       case "start-game": {
         if (!senderIsGM) return false;
         const activePlayers = Object.values(state.players).filter((entry) => entry.isParticipating);
@@ -1561,6 +1658,8 @@ const definition = {
         state.phase = "playing";
         state.round = 1;
         state.results = null;
+        state.payoutClaimed = false;
+        state.awardedWinners = {};
         for (const playerData of Object.values(state.players)) {
           ensurePlayerActionState(playerData);
           playerData.hasThrown = false;
@@ -1586,6 +1685,8 @@ const definition = {
         state.phase = "join";
         state.round = 1;
         state.results = null;
+        state.payoutClaimed = false;
+        state.awardedWinners = {};
         state.log = [gt(definition, "Log.Cleared", "<div class='tsu-log-entry'><b>Journal cleared.</b></div>")];
         for (const playerData of Object.values(state.players)) {
           ensurePlayerActionState(playerData);
@@ -1606,6 +1707,11 @@ const definition = {
         state.debugMode = Boolean(data.enabled);
         return true;
       }
+      case "set-currency": {
+        if (!senderIsGM) return false;
+        state.currency = normalizeCoinCurrency(data.currency);
+        return true;
+      }
       case "set-dc": {
         if (!senderIsGM) return false;
         if (data.auto) {
@@ -1619,6 +1725,9 @@ const definition = {
         state.baseDc = value;
         return true;
       }
+      case "award-money":
+        if (!senderIsGM || state.phase !== "results") return false;
+        return awardMoneyToWinners(definition, state, data.actorId);
       case "remove-player": {
         if (!senderIsGM || !state.players[data.actorId]) return false;
         state.excludedPlayers ||= {};

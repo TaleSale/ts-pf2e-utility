@@ -22,6 +22,13 @@ const GAME_ID = "kuboker";
 const APP_ID = `${MODULE_ID}-${GAME_ID}`;
 const I18N_ROOT = "Games.Kuboker";
 const LOCKED_ROUNDS_TOTAL = 2;
+const BETTING_ROUNDS_TOTAL = 3;
+const BETTING_CURRENCIES = Object.freeze({
+  cp: { shortKey: "CopperShort", longKey: "CopperLong", fallbackShort: "cp", fallbackLong: "Copper" },
+  sp: { shortKey: "SilverShort", longKey: "SilverLong", fallbackShort: "sp", fallbackLong: "Silver" },
+  gp: { shortKey: "GoldShort", longKey: "GoldLong", fallbackShort: "gp", fallbackLong: "Gold" },
+  pp: { shortKey: "PlatinumShort", longKey: "PlatinumLong", fallbackShort: "pp", fallbackLong: "Platinum" },
+});
 
 const STRATEGIES = Object.freeze({
   fair: { key: "Fair" },
@@ -70,12 +77,197 @@ function createInitialState() {
     dcOverride: null,
     debugMode: false,
     openSignal: null,
+    betting: {
+      enabled: false,
+      currency: "gp",
+      initialStake: 1,
+      step: 1,
+      roundLimit: 5,
+      currentRound: 0,
+      pot: 0,
+      payoutClaimed: false,
+      awardedWinners: {},
+    },
   };
 }
 
 function replaceStateContents(target, source) {
   for (const key of Object.keys(target)) delete target[key];
   Object.assign(target, source);
+}
+
+function normalizeBettingCurrency(currency) {
+  return BETTING_CURRENCIES[currency] ? currency : "gp";
+}
+
+function toPositiveInteger(value, fallback = 1) {
+  const normalized = Math.trunc(Number(value));
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : fallback;
+}
+
+function ensureBettingState(state) {
+  if (!state.betting || typeof state.betting !== "object") {
+    state.betting = {};
+  }
+  state.betting.enabled = Boolean(state.betting.enabled);
+  state.betting.currency = normalizeBettingCurrency(state.betting.currency);
+  state.betting.initialStake = toPositiveInteger(state.betting.initialStake, 1);
+  state.betting.step = toPositiveInteger(state.betting.step, 1);
+  state.betting.roundLimit = Math.max(state.betting.initialStake, toPositiveInteger(state.betting.roundLimit, 5));
+  state.betting.currentRound = Math.max(0, Math.min(BETTING_ROUNDS_TOTAL, Math.trunc(Number(state.betting.currentRound) || 0)));
+  state.betting.pot = Math.max(0, Math.trunc(Number(state.betting.pot) || 0));
+  state.betting.payoutClaimed = Boolean(state.betting.payoutClaimed);
+  state.betting.awardedWinners = (state.betting.awardedWinners && typeof state.betting.awardedWinners === "object")
+    ? state.betting.awardedWinners
+    : {};
+}
+
+function ensurePlayerBettingState(playerData) {
+  if (!playerData) return;
+  playerData.totalBet = Math.max(0, Math.trunc(Number(playerData.totalBet) || 0));
+  playerData.roundBet = Math.max(0, Math.trunc(Number(playerData.roundBet) || 0));
+  playerData.raiseSteps = toPositiveInteger(playerData.raiseSteps, 1);
+  playerData.isFolded = Boolean(playerData.isFolded);
+}
+
+function isBettingEnabled(state) {
+  ensureBettingState(state);
+  return Boolean(state.betting.enabled);
+}
+
+function isPlayerFolded(playerData) {
+  ensurePlayerBettingState(playerData);
+  return Boolean(playerData?.isFolded);
+}
+
+function getBettingCurrencyShort(definition, currency) {
+  const normalized = normalizeBettingCurrency(currency);
+  const config = BETTING_CURRENCIES[normalized];
+  return gt(definition, `Currency.${config.shortKey}`, config.fallbackShort);
+}
+
+function getBettingCurrencyLong(definition, currency) {
+  const normalized = normalizeBettingCurrency(currency);
+  const config = BETTING_CURRENCIES[normalized];
+  return gt(definition, `Currency.${config.longKey}`, config.fallbackLong);
+}
+
+function formatBetAmount(definition, amount, currency) {
+  return `${Math.max(0, Math.trunc(Number(amount) || 0))} ${getBettingCurrencyShort(definition, currency)}`;
+}
+
+function getBettingRoundLimit(state) {
+  ensureBettingState(state);
+  return Math.max(state.betting.initialStake, state.betting.roundLimit);
+}
+
+function getBettingStep(state) {
+  ensureBettingState(state);
+  return Math.max(1, state.betting.step);
+}
+
+function getActiveBettingEntries(state) {
+  return Object.entries(state.players ?? {}).filter(([, playerData]) => {
+    ensurePlayerBettingState(playerData);
+    return playerData.isParticipating && !playerData.isFolded;
+  });
+}
+
+function getBettingHighBet(state) {
+  return getActiveBettingEntries(state).reduce((highest, [, playerData]) => Math.max(highest, playerData.roundBet), 0);
+}
+
+function canAdvanceBettingRound(state) {
+  const activeEntries = getActiveBettingEntries(state);
+  if (activeEntries.length <= 1) return activeEntries.length === 1;
+  const highestBet = getBettingHighBet(state);
+  return activeEntries.every(([, playerData]) => playerData.roundBet === highestBet);
+}
+
+function resetBettingForNewHand(state) {
+  ensureBettingState(state);
+  state.betting.currentRound = 0;
+  state.betting.pot = 0;
+  state.betting.payoutClaimed = false;
+  state.betting.awardedWinners = {};
+  for (const playerData of Object.values(state.players ?? {})) {
+    ensurePlayerBettingState(playerData);
+    playerData.totalBet = 0;
+    playerData.roundBet = 0;
+    playerData.isFolded = false;
+    playerData.raiseSteps = 1;
+  }
+}
+
+function applyBetForPlayer(state, playerData, targetBet) {
+  ensureBettingState(state);
+  ensurePlayerBettingState(playerData);
+  const cappedTarget = Math.max(0, Math.min(getBettingRoundLimit(state), Math.trunc(Number(targetBet) || 0)));
+  if (cappedTarget <= playerData.roundBet) return 0;
+  const delta = cappedTarget - playerData.roundBet;
+  playerData.roundBet = cappedTarget;
+  playerData.totalBet += delta;
+  state.betting.pot += delta;
+  return delta;
+}
+
+function startBettingRound(definition, state, round) {
+  ensureBettingState(state);
+  const bettingRound = Math.max(1, Math.min(BETTING_ROUNDS_TOTAL, Math.trunc(Number(round) || 1)));
+  state.phase = "betting";
+  state.betting.currentRound = bettingRound;
+
+  const ante = Math.min(state.betting.initialStake, getBettingRoundLimit(state));
+  for (const playerData of Object.values(state.players ?? {})) {
+    ensurePlayerBettingState(playerData);
+    playerData.isConfirmed = false;
+    playerData.roundBet = 0;
+    if (!playerData.isParticipating || playerData.isFolded) continue;
+    applyBetForPlayer(state, playerData, ante);
+  }
+
+  const content = unwrapChronicleEntry(gtf(
+    definition,
+    "Log.BettingRoundStart",
+    {
+      round: bettingRound,
+      total: BETTING_ROUNDS_TOTAL,
+      ante: formatBetAmount(definition, ante, state.betting.currency),
+    },
+    ({ round: roundNumber, total, ante: anteAmount }) => `<b>Betting round ${roundNumber}/${total}.</b> Ante: <b>${escapeHtml(anteAmount)}</b>.`
+  ));
+  state.log.unshift(buildChronicleNote(content, { color: "#ffd98a", centered: true }));
+}
+
+async function awardKubokerPot(definition, state, actorId) {
+  ensureBettingState(state);
+  if (!state.betting.enabled || state.betting.pot <= 0 || !actorId) return false;
+  const winners = Object.entries(state.players ?? {}).filter(([, playerData]) => playerData.isWinner);
+  if (!winners.length) return false;
+  if (!winners.some(([winnerId]) => winnerId === actorId)) return false;
+  if (state.betting.awardedWinners?.[actorId]) return false;
+
+  const share = Math.floor(state.betting.pot / winners.length);
+  if (share <= 0) return false;
+
+  const actor = game.actors?.get(actorId);
+  if (!actor?.inventory?.addCoins) return false;
+  await actor.inventory.addCoins({ [state.betting.currency]: share });
+
+  state.betting.awardedWinners[actorId] = true;
+  state.betting.payoutClaimed = winners.every(([winnerId]) => state.betting.awardedWinners?.[winnerId]);
+  const winnerName = state.players?.[actorId]?.name || actor.name || actorId;
+  const content = unwrapChronicleEntry(gtf(
+    definition,
+    "Log.BettingPayout",
+    {
+      winners: winnerName,
+      amount: formatBetAmount(definition, share, state.betting.currency),
+    },
+    ({ winners: winnerNames, amount }) => `<b>${escapeHtml(winnerNames)}</b> receives <b>${escapeHtml(amount)}</b> from the bank.`
+  ));
+  state.log.unshift(buildChronicleNote(content, { color: "#c9ff9f" }));
+  return true;
 }
 
 function getActorModifiers(actor) {
@@ -326,6 +518,10 @@ async function addActorToState(state, actor, { isParticipating = false, source =
     isWinner: false,
     handName: "",
     score: 0,
+    totalBet: 0,
+    roundBet: 0,
+    raiseSteps: 1,
+    isFolded: false,
     source,
   };
 }
@@ -389,6 +585,16 @@ function isPlayerLockedOut(state, playerData) {
 function getPhaseLabel(definition, state) {
   const phase = state.phase || "join";
   const baseLabel = gt(definition, `Phases.${phase}`, phase);
+  if (phase === "betting") {
+    ensureBettingState(state);
+    const roundText = gtf(
+      definition,
+      "Betting.RoundProgress",
+      { current: state.betting.currentRound || 1, total: BETTING_ROUNDS_TOTAL },
+      ({ current, total }) => `Betting ${current}/${total}`
+    );
+    return `${baseLabel} (${roundText})`;
+  }
   if (!["deal", "locked"].includes(phase)) return baseLabel;
 
   const roundText = gtf(
@@ -425,7 +631,8 @@ function beginNextLockedRound(definition, state) {
   state.lockedRound = nextRound;
 
   for (const playerData of Object.values(state.players)) {
-    if (!playerData.isParticipating) continue;
+    ensurePlayerBettingState(playerData);
+    if (!playerData.isParticipating || playerData.isFolded) continue;
     playerData.isConfirmed = false;
     playerData.changesLeft = 0;
     playerData.crownChangesLeft = 0;
@@ -547,31 +754,37 @@ function getVisibleCheatersMap(state) {
 }
 
 function createPlayerPresentation(definition, state, actorId, playerData, visibleCheatersMap) {
+  ensureBettingState(state);
+  ensurePlayerBettingState(playerData);
   const actor = game.actors.get(actorId);
   const canPlayerControl = canCurrentUserOperateActor(actor, state);
   const isVisualOwner = canPlayerControl;
   const isSpectatorViewer = isCurrentUserSpectator(state);
   const isObserverCard = !playerData.isParticipating;
   const hidePrivateDetailsFromSpectator = false;
-  const isLockedOut = isPlayerLockedOut(state, playerData);
+  const isFolded = isPlayerFolded(playerData);
+  const isLockedOut = isFolded || isPlayerLockedOut(state, playerData);
   const hasPendingCrownLock = state.phase === "locked" && hasAnyPendingCrownRerolls(state);
   const canSeeDice = state.phase === "reveal" || isVisualOwner || isSpectatorViewer;
   const canSeeChoices = isVisualOwner || isSpectatorViewer;
   const showDice = state.phase !== "join" && !isObserverCard;
-  const showStrategyControls = state.phase === "deal" && canSeeChoices;
-  const showSkillControls = state.phase === "deal" && canSeeChoices;
+  const showBettingControls = isBettingEnabled(state) && state.phase === "betting" && !isObserverCard;
+  const showStrategyControls = state.phase === "deal" && canSeeChoices && !isFolded;
+  const showSkillControls = state.phase === "deal" && canSeeChoices && !isFolded;
   const canPlan = showStrategyControls && playerData.isParticipating && isVisualOwner && !isLockedOut;
   const canUseCrownReroll = state.phase === "locked" && playerData.isParticipating && isVisualOwner && hasPendingCrownReroll(playerData) && !isLockedOut;
   const canReroll = state.phase === "locked" && playerData.isParticipating && isVisualOwner && playerData.changesLeft > 0 && !hasPendingCrownReroll(playerData) && !hasPendingCrownLock && !isLockedOut;
   const canSeeConfirmState = game.user?.isGM || canSeeChoices;
-  const showConfirm = ["deal", "locked"].includes(state.phase) && canSeeConfirmState && !isObserverCard;
+  const showConfirm = ["deal", "locked"].includes(state.phase) && canSeeConfirmState && !isObserverCard && !isFolded;
   const confirmDisabled = !showConfirm || !playerData.isParticipating || isLockedOut || !canPlayerControl || (state.phase === "locked" && hasPendingCrownLock);
   const classes = [
     playerData.isParticipating ? "" : "tsu-player-card--spectator",
     (canPlan || canReroll || canUseCrownReroll) ? "tsu-player-card--active" : "",
     playerData.isWinner ? "tsu-player-card--winner" : "",
+    isFolded ? "tsu-player-card--spectator kb-player-card--folded" : "",
     playerData.isParticipating ? "active" : "",
     playerData.isWinner ? "is-winner" : "",
+    isFolded ? "is-folded" : "",
   ].filter(Boolean).join(" ");
 
   const strategyButtons = Object.entries(STRATEGIES).map(([strategyId, strategy]) => ({
@@ -631,7 +844,7 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
   }));
 
   const exposedTargets = [];
-  if (state.phase === "locked" && isVisualOwner && !hasPendingCrownLock) {
+  if (state.phase === "locked" && isVisualOwner && !hasPendingCrownLock && !isFolded) {
     for (const [cheaterId, observerIds] of Object.entries(visibleCheatersMap)) {
       if (!observerIds.includes(actorId)) continue;
       const cheater = state.players[cheaterId];
@@ -654,6 +867,8 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
   let statusText = "";
   if (isObserverCard) {
     statusText = "";
+  } else if (isFolded) {
+    statusText = gt(definition, "Betting.Folded", "Folded");
   } else if (isLockedOut) {
     statusText = gt(definition, "Disqualified", "Disqualified");
   } else if (state.phase === "reveal" && playerData.handName && !playerData.isWinner && !isDisqualified) {
@@ -664,6 +879,22 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
     statusText = gtf(definition, "RerollsLeft", { count: playerData.changesLeft }, ({ count }) => `Rerolls left: ${count}`);
   }
   const handResolvedName = state.phase === "reveal" ? (playerData.handName || "") : "";
+  const bettingCurrency = state.betting.currency;
+  const roundLimit = getBettingRoundLimit(state);
+  const highestBet = getBettingHighBet(state);
+  const callDelta = Math.max(0, highestBet - playerData.roundBet);
+  const raiseSteps = toPositiveInteger(playerData.raiseSteps, 1);
+  const raiseTarget = Math.min(roundLimit, highestBet + (getBettingStep(state) * raiseSteps));
+  const raiseDelta = Math.max(0, raiseTarget - playerData.roundBet);
+  const allInDelta = Math.max(0, roundLimit - playerData.roundBet);
+  const activeBettersCount = getActiveBettingEntries(state).length;
+  const canBet = showBettingControls && playerData.isParticipating && isVisualOwner && !isFolded;
+  const showAwardPotButton = game.user.isGM
+    && state.phase === "reveal"
+    && state.betting.enabled
+    && state.betting.pot > 0
+    && !state.betting.awardedWinners?.[actorId]
+    && playerData.isWinner;
 
   return {
     id: actorId,
@@ -683,6 +914,51 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
     removeDisabled: !game.user.isGM,
     showBody: state.phase !== "join" && !isObserverCard,
     showDice,
+    showBettingControls,
+    canBet,
+    currentBetLabel: state.betting.enabled && playerData.isParticipating && state.phase !== "join"
+      ? gtf(
+        definition,
+        "Betting.TotalBet",
+        { amount: formatBetAmount(definition, playerData.totalBet, bettingCurrency) },
+        ({ amount }) => `Bet: ${amount}`
+      )
+      : "",
+    roundBetLabel: state.betting.enabled && playerData.isParticipating && state.phase !== "join"
+      ? gtf(
+        definition,
+        "Betting.RoundBet",
+        {
+          amount: formatBetAmount(definition, playerData.roundBet, bettingCurrency),
+          round: state.betting.currentRound || 1,
+        },
+        ({ amount, round }) => `Round ${round}: ${amount}`
+      )
+      : "",
+    raiseSteps,
+    canCall: canBet && callDelta > 0,
+    callLabel: gtf(
+      definition,
+      "Buttons.CallAmount",
+      { amount: formatBetAmount(definition, callDelta, bettingCurrency) },
+      ({ amount }) => `Call ${amount}`
+    ),
+    canRaise: canBet && raiseDelta > 0 && highestBet < roundLimit,
+    raiseLabel: gtf(
+      definition,
+      "Buttons.RaiseAmount",
+      { amount: formatBetAmount(definition, raiseDelta, bettingCurrency) },
+      ({ amount }) => `Raise ${amount}`
+    ),
+    canAllIn: canBet && allInDelta > 0,
+    allInLabel: gtf(
+      definition,
+      "Buttons.AllInAmount",
+      { amount: formatBetAmount(definition, allInDelta, bettingCurrency) },
+      ({ amount }) => `All-in ${amount}`
+    ),
+    canFold: canBet && activeBettersCount > 1,
+    foldLabel: gt(definition, "Buttons.Pass", "Pass"),
     showStrategyControls,
     showSkillControls,
     canPlan,
@@ -712,6 +988,8 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
     ].filter(Boolean).join(" "),
     exposedTargets,
     winnerLabel: playerData.isWinner ? gt(definition, "Winner", "Winner") : "",
+    showAwardPotButton,
+    awardPotLabel: gt(definition, "Buttons.AwardPot", "Award Pot"),
     caughtLabel: playerData.complaints?.length ? gt(definition, "Disqualified", "Disqualified") : "",
     handResolvedName,
   };
@@ -827,7 +1105,7 @@ function logResult(definition, state, playerData, d20, modifier, penalty, total,
 async function executeMasterLogic(definition, state, { round = 1, preserveComplaints = false } = {}) {
   state.phase = "locked";
   state.lockedRound = round;
-  const participants = Object.values(state.players).filter((entry) => entry.isParticipating);
+  const participants = Object.values(state.players).filter((entry) => entry.isParticipating && !isPlayerFolded(entry));
   const activePlayers = participants.filter((entry) => !(round > 1 && isPlayerDisqualified(entry)));
   const dc = state.currentDC || 15;
   state.log.unshift(buildChronicleHeader(definition, dc));
@@ -902,17 +1180,62 @@ async function executeMasterLogic(definition, state, { round = 1, preserveCompla
       const dieIndex = Math.floor(Math.random() * 3);
       playerData.dice[dieIndex] = Math.floor(Math.random() * 10) + 1;
       const content = unwrapChronicleEntry(gtf(definition, "Log.ForcedReroll", { name: playerData.name }, ({ name }) => `Dealer forces a reroll for <b>${escapeHtml(name)}</b>.`));
-      state.log.unshift(buildChronicleNote(`вљ  ${content}`, { color: "#ffb347" }));
+      state.log.unshift(buildChronicleNote(`⚠ ${content}`, { color: "#ffb347" }));
     }
     if (degree === 0) {
       const dieIndex = Math.floor(Math.random() * 3);
       playerData.dice[dieIndex] = 0;
       playerData.blackDiceIdx = dieIndex;
       const content = unwrapChronicleEntry(gtf(definition, "Log.BlackDie", { name: playerData.name }, ({ name }) => `Black die for <b>${escapeHtml(name)}</b>.`));
-      state.log.unshift(buildChronicleNote(`вљ  ${content}`, { color: "#ff8b8b" }));
+      state.log.unshift(buildChronicleNote(`⚠ ${content}`, { color: "#ff8b8b" }));
     }
     logResult(definition, state, playerData, roll.total, modifier, 0, total, dc, degree, "Fair");
   }
+}
+
+function revealKubokerWinner(definition, state) {
+  state.phase = "reveal";
+  let bestScore = -1;
+  const winners = [];
+
+  for (const playerData of Object.values(state.players)) {
+    ensurePlayerBettingState(playerData);
+    playerData.isWinner = false;
+    if (!playerData.isParticipating) continue;
+    if (playerData.isFolded) {
+      playerData.handName = gt(definition, "Betting.Folded", "Folded");
+      playerData.score = -1;
+      continue;
+    }
+    if (playerData.complaints?.length) {
+      playerData.handName = gt(definition, "Disqualified", "Disqualified");
+      playerData.score = -1;
+      continue;
+    }
+    const hand = evaluateHand(playerData.dice, state.center);
+    playerData.handName = gt(definition, `Hands.${hand.nameKey}`, hand.nameKey);
+    playerData.score = hand.score;
+    if (hand.score > bestScore) bestScore = hand.score;
+  }
+
+  for (const playerData of Object.values(state.players)) {
+    if (!playerData.isParticipating || playerData.score !== bestScore || bestScore < 0) continue;
+    playerData.isWinner = true;
+    winners.push(playerData.name);
+  }
+
+  const winnerNames = winners.join(", ");
+  const winnerContent = unwrapChronicleEntry(gtf(
+    definition,
+    "Log.Winner",
+    {
+      winners: winnerNames,
+      name: winnerNames,
+      hand: Object.values(state.players).find((entry) => entry.isWinner)?.handName || gt(definition, "NoHand", "No hand"),
+    },
+    ({ winners, hand }) => `<b>Winner:</b> ${escapeHtml(winners || "-")}<br><span>${escapeHtml(hand)}</span>`
+  ));
+  state.log.unshift(buildChronicleNote(winnerContent, { color: "#ffd700" }));
 }
 
 const template = `
@@ -962,6 +1285,11 @@ const template = `
           <span class="tsu-die kb-stock-die">{{this}}</span>
         {{/each}}
       </div>
+      {{#if bettingEnabled}}
+        <div class="kb-bank-line">
+          <span>{{bettingBankLabel}}</span>
+        </div>
+      {{/if}}
     </section>
 
     {{#if showEmptyState}}<div class="tsu-empty-state kb-empty-state">{{emptyState}}</div>{{/if}}
@@ -994,6 +1322,12 @@ const template = `
                 {{#if spectatorLabel}}<span class="tsu-chip">{{spectatorLabel}}</span>{{/if}}
               </div>
               {{/if}}
+              {{#if currentBetLabel}}
+                <div class="kb-player-betline">
+                  <span class="tsu-chip kb-bet-chip">{{currentBetLabel}}</span>
+                  {{#if roundBetLabel}}<span class="kb-round-bet">{{roundBetLabel}}</span>{{/if}}
+                </div>
+              {{/if}}
             </div>
           </div>
 
@@ -1005,6 +1339,18 @@ const template = `
                 {{/each}}
               </div>
             {{/if}}
+
+              {{#if showBettingControls}}
+                <div class="kb-betting-row">
+                  <button type="button" class="tsu-small-button kb-btn-sm {{#unless canCall}}is-disabled disabled{{/unless}}" data-action="call-bet" data-actor-id="{{id}}" data-actor="{{id}}" {{#unless canCall}}disabled{{/unless}}>{{callLabel}}</button>
+                  <div class="kb-raise-control">
+                    <button type="button" class="tsu-small-button kb-btn-sm {{#unless canRaise}}is-disabled disabled{{/unless}}" data-action="raise-bet" data-actor-id="{{id}}" data-actor="{{id}}" {{#unless canRaise}}disabled{{/unless}}>{{raiseLabel}}</button>
+                    <input type="number" class="kb-raise-steps" min="1" step="1" value="{{raiseSteps}}" data-actor-id="{{id}}" data-actor="{{id}}" {{#unless canBet}}disabled{{/unless}}>
+                  </div>
+                  <button type="button" class="tsu-small-button kb-btn-sm {{#unless canAllIn}}is-disabled disabled{{/unless}}" data-action="all-in-bet" data-actor-id="{{id}}" data-actor="{{id}}" {{#unless canAllIn}}disabled{{/unless}}>{{allInLabel}}</button>
+                  <button type="button" class="tsu-small-button kb-btn-sm kb-pass-btn {{#unless canFold}}is-disabled disabled{{/unless}}" data-action="fold-bet" data-actor-id="{{id}}" data-actor="{{id}}" {{#unless canFold}}disabled{{/unless}}>{{foldLabel}}</button>
+                </div>
+              {{/if}}
 
               {{#if showCrownControls}}
                 <div class="tsu-player-subline kb-bottom-status">
@@ -1046,6 +1392,11 @@ const template = `
               {{/if}}
 
               {{#if isWinner}}<div class="kb-result-line kb-result-line--win">{{winnerLabel}} {{handResolvedName}}!</div>{{/if}}
+              {{#if showAwardPotButton}}
+                <div class="kb-award-row">
+                  <button type="button" class="tsu-small-button kb-btn-sm" data-action="award-pot" data-actor-id="{{id}}" data-actor="{{id}}">{{awardPotLabel}}</button>
+                </div>
+              {{/if}}
               {{#if isCaught}}<div class="kb-result-line kb-result-line--caught">{{caughtLabel}}</div>{{/if}}
               {{#if statusText}}<div class="kb-result-line kb-result-line--note">{{statusText}}</div>{{/if}}
           {{/if}}
@@ -1066,12 +1417,49 @@ const template = `
   </aside>
 
   <footer class="tsu-footer kb-footer">
-    <div>
+    <div class="kb-footer-settings">
       {{#if isGM}}
         <label class="tsu-checkbox kb-debug-label">
           <input id="kb-debug-mode" class="kb-debug" type="checkbox" {{#if state.debugMode}}checked{{/if}}>
           <span>{{ui.debugLabel}}</span>
         </label>
+        <label class="tsu-checkbox kb-debug-label">
+          <input id="kb-betting-enabled" class="kb-betting-enabled" type="checkbox" {{#if bettingEnabled}}checked{{/if}} {{#unless bettingConfigEditable}}disabled{{/unless}}>
+          <span>{{bettingToggleLabel}}</span>
+        </label>
+        {{#if bettingEnabled}}
+          <div class="kb-betting-config">
+            <label class="kb-betting-field">
+              <span>{{bettingInitialStakeLabel}}</span>
+              <input type="number" class="kb-betting-input" data-betting-field="initialStake" min="1" step="1" value="{{bettingInitialStakeValue}}" {{#unless bettingConfigEditable}}disabled{{/unless}}>
+            </label>
+            <label class="kb-betting-field">
+              <span>{{bettingCurrencyLabel}}</span>
+              <div class="kb-betting-dropdown {{#unless bettingConfigEditable}}is-disabled disabled{{/unless}}">
+                <button type="button" class="kb-betting-select" data-action="toggle-betting-currency" {{#unless bettingConfigEditable}}disabled{{/unless}}>
+                  <span class="kb-betting-select__pad" aria-hidden="true"></span>
+                  <span class="kb-betting-select__value">{{bettingSelectedCurrencyLabel}}</span>
+                  <span class="kb-betting-select__arrow" aria-hidden="true"></span>
+                </button>
+                <div class="kb-betting-dropdown-menu">
+                  {{#each bettingCurrencyOptions}}
+                    <button type="button" class="kb-betting-option {{#if selected}}is-selected{{/if}}" data-action="set-betting-currency" data-currency="{{value}}">
+                      {{label}}
+                    </button>
+                  {{/each}}
+                </div>
+              </div>
+            </label>
+            <label class="kb-betting-field">
+              <span>{{bettingStepLabel}}</span>
+              <input type="number" class="kb-betting-input" data-betting-field="step" min="1" step="1" value="{{bettingStepValue}}" {{#unless bettingConfigEditable}}disabled{{/unless}}>
+            </label>
+            <label class="kb-betting-field">
+              <span>{{bettingRoundLimitLabel}}</span>
+              <input type="number" class="kb-betting-input" data-betting-field="roundLimit" min="1" step="1" value="{{bettingRoundLimitValue}}" {{#unless bettingConfigEditable}}disabled{{/unless}}>
+            </label>
+          </div>
+        {{/if}}
       {{/if}}
     </div>
     <div class="tsu-footer-actions">
@@ -1124,6 +1512,7 @@ class KubokerApplication extends Application {
 
   getData() {
     const state = this.getState();
+    ensureBettingState(state);
     const visibleCheatersMap = getVisibleCheatersMap(state);
     const suggestedDc = getSuggestedDc(state);
     const ui = {
@@ -1163,20 +1552,27 @@ class KubokerApplication extends Application {
         disabled: participatingCount === 0,
       };
 
-      if (state.phase === "deal") {
+      if (state.phase === "betting") {
+        roundButton.action = "advance-betting";
+        roundButton.label = gt(definition, "Buttons.Advance", "Continue");
+        roundButton.title = gt(definition, "Buttons.Advance", "Continue");
+        roundButton.icon = "fas fa-arrow-right";
+        roundButton.classes = "is-resolve";
+        roundButton.disabled = !canAdvanceBettingRound(state);
+      } else if (state.phase === "deal") {
         roundButton.action = "run-lock";
         roundButton.title = ui.buttons.round;
         roundButton.icon = "fas fa-broom";
         roundButton.classes = "is-resolve";
         roundButton.disabled = false;
       } else if (state.phase === "locked" && getLockedRound(state) < LOCKED_ROUNDS_TOTAL) {
-        roundButton.action = "advance-round";
+        roundButton.action = isBettingEnabled(state) ? "enter-betting" : "advance-round";
         roundButton.title = ui.buttons.round;
         roundButton.icon = "fas fa-arrow-right";
         roundButton.classes = `is-resolve${hasPendingCrownLock ? " is-disabled disabled" : ""}`;
         roundButton.disabled = hasPendingCrownLock;
       } else if (state.phase === "locked" && getLockedRound(state) >= LOCKED_ROUNDS_TOTAL) {
-        roundButton.action = "reveal";
+        roundButton.action = isBettingEnabled(state) ? "enter-betting" : "reveal";
         roundButton.title = ui.buttons.reveal;
         roundButton.icon = "fas fa-eye";
         roundButton.classes = `is-reveal${hasPendingCrownLock ? " is-disabled disabled" : ""}`;
@@ -1202,6 +1598,28 @@ class KubokerApplication extends Application {
       players,
       showEmptyState: players.length === 0 || participatingCount === 0,
       emptyState: buildEmptyState(definition, state, visibleEntries),
+      bettingEnabled: state.betting.enabled,
+      bettingConfigEditable: state.phase === "join",
+      bettingToggleLabel: gt(definition, "Betting.Toggle", "Raise the stakes"),
+      bettingInitialStakeLabel: gt(definition, "Betting.InitialStake", "Initial stake"),
+      bettingCurrencyLabel: gt(definition, "Betting.Currency", "Currency"),
+      bettingStepLabel: gt(definition, "Betting.Step", "Raise step"),
+      bettingRoundLimitLabel: gt(definition, "Betting.RoundLimit", "Round limit"),
+      bettingInitialStakeValue: state.betting.initialStake,
+      bettingStepValue: state.betting.step,
+      bettingRoundLimitValue: state.betting.roundLimit,
+      bettingSelectedCurrencyLabel: getBettingCurrencyShort(definition, state.betting.currency),
+      bettingCurrencyOptions: Object.keys(BETTING_CURRENCIES).map((currency) => ({
+        value: currency,
+        label: getBettingCurrencyShort(definition, currency),
+        selected: state.betting.currency === currency,
+      })),
+      bettingBankLabel: gtf(
+        definition,
+        "Betting.Bank",
+        { amount: formatBetAmount(definition, state.betting.pot, state.betting.currency) },
+        ({ amount }) => `Bank: ${amount}`
+      ),
       centerDice: (() => {
         const dice = normalizeDiceValues(state.center, { fallback: 0 }).filter((value) => value > 0);
         return dice.length ? dice : ["-", "-"];
@@ -1215,6 +1633,10 @@ class KubokerApplication extends Application {
   activateListeners(html) {
     super.activateListeners(html);
 
+    html.on("click", (event) => {
+      if ($(event.target).closest(".kb-betting-dropdown").length) return;
+      html.find(".kb-betting-dropdown.is-open").removeClass("is-open");
+    });
     html.on("click", "[data-action]", (event) => this.onActionClick(event));
     html.on("dragover", (event) => {
       event.preventDefault();
@@ -1233,6 +1655,23 @@ class KubokerApplication extends Application {
     html.on("change", "#kb-debug-mode", (event) => {
       if (!game.user.isGM) return;
       void requestGameAction(GAME_ID, "toggle-debug", { enabled: event.currentTarget.checked });
+    });
+    html.on("change", "#kb-betting-enabled", (event) => {
+      if (!game.user?.isGM) return;
+      void requestGameAction(GAME_ID, "set-betting-config", { enabled: event.currentTarget.checked });
+    });
+    html.on("change", ".kb-betting-input", (event) => {
+      if (!game.user?.isGM) return;
+      const field = event.currentTarget.dataset.bettingField;
+      if (!field) return;
+      void requestGameAction(GAME_ID, "set-betting-config", { [field]: event.currentTarget.value });
+    });
+    html.on("change", ".kb-raise-steps", (event) => {
+      const input = event.currentTarget;
+      void requestGameAction(GAME_ID, "set-raise-steps", {
+        actorId: input.dataset.actorId,
+        steps: input.value,
+      });
     });
     html.on("change", ".kb-dc-input", (event) => {
       if (!game.user?.isGM) return;
@@ -1328,6 +1767,45 @@ class KubokerApplication extends Application {
       case "reveal":
         await requestGameAction(GAME_ID, "reveal", {});
         break;
+      case "enter-betting":
+        await requestGameAction(GAME_ID, "enter-betting", {});
+        break;
+      case "advance-betting":
+        await requestGameAction(GAME_ID, "advance-betting", {});
+        break;
+      case "call-bet":
+        await requestGameAction(GAME_ID, "call-bet", { actorId });
+        break;
+      case "raise-bet": {
+        const state = this.getState();
+        const steps = state.players?.[actorId]?.raiseSteps ?? 1;
+        await requestGameAction(GAME_ID, "raise-bet", { actorId, steps });
+        break;
+      }
+      case "all-in-bet":
+        await requestGameAction(GAME_ID, "all-in-bet", { actorId });
+        break;
+      case "fold-bet":
+        await requestGameAction(GAME_ID, "fold-bet", { actorId });
+        break;
+      case "toggle-betting-currency": {
+        event.preventDefault();
+        event.stopPropagation();
+        const dropdown = button.closest(".kb-betting-dropdown");
+        if (!dropdown || dropdown.classList.contains("is-disabled")) break;
+        this.element?.find(".kb-betting-dropdown.is-open").not(dropdown).removeClass("is-open");
+        dropdown.classList.toggle("is-open");
+        break;
+      }
+      case "set-betting-currency":
+        event.preventDefault();
+        event.stopPropagation();
+        button.closest(".kb-betting-dropdown")?.classList.remove("is-open");
+        await requestGameAction(GAME_ID, "set-betting-config", { currency: button.dataset.currency });
+        break;
+      case "award-pot":
+        await requestGameAction(GAME_ID, "award-pot", { actorId });
+        break;
       case "clear":
         await requestGameAction(GAME_ID, "clear", {});
         break;
@@ -1360,6 +1838,7 @@ const definition = {
   syncDefaultPlayers,
   createApplication: () => new KubokerApplication(),
   async handleAction({ action, data, state, senderId, canUserControlActor }) {
+    ensureBettingState(state);
     const senderIsGM = game.users?.get(senderId)?.isGM ?? false;
     switch (action) {
       case "toggle-join": {
@@ -1379,6 +1858,23 @@ const definition = {
         if (!value) return false;
         state.dcOverride = value;
         state.currentDC = value;
+        return true;
+      }
+      case "set-betting-config": {
+        if (!senderIsGM || state.phase !== "join") return false;
+        if (Object.prototype.hasOwnProperty.call(data, "enabled")) state.betting.enabled = Boolean(data.enabled);
+        if (Object.prototype.hasOwnProperty.call(data, "currency")) state.betting.currency = normalizeBettingCurrency(data.currency);
+        if (Object.prototype.hasOwnProperty.call(data, "initialStake")) state.betting.initialStake = toPositiveInteger(data.initialStake, state.betting.initialStake);
+        if (Object.prototype.hasOwnProperty.call(data, "step")) state.betting.step = toPositiveInteger(data.step, state.betting.step);
+        if (Object.prototype.hasOwnProperty.call(data, "roundLimit")) state.betting.roundLimit = toPositiveInteger(data.roundLimit, state.betting.roundLimit);
+        ensureBettingState(state);
+        return true;
+      }
+      case "set-raise-steps": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        ensurePlayerBettingState(playerData);
+        playerData.raiseSteps = toPositiveInteger(data.steps, playerData.raiseSteps);
         return true;
       }
       case "select-strategy": {
@@ -1407,6 +1903,80 @@ const definition = {
         if (!playerData || !playerData.isParticipating || !["deal", "locked"].includes(state.phase) || isPlayerLockedOut(state, playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
         if (state.phase === "locked" && hasAnyPendingCrownRerolls(state)) return false;
         playerData.isConfirmed = Boolean(data.isConfirmed);
+        return true;
+      }
+      case "call-bet": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || state.phase !== "betting" || !playerData.isParticipating || isPlayerFolded(playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        const highestBet = getBettingHighBet(state);
+        if (highestBet <= playerData.roundBet) return false;
+        const delta = applyBetForPlayer(state, playerData, highestBet);
+        if (!delta) return false;
+        const content = unwrapChronicleEntry(gtf(
+          definition,
+          "Log.BetCall",
+          { name: playerData.name, amount: formatBetAmount(definition, delta, state.betting.currency) },
+          ({ name, amount }) => `<b>${escapeHtml(name)}</b> calls <b>${escapeHtml(amount)}</b>.`
+        ));
+        state.log.unshift(buildChronicleNote(content, { color: "#d7f0ff" }));
+        return true;
+      }
+      case "raise-bet": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || state.phase !== "betting" || !playerData.isParticipating || isPlayerFolded(playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        const steps = toPositiveInteger(data.steps, playerData.raiseSteps);
+        playerData.raiseSteps = steps;
+        const highestBet = getBettingHighBet(state);
+        const targetBet = Math.min(getBettingRoundLimit(state), highestBet + (getBettingStep(state) * steps));
+        if (targetBet <= playerData.roundBet || targetBet <= highestBet) return false;
+        const delta = applyBetForPlayer(state, playerData, targetBet);
+        if (!delta) return false;
+        const content = unwrapChronicleEntry(gtf(
+          definition,
+          "Log.BetRaise",
+          {
+            name: playerData.name,
+            amount: formatBetAmount(definition, delta, state.betting.currency),
+            total: formatBetAmount(definition, targetBet, state.betting.currency),
+          },
+          ({ name, amount, total }) => `<b>${escapeHtml(name)}</b> raises by <b>${escapeHtml(amount)}</b> to <b>${escapeHtml(total)}</b>.`
+        ));
+        state.log.unshift(buildChronicleNote(content, { color: "#ffe6a3" }));
+        return true;
+      }
+      case "all-in-bet": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || state.phase !== "betting" || !playerData.isParticipating || isPlayerFolded(playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        const targetBet = getBettingRoundLimit(state);
+        if (playerData.roundBet >= targetBet) return false;
+        const delta = applyBetForPlayer(state, playerData, targetBet);
+        if (!delta) return false;
+        const content = unwrapChronicleEntry(gtf(
+          definition,
+          "Log.BetAllIn",
+          {
+            name: playerData.name,
+            amount: formatBetAmount(definition, delta, state.betting.currency),
+            total: formatBetAmount(definition, targetBet, state.betting.currency),
+          },
+          ({ name, amount, total }) => `<b>${escapeHtml(name)}</b> goes all-in for <b>${escapeHtml(total)}</b> (+${escapeHtml(amount)}).`
+        ));
+        state.log.unshift(buildChronicleNote(content, { color: "#ffcfb8" }));
+        return true;
+      }
+      case "fold-bet": {
+        const playerData = state.players[data.actorId];
+        if (!playerData || state.phase !== "betting" || !playerData.isParticipating || isPlayerFolded(playerData) || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        if (getActiveBettingEntries(state).length <= 1) return false;
+        playerData.isFolded = true;
+        playerData.isConfirmed = false;
+        const content = unwrapChronicleEntry(gtf(
+          definition,
+          "Log.BetFold",
+          { name: playerData.name },
+          ({ name }) => `<b>${escapeHtml(name)}</b> folds and leaves the bank behind.`
+        ));
+        state.log.unshift(buildChronicleNote(content, { color: "#ff9e9e" }));
         return true;
       }
       case "reroll-die": {
@@ -1499,11 +2069,11 @@ const definition = {
           return false;
         }
 
-        state.phase = "deal";
         state.lockedRound = 1;
         state.center = [Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 10) + 1];
         const suggestedDc = getSuggestedDc(state);
         state.currentDC = hasManualDcOverride(state) ? state.dcOverride : suggestedDc;
+        resetBettingForNewHand(state);
         const dealContent = unwrapChronicleEntry(gtf(
           definition,
           "Log.DealStart",
@@ -1527,8 +2097,37 @@ const definition = {
           playerData.isWinner = false;
           playerData.handName = "";
           playerData.score = 0;
+          playerData.totalBet = 0;
+          playerData.roundBet = 0;
+          playerData.raiseSteps = 1;
+          playerData.isFolded = false;
         }
+        if (state.betting.enabled) startBettingRound(definition, state, 1);
+        else state.phase = "deal";
         return true;
+      }
+      case "enter-betting": {
+        if (!senderIsGM || state.phase !== "locked" || hasAnyPendingCrownRerolls(state) || !state.betting.enabled) return false;
+        const nextRound = Math.min(BETTING_ROUNDS_TOTAL, getLockedRound(state) + 1);
+        startBettingRound(definition, state, nextRound);
+        return true;
+      }
+      case "advance-betting": {
+        if (!senderIsGM || state.phase !== "betting" || !canAdvanceBettingRound(state)) return false;
+        const bettingRound = state.betting.currentRound || 1;
+        if (bettingRound === 1) {
+          state.phase = "deal";
+          state.lockedRound = 1;
+          return true;
+        }
+        if (bettingRound === 2) {
+          return beginNextLockedRound(definition, state);
+        }
+        if (bettingRound >= 3) {
+          revealKubokerWinner(definition, state);
+          return true;
+        }
+        return false;
       }
       case "run-lock": {
         if (!senderIsGM || state.phase !== "deal") return false;
@@ -1544,50 +2143,19 @@ const definition = {
       case "reveal": {
         if (!senderIsGM || state.phase !== "locked" || getLockedRound(state) < LOCKED_ROUNDS_TOTAL) return false;
         if (hasAnyPendingCrownRerolls(state)) return false;
-        state.phase = "reveal";
-        let bestScore = -1;
-        const winners = [];
-
-        for (const playerData of Object.values(state.players)) {
-          playerData.isWinner = false;
-          if (!playerData.isParticipating) continue;
-          if (playerData.complaints?.length) {
-            playerData.handName = gt(definition, "Disqualified", "Disqualified");
-            playerData.score = -1;
-            continue;
-          }
-          const hand = evaluateHand(playerData.dice, state.center);
-          playerData.handName = gt(definition, `Hands.${hand.nameKey}`, hand.nameKey);
-          playerData.score = hand.score;
-          if (hand.score > bestScore) bestScore = hand.score;
-        }
-
-        for (const playerData of Object.values(state.players)) {
-          if (!playerData.isParticipating || playerData.score !== bestScore || bestScore < 0) continue;
-          playerData.isWinner = true;
-          winners.push(playerData.name);
-        }
-
-        const winnerNames = winners.join(", ");
-        const winnerContent = unwrapChronicleEntry(gtf(
-          definition,
-          "Log.Winner",
-          {
-            winners: winnerNames,
-            name: winnerNames,
-            hand: Object.values(state.players).find((entry) => entry.isWinner)?.handName || gt(definition, "NoHand", "No hand"),
-          },
-          ({ winners, hand }) => `<b>Winner:</b> ${escapeHtml(winners || "-")}<br><span>${escapeHtml(hand)}</span>`
-        ));
-        state.log.unshift(buildChronicleNote(winnerContent, { color: "#ffd700" }));
+        revealKubokerWinner(definition, state);
         return true;
       }
+      case "award-pot":
+        if (!senderIsGM || state.phase !== "reveal") return false;
+        return awardKubokerPot(definition, state, data.actorId);
       case "clear": {
         if (!senderIsGM) return false;
         state.phase = "join";
         state.lockedRound = 0;
         state.center = [];
         state.currentDC = hasManualDcOverride(state) ? state.dcOverride : getSuggestedDc(state);
+        resetBettingForNewHand(state);
         state.log = [buildChronicleNote(unwrapChronicleEntry(gt(definition, "Log.Cleared", "Table cleared.")), { color: "#888888" })];
         for (const playerData of Object.values(state.players)) {
           playerData.dice = [0, 0, 0];

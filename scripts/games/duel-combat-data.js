@@ -1615,6 +1615,20 @@ export const DUEL_STYLE = `
   
   .dl-player-card { background: linear-gradient(135deg, #222, #111); margin-bottom: 15px; padding: 12px; border: 2px solid #4a0404; border-radius: 4px; position: relative; box-shadow: inset 0 0 10px black; }
   .dl-player-card.is-ready { border-color: #28a745; box-shadow: 0 0 10px rgba(40,167,69,0.3); }
+  .dl-player-card.is-spectator { border-color: #4d5965; background: linear-gradient(135deg, #1d1f23, #101216); box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7); }
+  .dl-spectator-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border: 1px solid #7f8c99;
+    border-radius: 999px;
+    background: rgba(79, 95, 114, 0.18);
+    color: #c7d1db;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
   
   .dl-wound-bar-bg { background: #111; height: 12px; width: 100%; border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #4a0404; position: relative;}
   .dl-wound-bar-fill { background: linear-gradient(90deg, #800020, #ff0000); height: 100%; transition: 0.5s; }
@@ -1633,9 +1647,164 @@ export const DUEL_STYLE = `
   
   .dl-col-log { flex: 1.9; background: #050505; padding: 15px; padding-bottom: 50px; font-size: 11.5px; overflow-y: auto; color: #A8A9AD; }
   
-  .dl-footer { position: absolute; bottom: 0; left: 0; width: 100%; height: 42px; background: #0a0a0a; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-top: 2px solid #A8A9AD; z-index: 100;}
-  .dl-btn-main { background: #4a0404; color: #d3d3d3; border: 1px solid #A8A9AD; cursor: pointer; padding: 0 14px; font-weight: bold; font-size: 11px; border-radius: 3px; height: 28px; line-height: 26px; }
-  .dl-btn-main:hover { background: #800020; box-shadow: 0 0 8px #ff4444; }
+  .dl-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    min-height: 38px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 12px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #160a0f, #070a0d);
+    border-top: 1px solid #7f8c99;
+    z-index: 100;
+    overflow: visible;
+  }
+  .dl-footer-settings {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .dl-footer-actions {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    margin-left: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .dl-join-label,
+  .dl-debug-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 400;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dl-join-label { color: #c3ccd6; font-size: 11px; }
+  .dl-debug-label { color: #99a6b4; }
+  .dl-join-label input,
+  .dl-debug-label input {
+    margin: 0;
+    width: 12px;
+    min-width: 12px;
+    max-width: 12px;
+    height: 12px;
+    min-height: 12px;
+    max-height: 12px;
+    inline-size: 12px;
+    block-size: 12px;
+    flex: 0 0 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #7f8c99;
+    border-radius: 0;
+    background: linear-gradient(180deg, #7b1826, #42111a);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .dl-join-label input {
+    width: 14px;
+    min-width: 14px;
+    max-width: 14px;
+    height: 14px;
+    min-height: 14px;
+    max-height: 14px;
+    inline-size: 14px;
+    block-size: 14px;
+    flex: 0 0 14px;
+  }
+  .dl-join-label input:hover,
+  .dl-debug-label input:hover {
+    background: linear-gradient(180deg, #952133, #551723);
+    box-shadow: 0 0 6px rgba(127, 140, 153, 0.26);
+  }
+  .dl-join-label input:checked,
+  .dl-debug-label input:checked {
+    background: linear-gradient(180deg, #a42b3e, #631b2a);
+    border-color: #aeb9c4;
+  }
+  .dl-join-label input:checked::after,
+  .dl-debug-label input:checked::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 3px;
+    height: 7px;
+    border: solid #e7edf3;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -58%) rotate(45deg);
+  }
+  .dl-btn-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+    height: 26px;
+    padding: 0 12px;
+    border: 1px solid #7f8c99;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #7b1826, #451019);
+    color: #dfe6ee;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 24px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    margin: 0;
+  }
+  .dl-btn-main:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+    background: linear-gradient(180deg, #962236, #5b1622);
+    box-shadow: 0 0 7px rgba(127, 140, 153, 0.28);
+  }
+  .dl-btn-main:disabled {
+    background: #4f4b4d;
+    color: #aba7aa;
+    border-color: #737175;
+    opacity: 1;
+  }
+  .dl-btn-main.dl-ready-btn {
+    min-width: 0;
+    padding: 3px 10px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+  .dl-btn-main.dl-ready-btn.is-ready {
+    background: linear-gradient(180deg, #5f2430, #34151c);
+    color: #f2f6fa;
+    border-color: #b5c0cb;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 0 0 1px rgba(127, 140, 153, 0.18),
+      0 0 10px rgba(123, 24, 38, 0.22);
+  }
+  .dl-btn-main.dl-btn-accent {
+    background: linear-gradient(180deg, #8c2232, #55131d);
+  }
+  .dl-btn-main.dl-btn-muted {
+    background: linear-gradient(180deg, #4f5f72, #313b47);
+  }
   
   .dl-status-badge { background: #800020; border: 1px solid #ff4444; color: white; font-size: 9px; padding: 2px 5px; border-radius: 3px; display: inline-block; margin-top: 5px;}
 </style>
@@ -1673,7 +1842,7 @@ export const DUEL_TEMPLATE = `
   <div class="dl-col-main">
     <div class="dl-header-thematic"><h2>🩸 БОЕВАЯ ДУЭЛЬ 🩸</h2></div>
     {{#each players}}
-      <div class="dl-player-card {{#if this.isReady}}is-ready{{/if}}">
+      <div class="dl-player-card {{#if this.isReady}}is-ready{{/if}} {{#if this.isObserverCard}}is-spectator{{/if}}">
         <div style="display:flex; align-items:center; justify-content:space-between;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{{this.img}}" width="40" height="40" style="border-radius:4px; border:1px solid #A8A9AD;">
@@ -1686,16 +1855,19 @@ export const DUEL_TEMPLATE = `
             </div>
             <div>
               {{#if ../isJoinPhase}}
-                  <label style="font-size:11px; cursor:pointer; color:#A8A9AD;"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> УЧАСТНИК</label>
+                  <label class="dl-join-label"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> Я В ИГРЕ</label>
               {{/if}}
-              {{#if (and ../isPlayingPhase this.isOwner)}}
-                  <button class="dl-btn-main dl-ready-btn" data-actor="{{this.id}}" style="height:24px; line-height:22px; {{#if this.isReady}}background:#1e4d2b; border-color:#0f0;{{/if}}">{{#if this.isReady}}ГОТОВ{{else}}ПОДТВЕРДИТЬ{{/if}}</button>
+              {{#if this.spectatorLabel}}
+                  <span class="dl-spectator-chip">{{this.spectatorLabel}}</span>
+              {{/if}}
+              {{#if (and ../isPlayingPhase this.isOwnerParticipant)}}
+                  <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}ГОТОВ{{else}}ПОДТВЕРДИТЬ{{/if}}</button>
               {{/if}}
             </div>
         </div>
         
         <div style="margin-top:6px; margin-bottom:4px;">
-            {{#if (and this.isOwner (not this.isReady))}}
+            {{#if (and this.isOwnerParticipant (not this.isReady))}}
                 <select class="dl-weapon-select" data-actor="{{this.id}}">
                     {{#each this.stats.availableStrikes}}
                         <option value="{{this.id}}" {{#if (eq ../selectedStrikeId this.id)}}selected{{/if}}>⚔️ {{this.name}} (+{{this.atk}})</option>
@@ -1728,7 +1900,7 @@ export const DUEL_TEMPLATE = `
         {{/if}}
 
         {{#if ../isPlayingPhase}}
-            {{#if this.isOwner}}
+            {{#if this.isOwnerParticipant}}
                 {{#each this.actionSlots}}
                     <div class="dl-action-row {{#if this.isDisabled}}disabled{{/if}}">
                         <span style="font-size:12px; font-weight:bold; color:#A8A9AD; width:20px;">{{this.num}}</span>
@@ -1751,7 +1923,7 @@ export const DUEL_TEMPLATE = `
                 {{/each}}
             {{else}}
                 <div style="margin-top:10px; text-align:center; font-style:italic; color:#888; font-size:11px;">
-                    {{#if this.isReady}}Действия спланированы.{{else}}Планирует действия...{{/if}}
+                    {{#if this.isObserverCard}}Наблюдает за дуэлью.{{else}}{{#if this.isReady}}Действия спланированы.{{else}}Планирует действия...{{/if}}{{/if}}
                 </div>
             {{/if}}
         {{/if}}
@@ -1765,19 +1937,19 @@ export const DUEL_TEMPLATE = `
   </div>
 
   <div class="dl-footer">
-    <div>
+    <div class="dl-footer-settings">
       {{#if isGM}}
-        <label style="font-size:11px; color:#888; cursor:pointer; display:flex; align-items:center; gap:4px;">
-            <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> Режим ГМ (Отладка)
+        <label class="dl-debug-label">
+            <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> Режим ГМ
         </label>
       {{/if}}
     </div>
-    <div style="display:flex; gap:10px;">
+    <div class="dl-footer-actions">
       {{#if isGM}}
-        {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start">НАЧАТЬ ДУЭЛЬ</button>{{/if}}
-        {{#if (eq state.phase 'play')}}<button class="dl-btn-main" id="dl-resolve" style="background:#800020;">РАЗРЕШИТЬ РАУНД</button>{{/if}}
-        <button class="dl-btn-main" id="dl-clear" style="background:#6a3a00;">ОЧИСТИТЬ</button>
-        <button class="dl-btn-main" id="dl-reset" style="background:#333;">СБРОС</button>
+        {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start" {{#unless canStartDuel}}disabled{{/unless}}>НАЧАТЬ</button>{{/if}}
+        {{#if (eq state.phase 'play')}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">РАУНД</button>{{/if}}
+        <button class="dl-btn-main dl-btn-accent" id="dl-clear">ОЧИСТИТЬ</button>
+        <button class="dl-btn-main dl-btn-muted" id="dl-reset">СБРОС</button>
       {{/if}}
     </div>
   </div>
