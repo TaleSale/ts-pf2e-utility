@@ -1619,6 +1619,7 @@ export const DUEL_STYLE = `
   .dl-spectator-chip {
     display: inline-flex;
     align-items: center;
+    margin-right: 8px;
     padding: 2px 6px;
     border: 1px solid #7f8c99;
     border-radius: 999px;
@@ -1628,6 +1629,22 @@ export const DUEL_STYLE = `
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+  }
+  .dl-spectator-chip.is-hidden {
+    visibility: hidden;
+    width: 0;
+    min-width: 0;
+    margin-right: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+  .dl-join-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    height: 18px;
+    justify-content: flex-end;
   }
   
   .dl-wound-bar-bg { background: #111; height: 12px; width: 100%; border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #4a0404; position: relative;}
@@ -1691,13 +1708,18 @@ export const DUEL_STYLE = `
     gap: 4px;
     font-size: 10px;
     font-weight: 400;
+    line-height: 1;
     cursor: pointer;
     white-space: nowrap;
   }
   .dl-join-label { color: #c3ccd6; font-size: 11px; }
+  .dl-join-label.is-disabled { color: #6e7883; cursor: default; opacity: 0.7; }
   .dl-debug-label { color: #99a6b4; }
+  .dl-gm-debug-label { order: 1; }
+  .dl-random-rule-label { order: 2; }
   .dl-join-label input,
   .dl-debug-label input {
+    display: block;
     margin: 0;
     width: 12px;
     min-width: 12px;
@@ -1733,6 +1755,17 @@ export const DUEL_STYLE = `
   .dl-debug-label input:hover {
     background: linear-gradient(180deg, #952133, #551723);
     box-shadow: 0 0 6px rgba(127, 140, 153, 0.26);
+  }
+  .dl-join-label input:disabled {
+    border-color: #59636d;
+    background: linear-gradient(180deg, #3b4046, #2a2f34);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    cursor: default;
+    opacity: 0.7;
+  }
+  .dl-join-label input:disabled:hover {
+    background: linear-gradient(180deg, #3b4046, #2a2f34);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   .dl-join-label input:checked,
   .dl-debug-label input:checked {
@@ -1854,12 +1887,12 @@ export const DUEL_TEMPLATE = `
                 </div>
             </div>
             <div>
+              <div class="dl-join-row">
+                  <span class="dl-spectator-chip {{#unless this.spectatorLabel}}is-hidden{{/unless}}">{{this.spectatorLabel}}</span>
               {{#if ../isJoinPhase}}
                   <label class="dl-join-label"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> Я В ИГРЕ</label>
               {{/if}}
-              {{#if this.spectatorLabel}}
-                  <span class="dl-spectator-chip">{{this.spectatorLabel}}</span>
-              {{/if}}
+              </div>
               {{#if (and ../isPlayingPhase this.isOwnerParticipant)}}
                   <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}ГОТОВ{{else}}ПОДТВЕРДИТЬ{{/if}}</button>
               {{/if}}
@@ -1867,7 +1900,7 @@ export const DUEL_TEMPLATE = `
         </div>
         
         <div style="margin-top:6px; margin-bottom:4px;">
-            {{#if (and this.isOwnerParticipant (not this.isReady))}}
+            {{#if this.canEditActionPlan}}
                 <select class="dl-weapon-select" data-actor="{{this.id}}">
                     {{#each this.stats.availableStrikes}}
                         <option value="{{this.id}}" {{#if (eq ../selectedStrikeId this.id)}}selected{{/if}}>⚔️ {{this.name}} (+{{this.atk}})</option>
@@ -1900,9 +1933,9 @@ export const DUEL_TEMPLATE = `
         {{/if}}
 
         {{#if ../isPlayingPhase}}
-            {{#if this.isOwnerParticipant}}
+            {{#if this.canSeeActionPlan}}
                 {{#each this.actionSlots}}
-                    <div class="dl-action-row {{#if this.isDisabled}}disabled{{/if}}">
+                    <div class="dl-action-row {{#if this.isDisabled}}disabled{{/if}} {{#if this.isReadonly}}disabled{{/if}}">
                         <span style="font-size:12px; font-weight:bold; color:#A8A9AD; width:20px;">{{this.num}}</span>
                         <div class="dl-act-btn {{#if (eq this.planned.type 'attack')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="attack">
                             ⚔️ Атака ({{#if (gte ../stats.atk 0)}}+{{/if}}{{../stats.atk}})
@@ -1913,7 +1946,7 @@ export const DUEL_TEMPLATE = `
                         <div class="dl-act-btn {{#if (eq this.planned.type 'maneuver')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="maneuver">
                             🤹 Маневр
                         </div>
-                        <select class="dl-select dl-man-sel" data-actor="{{../id}}" data-slot="{{@index}}" {{#unless (eq this.planned.type 'maneuver')}}disabled style="opacity:0.3"{{/unless}}>
+                        <select class="dl-select dl-man-sel" data-actor="{{../id}}" data-slot="{{@index}}" {{#if this.maneuverSelectDisabled}}disabled style="opacity:0.3"{{/if}}>
                             <option value="ath" {{#if (eq this.planned.sub 'ath')}}selected{{/if}}>Атлетика ({{#if (gte ../stats.ath 0)}}+{{/if}}{{../stats.ath}}) vs Стойкость</option>
                             <option value="acr" {{#if (eq this.planned.sub 'acr')}}selected{{/if}}>Акробатика ({{#if (gte ../stats.acr 0)}}+{{/if}}{{../stats.acr}}) vs Рефлекс</option>
                             <option value="int" {{#if (eq this.planned.sub 'int')}}selected{{/if}}>Запугив. ({{#if (gte ../stats.int 0)}}+{{/if}}{{../stats.int}}) vs Воля</option>
@@ -1939,7 +1972,10 @@ export const DUEL_TEMPLATE = `
   <div class="dl-footer">
     <div class="dl-footer-settings">
       {{#if isGM}}
-        <label class="dl-debug-label">
+        <label class="dl-debug-label dl-random-rule-label">
+            <input type="checkbox" id="dl-random-lost-action" {{#if state.randomLostActionRule}}checked{{/if}}> {{randomLostActionLabel}}
+        </label>
+        <label class="dl-debug-label dl-gm-debug-label">
             <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> Режим ГМ
         </label>
       {{/if}}

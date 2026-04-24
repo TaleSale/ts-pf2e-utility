@@ -1083,14 +1083,18 @@
 
 .tsu-kuboker .kb-betting-field {
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   color: #b9964a;
   font-size: 10px;
-  text-align: center;
+  text-align: right;
   white-space: nowrap;
+}
+
+.tsu-kuboker .kb-betting-field > span {
+  flex: 0 0 auto;
 }
 
 .tsu-kuboker .kb-betting-input,
@@ -1943,10 +1947,55 @@
   box-shadow: none;
 }
 
+#kuboker-app .kb-stock-card {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border: 1px dashed rgba(212, 175, 55, 0.7);
+  border-left: 1px dashed rgba(212, 175, 55, 0.7);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: none;
+  overflow: visible;
+  box-sizing: border-box;
+  height: 54px;
+}
+
+#kuboker-app .kb-stock-card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 40px;
+  gap: 12px;
+}
+
+#kuboker-app .kb-stock-summary {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  min-width: 0;
+}
+
+#kuboker-app .kb-stock-card .kb-player-betline {
+  margin-top: 5px;
+  flex-wrap: nowrap;
+}
+
 #kuboker-app .kb-stock-dice {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  margin-top: 8px;
+}
+
+#kuboker-app .kb-stock-block .kb-stock-dice {
+  margin-top: 0;
+}
+
+#kuboker-app .kb-stock-card .kb-stock-dice {
+  grid-column: 2;
+  justify-self: center;
   margin-top: 0;
 }
 
@@ -2221,11 +2270,18 @@
 
 #devils-pin-app .dp-currency-field {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
   color: #b9964a;
   font-size: 10px;
+  text-align: right;
   white-space: nowrap;
+}
+
+#devils-pin-app .dp-currency-field > span {
+  flex: 0 0 auto;
 }
 
 #devils-pin-app .dp-currency-dropdown {
@@ -2242,9 +2298,9 @@
   align-items: center;
   border: 1px solid #c99b35;
   border-radius: 2px;
-  background: linear-gradient(180deg, #7d0909, #4d0505);
+  background: linear-gradient(180deg, #230606, #120202);
   color: #f4d17a;
-  padding: 0 4px;
+  padding: 0 6px;
   cursor: pointer;
   box-sizing: border-box;
   appearance: none;
@@ -2699,10 +2755,16 @@
 
 #kuboker-app .kb-stock-dice .tsu-die,
 #kuboker-app .kb-stock-die {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   min-width: 40px;
   height: 40px;
+  box-sizing: border-box;
   font-size: 20px;
+  line-height: 1;
+  text-align: center;
   box-shadow: 2px 2px 0 #000;
 }
 

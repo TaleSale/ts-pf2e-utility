@@ -11,6 +11,10 @@
         "Rules": {
           "HelpTitle": "Combat Duel Rules",
           "HelpHtml": "<div style=\"font-family:'Signika',sans-serif; line-height:1.5; color:#1a1a1a; padding:15px; background:url('ui/parchment.jpg'); border:2px solid #540000;\"><h2 style=\"border-bottom:2px solid #700; color:#700; text-align:center; font-family:'Modesto Condensed', serif;\">COMBAT DUEL</h2><p><b>Goal:</b> inflict Wounds equal to the opponent's death threshold. It is 4 by default; <i>Diehard</i> raises it and <i>Doomed</i> lowers it.</p><p><b>Round:</b> each duelist secretly sets 3 action slots and both sides resolve them simultaneously.</p><h3 style=\"color:#900;\">1. ACTIONS</h3><ul><li><b>Attack:</b> selected weapon vs AC. Success deals 1 Wound, critical success deals 2 Wounds.</li><li><b>Defense:</b> total defense. Hostile checks against the duelist are rolled with disadvantage: 2d20 and keep the lower result.</li><li><b>Maneuver:</b> Athletics vs Fortitude, Acrobatics vs Reflex, Intimidation vs Will, Deception vs Perception. Success gives the target -2 AC next round, critical success also removes 1 action.</li></ul><h3 style=\"color:#900;\">2. ACTION INTERACTION</h3><ul><li><b>Attack vs Defense:</b> the attacker rolls with disadvantage.</li><li><b>Maneuver vs Attack:</b> the maneuvering duelist takes -2 to the roll.</li><li><b>Maneuver vs Defense:</b> the defense is broken and the defender's DC is reduced by 2.</li></ul><h3 style=\"color:#900;\">3. MAP</h3><p>Multiple attack penalty is tracked separately for Attack and for each Maneuver type: 0 / -4 / -8.</p></div>"
+        },
+        "Footer": {
+          "DebugMode": "GM Mode",
+          "RandomLostAction": "Lost action is random"
         }
       }
     }

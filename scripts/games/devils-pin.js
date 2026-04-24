@@ -1,4 +1,6 @@
 import {
+  comparePlayerEntriesForDisplay,
+  getPinnedPlayerActorIdForDisplay,
   getActorUuidFromDropData,
   getDroppedActors,
   MODULE_ID,
@@ -7,6 +9,7 @@ import {
   getActorLoreModifier,
   getGameState,
   getNonGmCharacters,
+  isActorControlledByNonGm,
   gobj,
   gt,
   gtf,
@@ -22,12 +25,14 @@ const GAME_ID = "devils-pin";
 const APP_ID = `${MODULE_ID}-${GAME_ID}`;
 const I18N_ROOT = "Games.DevilsPin";
 const DART_UUID = "Compendium.pf2e.equipment-srd.Item.Tt4Qw64fwrxhr5gT";
+const DART_MATCH_TOKENS = Object.freeze(["dart", "дротик", "дрот"]);
 const DEFAULT_BASE_DC = 15;
 const PLAYER_TARGET_PREFIX = "player:";
 const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
 const OUTCOME_KEYS_BY_RANK = ["UberFailure", "CriticalFailure", "Failure", "Success", "CriticalSuccess", "UberCrit"];
 const GAMES_LORE_SELECTOR = ["game", "games", "\u0438\u0433\u0440"];
 const COIN_CURRENCIES = Object.freeze({
+  dd: { shortKey: "DevilishDebtShort", longKey: "DevilishDebtLong", fallbackShort: "DD", fallbackLong: "Devilish Debt" },
   cp: { shortKey: "CopperShort", longKey: "CopperLong", fallbackShort: "cp", fallbackLong: "Copper" },
   sp: { shortKey: "SilverShort", longKey: "SilverLong", fallbackShort: "sp", fallbackLong: "Silver" },
   gp: { shortKey: "GoldShort", longKey: "GoldLong", fallbackShort: "gp", fallbackLong: "Gold" },
@@ -86,6 +91,10 @@ function getCurrencyLong(definition, currency) {
   const normalized = normalizeCoinCurrency(currency);
   const config = COIN_CURRENCIES[normalized];
   return gt(definition, `Currency.${config.longKey}`, config.fallbackLong);
+}
+
+function isScoreOnlyCurrency(currency) {
+  return normalizeCoinCurrency(currency) === "dd";
 }
 
 function formatCurrencyAmount(definition, state, amount) {
@@ -206,28 +215,97 @@ function getSelectionTargetLabel(definition, state, targetToken) {
   return "";
 }
 
+function findDartStrike(actor) {
+  return findResolvedDartStrike(actor);
+  const actions = actor.system?.actions?.filter((entry) => entry?.type === "strike") ?? [];
+  return actions.find((entry) => {
+    const item = entry.item;
+    
+    return slug === "dart" || name.includes("dart") || name.includes("дрот");
+  }) ?? null;
+}
+
+function matchesDartText(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized && DART_MATCH_TOKENS.some((token) => normalized === token || normalized.includes(token));
+}
+
+function describeActorStrikes(actor) {
+  const actions = actor?.system?.actions ?? [];
+  return actions
+    .filter((entry) => entry?.type === "strike")
+    .map((entry, index) => ({
+      index,
+      label: entry.label ?? "",
+      slug: entry.slug ?? "",
+      totalModifier: entry.totalModifier ?? null,
+      itemName: entry.item?.name ?? "",
+      itemSlug: entry.item?.slug ?? "",
+    }));
+}
+
+function findResolvedDartStrike(actor) {
+  const actions = actor?.system?.actions?.filter((entry) => entry?.type === "strike") ?? [];
+  return actions.find((entry) => {
+    const item = entry?.item;
+    return [entry?.slug, entry?.label, item?.slug, item?.name].some(matchesDartText);
+  }) ?? null;
+}
+
 async function getDartModifierForCharacter(actor) {
   if (!actor || actor.type !== "character") return 0;
 
   try {
-    const actions = actor.system.actions ?? [];
-    const directMatch = actions.find((entry) => {
-      const item = entry.item;
-      const name = String(item?.name ?? "").toLowerCase();
-      const slug = String(item?.slug ?? "").toLowerCase();
-      return slug === "dart" || name.includes("dart") || name.includes("дрот");
-    });
-    if (directMatch?.totalModifier != null) return directMatch.totalModifier;
+    const existingStrike = findResolvedDartStrike(actor);
+    if (existingStrike?.totalModifier != null) return existingStrike.totalModifier;
 
-    const thrownMatch = actions.find((entry) => {
-      const traits = entry.item?.system?.traits?.value ?? entry.item?.traits ?? [];
-      return Array.isArray(traits) && traits.includes("thrown");
-    });
-    if (thrownMatch?.totalModifier != null) return thrownMatch.totalModifier;
+    const dartSource = await fromUuid(DART_UUID);
+    if (!dartSource) {
+      console.warn(`${MODULE_ID} | devils-pin: dart source not found for ${actor.name}`, {
+        actor: actor.name,
+        strikes: describeActorStrikes(actor),
+      });
+      return actor.system.abilities?.dex?.mod || 0;
+    }
 
-    return actor.system.abilities?.dex?.mod || 0;
+    const itemData = dartSource.toObject();
+    itemData.system ??= {};
+    itemData.system.equipped = {
+      ...(itemData.system.equipped ?? {}),
+      carryType: "held",
+      handsHeld: 1,
+    };
+    const [tempItem] = await actor.createEmbeddedDocuments("Item", [itemData]);
+    if (!tempItem) {
+      console.warn(`${MODULE_ID} | devils-pin: failed to create temporary dart for ${actor.name}`, {
+        actor: actor.name,
+        strikes: describeActorStrikes(game.actors?.get(actor.id) ?? actor),
+      });
+      return actor.system.abilities?.dex?.mod || 0;
+    }
+
+    try {
+      const refreshedActor = game.actors?.get(actor.id) ?? actor;
+      const dartStrike = findResolvedDartStrike(refreshedActor);
+      if (dartStrike?.totalModifier != null) return dartStrike.totalModifier;
+
+      console.warn(`${MODULE_ID} | devils-pin: falling back to DEX for ${actor.name}`, {
+        actor: actor.name,
+        dex: actor.system.abilities?.dex?.mod ?? 0,
+        tempItem: {
+          id: tempItem.id,
+          name: tempItem.name,
+          slug: tempItem.slug ?? tempItem.system?.slug ?? "",
+        },
+        strikes: describeActorStrikes(refreshedActor),
+      });
+      return actor.system.abilities?.dex?.mod ?? 0;
+    } finally {
+      await actor.deleteEmbeddedDocuments("Item", [tempItem.id]);
+    }
   } catch (_error) {
-    return 0;
+    console.warn(`${MODULE_ID} | devils-pin: failed to compute dart modifier for ${actor.name}`, _error);
+    return actor.system?.abilities?.dex?.mod || 0;
   }
 }
 
@@ -388,13 +466,12 @@ async function addActorToState(state, actor, { isParticipating = false, source =
   state.players ||= {};
 
   const existing = state.players[actor.id];
-  const cachedAtk = actor.type === "character" ? await getDartModifierForCharacter(actor) : 0;
   const level = actor.level || actor.system?.details?.level?.value || 0;
   if (existing) {
     ensurePlayerActionState(existing);
     existing.name = actor.name;
     existing.img = actor.img;
-    existing.cachedAtk = cachedAtk;
+    existing.cachedAtk = Number(existing.cachedAtk) || 0;
     existing.level = level;
     existing.source = source;
     if (actor.type === "npc") {
@@ -413,7 +490,7 @@ async function addActorToState(state, actor, { isParticipating = false, source =
     hasThrown: false,
     selectedSkill: "",
     selectedTarget: "",
-    cachedAtk,
+    cachedAtk: 0,
     lastSkill: "",
     lastTarget: "",
     lastResolvedTarget: "",
@@ -462,7 +539,7 @@ async function syncDefaultPlayers(state) {
 
     state.players[actor.id].name = actor.name;
     state.players[actor.id].img = actor.img;
-    state.players[actor.id].cachedAtk = actor.type === "character" ? await getDartModifierForCharacter(actor) : 0;
+    state.players[actor.id].cachedAtk = Number(state.players[actor.id].cachedAtk) || 0;
     state.players[actor.id].level = actor.level || actor.system?.details?.level?.value || 0;
     state.players[actor.id].source = "auto";
   }
@@ -491,7 +568,7 @@ function buildSummaryUi(definition, state) {
       clear: gt(definition, "Buttons.Clear", "Clear Table"),
       resetRound: gt(definition, "Buttons.ResetRound", "Round"),
       resetGame: gt(definition, "Buttons.ResetGame", "Full Reset"),
-      refresh: gt(definition, "Buttons.RefreshAttack", "Refresh attack"),
+
       remove: gt(definition, "Buttons.Remove", "Remove"),
       pay: gt(definition, "Buttons.Pay", "Pay"),
       collected: gt(definition, "Buttons.Collected", "Collected"),
@@ -519,6 +596,29 @@ function buildSummaryUi(definition, state) {
             itemClasses: "dp-rule-item--outcome",
           };
         }),
+      },
+      {
+        title: gt(definition, "Rules.RestrictionsHeader", "Restrictions"),
+        items: [
+          {
+            icon: "🔁",
+            label: gt(definition, "Rules.Restrictions.NoSameSkillLabel", "Same skill"),
+            copy: gt(definition, "Rules.Restrictions.NoSameSkillSummary", "You cannot use the same skill twice in a row."),
+            itemClasses: "dp-rule-item--restriction",
+          },
+          {
+            icon: "🎯",
+            label: gt(definition, "Rules.Restrictions.NoSameFaceLabel", "Same final target"),
+            copy: gt(definition, "Rules.Restrictions.NoSameFaceSummary", "You cannot end on the same face part in consecutive rounds."),
+            itemClasses: "dp-rule-item--restriction",
+          },
+          {
+            icon: "🪃",
+            label: gt(definition, "Rules.Restrictions.NoSameInterferenceLabel", "Same interference target"),
+            copy: gt(definition, "Rules.Restrictions.NoSameInterferenceSummary", "You cannot target the same player's throw in consecutive rounds."),
+            itemClasses: "dp-rule-item--restriction",
+          },
+        ],
       },
     ],
   };
@@ -609,11 +709,6 @@ function canSenderToggleJoin(actorId, senderId, _state, canUserControlActor) {
   return canUserControlActor(actorId, senderId);
 }
 
-function isActorAssignedToGm(actor) {
-  if (!actor) return false;
-  return (game.users?.contents ?? []).some((user) => user.isGM && user.character?.id === actor.id);
-}
-
 function isCurrentUserSpectator(state) {
   if (!game.user) return false;
   if (game.user.isGM) {
@@ -680,12 +775,13 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
   const isLoser = state.phase === "results" && playerData.isParticipating && !isWinner;
   const canPlayerControl = canCurrentUserOperateActor(actor, state);
   const isSpectatorViewer = isCurrentUserSpectator(state);
+  const canSpectatorInspectActor = isSpectatorViewer && isActorControlledByNonGm(actor);
   const isObserverCard = !playerData.isParticipating;
   const canChoose = state.phase === "playing"
     && playerData.isParticipating
     && !playerData.hasThrown
     && canPlayerControl;
-  const showChoiceControls = !isObserverCard && state.phase === "playing" && (canPlayerControl || isSpectatorViewer);
+  const showChoiceControls = !isObserverCard && state.phase === "playing" && (canPlayerControl || canSpectatorInspectActor);
   const canConfirmChoice = canChoose
     && isChoiceReady(state, actorId, playerData);
   const isConfirmed = Boolean(playerData.isConfirmed);
@@ -711,7 +807,7 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
       ({ debt, currency }) => `${debt} ${currency}`
     )
     : "";
-  const showPrivateSelection = !isObserverCard && (canPlayerControl || isSpectatorViewer);
+  const showPrivateSelection = !isObserverCard && (canPlayerControl || canSpectatorInspectActor);
   const selectionState = showPrivateSelection ? buildSelectionText(definition, state, playerData) : { current: "", last: "", resolved: "" };
   const statusText = isObserverCard ? "" : buildPlayerStatusText(definition, state, playerData, { canChoose, isWinner, isLoser });
   const skillButtons = Object.entries(SKILLS)
@@ -764,6 +860,7 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
       && state.phase === "results"
       && isWinner
       && !state.awardedWinners?.[actorId]
+      && state.results?.payoutEnabled !== false
       && (Number(state.results?.totalPot) || 0) > 0,
     awardMoneyLabel: gt(definition, "Buttons.AwardMoney", "Award Money"),
     selectionText: selectionState.current,
@@ -773,9 +870,6 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
     statusText,
     showRemove: state.phase === "join",
     removeDisabled: !game.user.isGM,
-    showRefresh: playerData.isParticipating,
-    refreshDisabled: !game.user.isGM || !playerData.isParticipating,
-    refreshTitle: gt(definition, "Buttons.RefreshAttack", "Refresh attack"),
     canChoose,
     showChoiceControls,
     showConfirmButton: state.phase === "playing" && !isObserverCard,
@@ -796,7 +890,7 @@ function createPlayerPresentation(definition, state, actorId, playerData) {
 async function awardMoneyToWinners(definition, state, actorId) {
   ensureCurrencyState(state);
   const winnerIds = state.results?.winners || [];
-  if (!winnerIds.length || !actorId || !winnerIds.includes(actorId) || state.awardedWinners?.[actorId]) return false;
+  if (!winnerIds.length || !actorId || !winnerIds.includes(actorId) || state.awardedWinners?.[actorId] || state.results?.payoutEnabled === false) return false;
   const amount = Math.max(0, Math.trunc(Number(state.results?.totalPot) || 0));
   if (!amount) return false;
 
@@ -1115,21 +1209,29 @@ async function resolveConfirmedRound(definition, state) {
     }));
   }
 
-  const someoneWonEarly = activePlayers.some(([, playerData]) => playerData.debt === 0);
-  if (state.round >= 3 || someoneWonEarly) {
+  if (state.round >= 3) {
     state.phase = "results";
     const minimumDebt = Math.min(...activePlayers.map(([, playerData]) => playerData.debt));
     const winnerIds = activePlayers.filter(([, playerData]) => playerData.debt === minimumDebt).map(([id]) => id);
     const totalPot = activePlayers.filter(([, playerData]) => playerData.debt > minimumDebt).reduce((sum, [, playerData]) => sum + playerData.debt, 0);
-    state.results = { winners: winnerIds, totalPot };
-    state.payoutClaimed = false;
+    const payoutEnabled = !isScoreOnlyCurrency(state.currency);
+    state.results = { winners: winnerIds, totalPot, payoutEnabled };
+    state.payoutClaimed = !payoutEnabled;
     const names = winnerIds.map((id) => state.players[id]?.name).filter(Boolean).join(", ");
-    chronology.push(gtf(
-      definition,
-      "Log.Win",
-      { names, totalPot, currency: getCurrencyShort(definition, state.currency) },
-      ({ names: winnerNames, totalPot: pot, currency }) => `<div class="tsu-log-entry" style="background:linear-gradient(135deg,#123e1f,#2d8f45,#123e1f);color:white;border:1px solid gold;"><b>${escapeHtml(winnerNames)}</b> win the pot: <b>${pot} ${currency}</b></div>`
-    ));
+    const currency = getCurrencyShort(definition, state.currency);
+    chronology.push(payoutEnabled
+      ? gtf(
+        definition,
+        "Log.Win",
+        { names, totalPot, currency },
+        ({ names: winnerNames, totalPot: pot, currency: winnerCurrency }) => `<div class="tsu-log-entry" style="background:linear-gradient(135deg,#123e1f,#2d8f45,#123e1f);color:white;border:1px solid gold;"><b>${escapeHtml(winnerNames)}</b> win the pot: <b>${pot} ${winnerCurrency}</b></div>`
+      )
+      : gtf(
+        definition,
+        "Log.WinScore",
+        { names, debt: minimumDebt, currency },
+        ({ names: winnerNames, debt, currency: winnerCurrency }) => `<div class="tsu-log-entry" style="background:linear-gradient(135deg,#123e1f,#2d8f45,#123e1f);color:white;border:1px solid gold;"><b>${escapeHtml(winnerNames)}</b> win on points: <b>${debt} ${winnerCurrency}</b></div>`
+      ));
   } else {
     state.round += 1;
     for (const [, playerData] of activePlayers) {
@@ -1187,7 +1289,7 @@ const template = `
           <div class="tsu-player-card-top">
             <img class="tsu-avatar" src="{{img}}" alt="{{name}}">
             <div class="tsu-player-meta">
-              <div class="tsu-player-name">{{name}} {{#if showRefresh}}<button type="button" class="tsu-icon-button dp-refresh-btn {{#if refreshDisabled}}is-disabled disabled{{/if}}" data-action="refresh-attack" data-actor-id="{{id}}" {{#if refreshDisabled}}disabled{{/if}}><i class="fas fa-rotate"></i></button>{{/if}}</div>
+              <div class="tsu-player-name">{{name}}</div>
               <div class="tsu-player-subline">
                 {{#if joinCheckbox}}<label class="tsu-checkbox dp-join-label"><input type="checkbox" class="tsu-join-toggle dp-join-cb" data-actor-id="{{id}}" {{#if isParticipating}}checked{{/if}}> <span>{{joinLabel}}</span></label>{{/if}}
                 {{#if spectatorLabel}}<span class="tsu-chip">{{spectatorLabel}}</span>{{/if}}
@@ -1329,13 +1431,9 @@ class DevilsPinApplication extends Application {
         })
         .length;
       const readyToResolve = state.phase === "playing" && participatingCount > 0 && confirmedThrows === participatingCount;
+      const pinnedActorId = getPinnedPlayerActorIdForDisplay(visibleEntries, game.user);
       const players = visibleEntries
-        .sort((a, b) => {
-          const aOwned = (!game.user.isGM && userCanControlActor(game.actors.get(a[0]), game.user)) ? 1 : 0;
-          const bOwned = (!game.user.isGM && userCanControlActor(game.actors.get(b[0]), game.user)) ? 1 : 0;
-          if (aOwned !== bOwned) return bOwned - aOwned;
-          return (a[1].name || "").localeCompare(b[1].name || "", game.i18n?.lang || "en", { sensitivity: "base" });
-        })
+        .sort((a, b) => comparePlayerEntriesForDisplay(a, b, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
         .map(([actorId, playerData]) => createPlayerPresentation(definition, state, actorId, playerData));
 
       console.log(`${MODULE_ID} | devils-pin getData`, {
@@ -1510,9 +1608,7 @@ class DevilsPinApplication extends Application {
       case "confirm-choice":
         await requestGameAction(GAME_ID, "toggle-confirm", { actorId });
         break;
-      case "refresh-attack":
-        await requestGameAction(GAME_ID, "refresh-attack", { actorId });
-        break;
+
       case "start-game":
         await requestGameAction(GAME_ID, "start-game", {});
         break;
@@ -1563,13 +1659,7 @@ const definition = {
         playerData.isParticipating = Boolean(data.isParticipating);
         return true;
       }
-      case "refresh-attack": {
-        if (!senderIsGM || !state.players[data.actorId]) return false;
-        const actor = game.actors.get(data.actorId);
-        if (!actor) return false;
-        state.players[data.actorId].cachedAtk = await getDartModifierForCharacter(actor);
-        return true;
-      }
+
       case "set-skill": {
         const playerData = state.players[data.actorId];
         if (!playerData || !playerData.isParticipating || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor) || state.phase !== "playing" || playerData.hasThrown || !SKILLS[data.skill]) return false;
@@ -1650,10 +1740,22 @@ const definition = {
       }
       case "start-game": {
         if (!senderIsGM) return false;
-        const activePlayers = Object.values(state.players).filter((entry) => entry.isParticipating);
-        if (!activePlayers.length) {
+        const activePlayerEntries = Object.entries(state.players).filter(([, entry]) => entry.isParticipating);
+        if (!activePlayerEntries.length) {
           notify("warn", "DevilsPinNoPlayers", {}, "Add at least one participant before starting.");
           return false;
+        }
+        for (const [actorId, playerData] of activePlayerEntries) {
+          const actor = game.actors.get(actorId);
+          if (actor?.type === "character") {
+            playerData.cachedAtk = await getDartModifierForCharacter(actor);
+            console.log(`${MODULE_ID} | devils-pin: start-game attack cache`, {
+              actorId,
+              actor: actor.name,
+              cachedAtk: playerData.cachedAtk,
+              isParticipating: playerData.isParticipating,
+            });
+          }
         }
         state.phase = "playing";
         state.round = 1;

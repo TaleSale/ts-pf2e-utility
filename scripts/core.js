@@ -36,6 +36,7 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
 const gameRegistry = new Map();
 const openApps = new Map();
 const seenOpenSignals = new Map();
+const gameActionQueues = new Map();
 const PARTIAL_REFRESH_SCROLL_SELECTORS = [
   ".tsu-rule-list",
   ".tsu-player-list",
@@ -198,7 +199,6 @@ export async function saveGameState(gameId, state, scene = getCurrentScene()) {
   state.syncToken = Date.now();
   const flagKey = gameFlagKey(gameId);
   const snapshot = clone(state);
-  await scene.unsetFlag(MODULE_ID, flagKey);
   await scene.setFlag(MODULE_ID, flagKey, snapshot);
 }
 
@@ -212,6 +212,97 @@ export function userCanControlActor(actor, user = game.user) {
   if (user.isGM) return true;
   if (actor.testUserPermission(user, "OWNER")) return true;
   return user.character?.id === actor.id;
+}
+
+export function isActorControlledByNonGm(actor) {
+  if (!actor) return false;
+  return (game.users?.contents ?? []).some((user) => !user.isGM && userCanControlActor(actor, user));
+}
+
+export function getPinnedPlayerActorIdForDisplay(entries, user = game.user) {
+  if (!user) return null;
+
+  const candidateActorIds = new Set(
+    (Array.isArray(entries) ? entries : [])
+      .map((entry) => Array.isArray(entry) ? entry[0] : entry)
+      .filter(Boolean),
+  );
+  const allowsActor = (actorId) => !candidateActorIds.size || candidateActorIds.has(actorId);
+
+  if (user.isGM) return null;
+
+  const assignedActorId = user.character?.id ?? null;
+  if (assignedActorId && allowsActor(assignedActorId)) return assignedActorId;
+
+  const parties = (game.actors?.contents ?? []).filter((actor) => actor?.type === "party");
+  const rankedParties = parties
+    .map((party) => {
+      const members = getPartyCharacterMembers(party).filter((member) => allowsActor(member.id));
+      const ownedMembers = members.filter((member) => member.testUserPermission(user, "OWNER"));
+      const limitedMembers = members.filter((member) => member.testUserPermission(user, "LIMITED"));
+      return { members, ownedMembers, limitedMembers };
+    })
+    .sort((left, right) => {
+      const leftOwnedUnique = left.ownedMembers.length === 1 ? 1 : 0;
+      const rightOwnedUnique = right.ownedMembers.length === 1 ? 1 : 0;
+      if (leftOwnedUnique !== rightOwnedUnique) return rightOwnedUnique - leftOwnedUnique;
+
+      const leftLimitedUnique = left.limitedMembers.length === 1 ? 1 : 0;
+      const rightLimitedUnique = right.limitedMembers.length === 1 ? 1 : 0;
+      if (leftLimitedUnique !== rightLimitedUnique) return rightLimitedUnique - leftLimitedUnique;
+
+      return right.members.length - left.members.length;
+    });
+
+  const preferredParty = rankedParties[0] ?? null;
+  if (preferredParty?.ownedMembers.length === 1) return preferredParty.ownedMembers[0].id;
+  if (preferredParty?.limitedMembers.length === 1) return preferredParty.limitedMembers[0].id;
+
+  const ownedCandidates = Array.from(candidateActorIds)
+    .map((actorId) => game.actors?.get(actorId))
+    .filter((actor) => actor?.testUserPermission?.(user, "OWNER"));
+  if (ownedCandidates.length === 1) return ownedCandidates[0].id;
+
+  const limitedCandidates = Array.from(candidateActorIds)
+    .map((actorId) => game.actors?.get(actorId))
+    .filter((actor) => actor?.testUserPermission?.(user, "LIMITED"));
+  if (limitedCandidates.length === 1) return limitedCandidates[0].id;
+
+  return null;
+}
+
+export function comparePlayerEntriesForDisplay(
+  left,
+  right,
+  {
+    state = null,
+    user = game.user,
+    locale = game.i18n?.lang || "en",
+    joinPhase = "join",
+    pinnedActorId = null,
+  } = {},
+) {
+  const [leftActorId, leftPlayerData = {}] = left;
+  const [rightActorId, rightPlayerData = {}] = right;
+
+  const leftPinned = pinnedActorId ? leftActorId === pinnedActorId : false;
+  const rightPinned = pinnedActorId ? rightActorId === pinnedActorId : false;
+  if (leftPinned !== rightPinned) return Number(rightPinned) - Number(leftPinned);
+
+  if (user?.isGM) {
+    const leftGmCharacter = game.actors?.get(leftActorId)?.type === "npc";
+    const rightGmCharacter = game.actors?.get(rightActorId)?.type === "npc";
+    if (leftGmCharacter !== rightGmCharacter) return Number(rightGmCharacter) - Number(leftGmCharacter);
+  }
+
+  const pushSpectatorsToEnd = Boolean(state?.phase) && state.phase !== joinPhase;
+  if (pushSpectatorsToEnd) {
+    const leftSpectator = !Boolean(leftPlayerData.isParticipating);
+    const rightSpectator = !Boolean(rightPlayerData.isParticipating);
+    if (leftSpectator !== rightSpectator) return Number(leftSpectator) - Number(rightSpectator);
+  }
+
+  return (leftPlayerData.name || "").localeCompare(rightPlayerData.name || "", locale, { sensitivity: "base" });
 }
 
 function canUserControlActor(actorId, userId) {
@@ -495,11 +586,38 @@ export async function requestGameAction(gameId, action, data = {}) {
   };
 
   if (game.user?.isGM) {
-    await processGameAction(payload);
+    await enqueueGameAction(payload);
     return;
   }
 
   game.socket?.emit(SOCKET_CHANNEL, payload);
+}
+
+function getGameActionQueueKey(message) {
+  const gameId = message?.payload?.gameId ?? "unknown-game";
+  const sceneId = getCurrentScene()?.id ?? "no-scene";
+  return `${sceneId}:${gameId}`;
+}
+
+function enqueueGameAction(message) {
+  if (!game.user?.isGM) return Promise.resolve();
+
+  const queueKey = getGameActionQueueKey(message);
+  const previous = gameActionQueues.get(queueKey) ?? Promise.resolve();
+  const current = previous
+    .catch((error) => {
+      console.error(`${MODULE_ID} | game action queue recovered after error`, error);
+    })
+    .then(() => processGameAction(message));
+
+  gameActionQueues.set(queueKey, current);
+  void current.finally(() => {
+    if (gameActionQueues.get(queueKey) === current) {
+      gameActionQueues.delete(queueKey);
+    }
+  });
+
+  return current;
 }
 
 async function processGameAction(message) {
@@ -553,7 +671,7 @@ function registerSocket() {
   game.socket.on(SOCKET_CHANNEL, (message) => {
     if (!message || message.moduleId !== MODULE_ID) return;
     if (message.senderId && message.senderId === game.user?.id) return;
-    void processGameAction(message);
+    void enqueueGameAction(message);
   });
 }
 

@@ -7,14 +7,17 @@
   getActorLoreModifier,
   getGameState,
   getNonGmCharacters,
+  isActorControlledByNonGm,
   gobj,
   gt,
   gtf,
+  getPinnedPlayerActorIdForDisplay,
   notify,
   patchApplicationRegions,
   randomChoice,
   requestGameAction,
   t,
+  comparePlayerEntriesForDisplay,
   userCanControlActor,
 } from "../core.js";
 
@@ -23,6 +26,7 @@ const APP_ID = `${MODULE_ID}-${GAME_ID}`;
 const I18N_ROOT = "Games.Kuboker";
 const LOCKED_ROUNDS_TOTAL = 2;
 const BETTING_ROUNDS_TOTAL = 3;
+const KUBOKER_ICON = "icons/skills/trades/gaming-gambling-dice-gray.webp";
 const BETTING_CURRENCIES = Object.freeze({
   cp: { shortKey: "CopperShort", longKey: "CopperLong", fallbackShort: "cp", fallbackLong: "Copper" },
   sp: { shortKey: "SilverShort", longKey: "SilverLong", fallbackShort: "sp", fallbackLong: "Silver" },
@@ -380,11 +384,6 @@ function canSenderToggleJoin(actorId, senderId, _state, canUserControlActor) {
   if (!sender) return false;
   if (sender.isGM) return true;
   return canUserControlActor(actorId, senderId);
-}
-
-function isActorAssignedToGm(actor) {
-  if (!actor) return false;
-  return (game.users?.contents ?? []).some((user) => user.isGM && user.character?.id === actor.id);
 }
 
 function isCurrentUserSpectator(state) {
@@ -760,13 +759,14 @@ function createPlayerPresentation(definition, state, actorId, playerData, visibl
   const canPlayerControl = canCurrentUserOperateActor(actor, state);
   const isVisualOwner = canPlayerControl;
   const isSpectatorViewer = isCurrentUserSpectator(state);
+  const canSpectatorInspectActor = isSpectatorViewer && isActorControlledByNonGm(actor);
   const isObserverCard = !playerData.isParticipating;
   const hidePrivateDetailsFromSpectator = false;
   const isFolded = isPlayerFolded(playerData);
   const isLockedOut = isFolded || isPlayerLockedOut(state, playerData);
   const hasPendingCrownLock = state.phase === "locked" && hasAnyPendingCrownRerolls(state);
-  const canSeeDice = state.phase === "reveal" || isVisualOwner || isSpectatorViewer;
-  const canSeeChoices = isVisualOwner || isSpectatorViewer;
+  const canSeeDice = state.phase === "reveal" || isVisualOwner || canSpectatorInspectActor;
+  const canSeeChoices = isVisualOwner || canSpectatorInspectActor;
   const showDice = state.phase !== "join" && !isObserverCard;
   const showBettingControls = isBettingEnabled(state) && state.phase === "betting" && !isObserverCard;
   const showStrategyControls = state.phase === "deal" && canSeeChoices && !isFolded;
@@ -1279,18 +1279,34 @@ const template = `
       <div class="tsu-status-line">{{phaseLabel}}</div>
     </header>
 
-    <section class="kb-stock-block">
-      <div class="tsu-dice-row kb-dice-box kb-stock-dice">
-        {{#each centerDice}}
-          <span class="tsu-die kb-stock-die">{{this}}</span>
-        {{/each}}
-      </div>
-      {{#if bettingEnabled}}
-        <div class="kb-bank-line">
-          <span>{{bettingBankLabel}}</span>
+    {{#if bettingEnabled}}
+      <section class="tsu-player-card kb-player-card kb-stock-card">
+        <div class="tsu-player-card-top kb-stock-card-top">
+          <div class="kb-stock-summary">
+            <img class="tsu-avatar" src="{{stockIcon}}" alt="{{stockName}}">
+            <div class="tsu-player-meta">
+              <div class="tsu-player-name">{{stockName}}</div>
+              <div class="kb-player-betline">
+                <span class="tsu-chip kb-bet-chip">{{bettingBankLabel}}</span>
+              </div>
+            </div>
+          </div>
+          <div class="tsu-dice-row kb-dice-box kb-stock-dice">
+            {{#each centerDice}}
+              <span class="tsu-die kb-stock-die">{{this}}</span>
+            {{/each}}
+          </div>
         </div>
-      {{/if}}
-    </section>
+      </section>
+    {{else}}
+      <section class="kb-stock-block">
+        <div class="tsu-dice-row kb-dice-box kb-stock-dice">
+          {{#each centerDice}}
+            <span class="tsu-die kb-stock-die">{{this}}</span>
+          {{/each}}
+        </div>
+      </section>
+    {{/if}}
 
     {{#if showEmptyState}}<div class="tsu-empty-state kb-empty-state">{{emptyState}}</div>{{/if}}
 
@@ -1524,13 +1540,9 @@ class KubokerApplication extends Application {
     const visibleEntries = Object.entries(state.players)
       .filter(([actorId]) => !state.excludedPlayers?.[actorId]);
     const participatingCount = visibleEntries.filter(([, entry]) => entry.isParticipating).length;
+    const pinnedActorId = getPinnedPlayerActorIdForDisplay(visibleEntries, game.user);
     const players = visibleEntries
-      .sort((a, b) => {
-        const aOwned = (!game.user.isGM && userCanControlActor(game.actors.get(a[0]), game.user)) ? 1 : 0;
-        const bOwned = (!game.user.isGM && userCanControlActor(game.actors.get(b[0]), game.user)) ? 1 : 0;
-        if (aOwned !== bOwned) return bOwned - aOwned;
-        return (a[1].name || "").localeCompare(b[1].name || "", game.i18n?.lang || "en", { sensitivity: "base" });
-      })
+      .sort((a, b) => comparePlayerEntriesForDisplay(a, b, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
       .map(([actorId, playerData]) => createPlayerPresentation(definition, state, actorId, playerData, visibleCheatersMap));
 
     console.log(`${MODULE_ID} | kuboker getData`, {
@@ -1620,6 +1632,8 @@ class KubokerApplication extends Application {
         { amount: formatBetAmount(definition, state.betting.pot, state.betting.currency) },
         ({ amount }) => `Bank: ${amount}`
       ),
+      stockIcon: KUBOKER_ICON,
+      stockName: gt(definition, "StockName", game.i18n?.lang?.startsWith("ru") ? "\u041f\u0440\u0438\u043a\u0443\u043f" : "Stock"),
       centerDice: (() => {
         const dice = normalizeDiceValues(state.center, { fallback: 0 }).filter((value) => value > 0);
         return dice.length ? dice : ["-", "-"];

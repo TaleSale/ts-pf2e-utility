@@ -1,9 +1,12 @@
 import {
+  comparePlayerEntriesForDisplay,
   escapeHtml,
   getActorUuidFromDropData,
   getDroppedActors,
   getGameState,
   getNonGmCharacters,
+  getPinnedPlayerActorIdForDisplay,
+  isActorControlledByNonGm,
   gt,
   MODULE_ID,
   notify,
@@ -28,6 +31,7 @@ function createInitialState() {
     round: 1,
     log: [],
     debugMode: false,
+    randomLostActionRule: false,
     openSignal: null,
   };
 }
@@ -47,6 +51,7 @@ function createPlayerState(actor, { isParticipating = false, source = "manual" }
     isReady: false,
     acPenalty: 0,
     lostActions: 0,
+    lostActionSlots: [],
     wounds: 0,
     selectedStrikeId: null,
     source,
@@ -231,12 +236,66 @@ function canSenderToggleJoin(actorId, senderId, canUserControlActor) {
   return canUserControlActor(actorId, senderId);
 }
 
+function isCurrentUserSpectator(state) {
+  if (!game.user || game.user.isGM) return false;
+  return !Object.entries(state?.players ?? {}).some(([actorId, playerData]) => {
+    if (!playerData?.isParticipating) return false;
+    return userCanControlActor(game.actors?.get(actorId), game.user);
+  });
+}
+
 function getParticipatingActorIds(state) {
   return Object.keys(state.players ?? {}).filter((actorId) => state.players?.[actorId]?.isParticipating);
 }
 
 function canStartDuelWithState(state) {
   return getParticipatingActorIds(state).length === 2;
+}
+
+function getLostActionSlots(lostActions, randomize = false) {
+  const lossCount = Math.max(0, Math.min(3, Number(lostActions) || 0));
+  if (!lossCount) return [];
+  if (!randomize) {
+    return Array.from({ length: lossCount }, (_, index) => 3 - lossCount + index);
+  }
+
+  const pool = [0, 1, 2];
+  const slots = [];
+  for (let index = 0; index < lossCount; index += 1) {
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    slots.push(pool.splice(randomIndex, 1)[0]);
+  }
+  return slots.sort((left, right) => left - right);
+}
+
+function setPlayerLostActions(playerData, lostActions, randomize = false) {
+  const normalized = Math.max(0, Math.min(3, Number(lostActions) || 0));
+  playerData.lostActions = normalized;
+  playerData.lostActionSlots = getLostActionSlots(normalized, randomize);
+}
+
+function ensurePlayerLostActionState(playerData) {
+  if (!playerData) return;
+
+  const expectedCount = Math.max(0, Math.min(3, Number(playerData.lostActions) || 0));
+  const slots = Array.isArray(playerData.lostActionSlots)
+    ? playerData.lostActionSlots
+      .map((slot) => Number(slot))
+      .filter((slot, index, list) => Number.isInteger(slot) && slot >= 0 && slot < 3 && list.indexOf(slot) === index)
+      .sort((left, right) => left - right)
+    : [];
+
+  if (slots.length !== expectedCount) {
+    playerData.lostActionSlots = getLostActionSlots(expectedCount, false);
+    return;
+  }
+
+  playerData.lostActionSlots = slots;
+}
+
+function isActionSlotLost(playerData, slot) {
+  ensurePlayerLostActionState(playerData);
+  return playerData.lostActionSlots.includes(slot);
 }
 
 function startDuel(state) {
@@ -246,7 +305,7 @@ function startDuel(state) {
     playerData.planned = [];
     playerData.isReady = false;
     playerData.acPenalty = 0;
-    playerData.lostActions = 0;
+    setPlayerLostActions(playerData, 0, state.randomLostActionRule);
   }
   state.log.unshift("<div style=\"text-align:center; color:#ff4444; border:2px solid #800020; background:rgba(128,0,32,0.2); padding:5px; margin-bottom:10px; font-weight:bold;\">ДУЭЛЬ НАЧАЛАСЬ!</div>");
 }
@@ -259,7 +318,7 @@ function clearDuel(state) {
     playerData.planned = [];
     playerData.isReady = false;
     playerData.acPenalty = 0;
-    playerData.lostActions = 0;
+    setPlayerLostActions(playerData, 0, state.randomLostActionRule);
     playerData.wounds = 0;
   }
 }
@@ -274,6 +333,7 @@ async function resolveRound(state) {
   const [p1Id, p2Id] = activeIds;
   const p1 = state.players[p1Id];
   const p2 = state.players[p2Id];
+  const useRandomLostActionRule = Boolean(state.randomLostActionRule);
 
   state.log.unshift(`<div style="text-align:center; background:linear-gradient(90deg, transparent, #800020, transparent); color:#A8A9AD; font-weight:bold; padding:4px; margin:10px 0; border-top:1px solid #A8A9AD; border-bottom:1px solid #A8A9AD; text-transform:uppercase; letter-spacing:2px;">⚔️ РАУНД ${state.round} ⚔️</div>`);
 
@@ -288,8 +348,8 @@ async function resolveRound(state) {
     let act1 = p1.planned?.[slot] || { type: "none" };
     let act2 = p2.planned?.[slot] || { type: "none" };
 
-    if (slot >= (3 - (p1.lostActions || 0))) act1 = { type: "none" };
-    if (slot >= (3 - (p2.lostActions || 0))) act2 = { type: "none" };
+    if (isActionSlotLost(p1, slot)) act1 = { type: "none" };
+    if (isActionSlotLost(p2, slot)) act2 = { type: "none" };
 
     if (act1.type === "none" && act2.type === "none") {
       state.log.unshift(`<div style="border-left: 3px solid #71797E; background: rgba(0,0,0,0.4); padding: 5px; margin-bottom: 5px; border-radius:3px;">
@@ -444,8 +504,8 @@ async function resolveRound(state) {
 
   p1.acPenalty = p1NextAcPen;
   p2.acPenalty = p2NextAcPen;
-  p1.lostActions = Math.min(3, p1NextLost);
-  p2.lostActions = Math.min(3, p2NextLost);
+  setPlayerLostActions(p1, p1NextLost, useRandomLostActionRule);
+  setPlayerLostActions(p2, p2NextLost, useRandomLostActionRule);
   p1.isReady = false;
   p2.isReady = false;
   p1.planned = [];
@@ -522,17 +582,15 @@ class DuelCombatApplication extends Application {
 
   getData() {
     const state = this.getState();
+    state.randomLostActionRule = Boolean(state.randomLostActionRule);
     const players = [];
     const activeCombatants = Object.values(state.players ?? {}).filter((entry) => entry.isParticipating);
     const participatingCount = activeCombatants.length;
-    const isSpectator = !activeCombatants.some((entry) => userCanControlActor(game.actors.get(entry.id), game.user));
+    const isSpectator = isCurrentUserSpectator(state);
+    const pinnedActorId = getPinnedPlayerActorIdForDisplay(Object.entries(state.players ?? {}), game.user);
 
-    const entries = Object.entries(state.players ?? {}).sort((left, right) => {
-      const leftOwned = userCanControlActor(game.actors.get(left[0]), game.user) ? 1 : 0;
-      const rightOwned = userCanControlActor(game.actors.get(right[0]), game.user) ? 1 : 0;
-      if (leftOwned !== rightOwned) return rightOwned - leftOwned;
-      return (left[1].name || "").localeCompare(right[1].name || "", game.i18n?.lang || "ru", { sensitivity: "base" });
-    });
+    const entries = Object.entries(state.players ?? {})
+      .sort((left, right) => comparePlayerEntriesForDisplay(left, right, { state, user: game.user, locale: game.i18n?.lang || "ru", pinnedActorId }));
 
     for (const [actorId, playerData] of entries) {
       const actor = game.actors.get(actorId);
@@ -544,17 +602,23 @@ class DuelCombatApplication extends Application {
       const wounds = playerData.wounds || 0;
       const woundPct = Math.min(100, (wounds / stats.maxWounds) * 100);
       const isOwner = canCurrentUserOperateActor(actor, state);
+      const canSpectatorInspectActor = isSpectator && isActorControlledByNonGm(actor);
       const isObserverCard = !playerData.isParticipating;
       const isOwnerParticipant = isOwner && playerData.isParticipating;
-      const showStats = game.user.isGM || isOwner || (isSpectator && actor.type === "character");
+      const canEditActionPlan = isOwnerParticipant && !playerData.isReady;
+      const canSeeActionPlan = playerData.isParticipating && (isOwner || canSpectatorInspectActor);
+      const showStats = game.user.isGM || isOwner || canSpectatorInspectActor;
       const actionSlots = [];
-      const availableSlots = 3 - (playerData.lostActions || 0);
+      ensurePlayerLostActionState(playerData);
 
       for (let index = 0; index < 3; index += 1) {
+        const planned = playerData.planned?.[index] || { type: "none", sub: "ath" };
         actionSlots.push({
           num: index + 1,
-          isDisabled: index >= availableSlots,
-          planned: playerData.planned?.[index] || { type: "none", sub: "ath" },
+          isDisabled: isActionSlotLost(playerData, index),
+          isReadonly: !canEditActionPlan,
+          maneuverSelectDisabled: !canEditActionPlan || planned.type !== "maneuver",
+          planned,
         });
       }
 
@@ -564,6 +628,8 @@ class DuelCombatApplication extends Application {
         isOwner,
         isOwnerParticipant,
         isObserverCard,
+        canEditActionPlan,
+        canSeeActionPlan,
         spectatorLabel: isObserverCard ? gt(definition, "Spectator", "Наблюдает") : "",
         showStats,
         wounds,
@@ -580,11 +646,19 @@ class DuelCombatApplication extends Application {
       isJoinPhase: state.phase === "join",
       isPlayingPhase: state.phase === "play",
       canStartDuel: participatingCount === 2,
+      randomLostActionLabel: gt(definition, "Footer.RandomLostAction", "Потеряно случайное действие"),
     };
   }
 
   activateListeners(html) {
     super.activateListeners(html);
+
+    const shouldDisableJoin = this.getState().phase === "join" && getParticipatingActorIds(this.getState()).length >= 2;
+    html.find(".dl-join-cb").each((_, element) => {
+      const input = element;
+      const isDisabled = shouldDisableJoin && !input.checked;
+      $(input).prop("disabled", isDisabled).closest(".dl-join-label").toggleClass("is-disabled", isDisabled);
+    });
 
     html.find(".dl-join-cb").on("change", (event) => {
       void requestGameAction(GAME_ID, "toggle-join", {
@@ -633,6 +707,10 @@ class DuelCombatApplication extends Application {
     html.find("#dl-debug").on("change", (event) => {
       if (!game.user?.isGM) return;
       void requestGameAction(GAME_ID, "toggle-debug", { enabled: event.currentTarget.checked });
+    });
+    html.find("#dl-random-lost-action").on("change", (event) => {
+      if (!game.user?.isGM) return;
+      void requestGameAction(GAME_ID, "toggle-random-lost-action", { enabled: event.currentTarget.checked });
     });
 
     html.find("#dl-start").on("click", () => {
@@ -701,9 +779,8 @@ const definition = {
         const slot = Math.trunc(Number(data.slot));
         const type = String(data.type ?? "");
         const sub = String(data.sub ?? "ath");
-        const availableSlots = 3 - (playerData?.lostActions || 0);
         if (!playerData || !playerData.isParticipating || state.phase !== "play" || playerData.isReady || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
-        if (!Number.isInteger(slot) || slot < 0 || slot > 2 || slot >= availableSlots) return false;
+        if (!Number.isInteger(slot) || slot < 0 || slot > 2 || isActionSlotLost(playerData, slot)) return false;
         if (!["attack", "defense", "maneuver"].includes(type)) return false;
         if (type === "maneuver" && !MANEUVER_TYPES.has(sub)) return false;
         playerData.planned[slot] = { type, sub: type === "maneuver" ? sub : null };
@@ -718,6 +795,11 @@ const definition = {
       case "toggle-debug": {
         if (!senderIsGM) return false;
         state.debugMode = Boolean(data.enabled);
+        return true;
+      }
+      case "toggle-random-lost-action": {
+        if (!senderIsGM) return false;
+        state.randomLostActionRule = Boolean(data.enabled);
         return true;
       }
       case "start-duel": {
