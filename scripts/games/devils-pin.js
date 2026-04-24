@@ -182,8 +182,16 @@ function hasManualBaseDcOverride(state) {
 function getTargetDc(state, targetOrId) {
   const target = typeof targetOrId === "string" ? TARGETS[targetOrId] : targetOrId;
   if (!target) return DEFAULT_BASE_DC;
-  if (hasManualBaseDcOverride(state)) return getBaseDc(state) + (target.manualDcOffset || 0);
-  return getLevelBasedDc(getSuggestedBaseLevel(state) + (target.levelOffset || 0));
+  
+  if (hasManualBaseDcOverride(state)) {
+    return getBaseDc(state) + (target.manualDcOffset || 0);
+  }
+
+  // 1. Сначала вычисляем сам базовый DC по уровню (без смещений уровня)
+  const baseDc = getLevelBasedDc(getSuggestedBaseLevel(state));
+
+  // 2. Добавляем корректировку уже к готовому DC 
+  return baseDc + (target.levelOffset || 0);
 }
 
 function getDcLabel(definition) {
