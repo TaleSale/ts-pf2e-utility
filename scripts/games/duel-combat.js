@@ -1,15 +1,14 @@
 import {
   comparePlayerEntriesForDisplay,
   escapeHtml,
+  formatSignedNumber,
   getActorUuidFromDropData,
   getDroppedActors,
   getGameState,
   getNonGmCharacters,
   getPinnedPlayerActorIdForDisplay,
   isActorControlledByNonGm,
-  gt,
   MODULE_ID,
-  notify,
   patchApplicationRegions,
   requestGameAction,
   userCanControlActor,
@@ -22,6 +21,231 @@ const I18N_ROOT = "Games.DuelCombat";
 const MANEUVER_TYPES = new Set(["ath", "acr", "int", "dec"]);
 const TYPE_ORDER = ["atk", "ath", "acr", "int", "dec", "def", "none"];
 const DEG_WEIGHT = { cs: 4, s: 3, f: 2, cf: 1, def: 0, none: -1 };
+const EN_DUEL_TEXT = Object.freeze({
+  title: "Combat Duel",
+  spectator: "Spectating",
+  randomLostActionLabel: "Lost action is random",
+  warnings: {
+    startNeedsTwo: "Combat Duel requires exactly 2 participants.",
+  },
+  degreeNames: {
+    cs: "critical success",
+    s: "success",
+    f: "failure",
+    cf: "critical failure",
+    none: "no roll",
+  },
+  clashActions: {
+    atk: "an attack",
+    def: "a defense",
+    ath: "an Athletics maneuver",
+    acr: "an Acrobatics maneuver",
+    int: "an Intimidation maneuver",
+    dec: "a Deception maneuver",
+    none: "inaction",
+  },
+});
+
+function isEnglishLocale() {
+  return !String(game.i18n?.lang ?? "ru").startsWith("ru");
+}
+
+function formatEnglishTemplate(template, data = {}) {
+  return String(template).replace(/\{(\w+)\}/g, (_match, key) => `${data[key] ?? ""}`);
+}
+
+function getEnglishDuelUi() {
+  return {
+    headerTitle: "COMBAT DUEL",
+    rulesHeader: "Combat Duel Rules",
+    rulesHtml: `
+      <b>Goal:</b> inflict Wounds equal to the opponent's death threshold. It is 4 by default; <i>Diehard</i> raises it and <i>Doomed</i> lowers it.<br>
+      <b>Round:</b> each duelist secretly plans 3 action slots, then both plans resolve simultaneously.<br>
+      <hr style="border-color:#4a0404; margin: 8px 0;">
+      <b>Attack:</b> selected weapon vs AC.<br>
+      <i style="color:#2ecc71">Success:</i> 1 Wound | <i style="color:#2ecc71">Critical:</i> 2 Wounds<br>
+      <b>Defense:</b> total defense. Hostile checks against the duelist roll <b>2d20</b> and keep the <b>lower</b> result.<br>
+      <b>Maneuver:</b> Athletics vs Fortitude, Acrobatics vs Reflex, Intimidation vs Will, Deception vs Perception.<br>
+      <i style="color:#2ecc71">Success:</i> target takes -2 AC next round<br>
+      <i style="color:#2ecc71">Critical:</i> target takes -2 AC and loses 1 action<br>
+      <hr style="border-color:#4a0404; margin: 8px 0;">
+      <b>Action Interaction:</b><br>
+      <i>Attack vs Defense:</i> attacker rolls with disadvantage.<br>
+      <i>Maneuver vs Attack:</i> maneuvering duelist takes -2.<br>
+      <i>Maneuver vs Defense:</i> defense is broken and defender DC is reduced by 2.<br>
+      <hr style="border-color:#4a0404; margin: 8px 0;">
+      <b>MAP:</b> tracked separately for Attack and for each Maneuver type: <b>0 / -4 / -8</b>.
+    `,
+    joinLabel: "I'm in the duel",
+    readyLabel: "READY",
+    confirmLabel: "CONFIRM",
+    startLabel: "START",
+    resolveLabel: "ROUND",
+    clearLabel: "CLEAR",
+    resetLabel: "RESET",
+    gmModeLabel: "GM mode",
+    weaponLabel: "Weapon",
+    woundsLabel: "Wounds",
+    logTitle: "Combat Log",
+    statsHidden: "Defensive stats are hidden",
+    stats: {
+      ac: "AC",
+      fort: "FORT",
+      ref: "REF",
+      will: "WILL",
+      per: "PER",
+    },
+    actions: {
+      attack: "Attack",
+      defense: "Defense",
+      maneuver: "Maneuver",
+    },
+    maneuvers: {
+      ath: "Athletics",
+      acr: "Acrobatics",
+      int: "Intimidation",
+      dec: "Deception",
+    },
+    saves: {
+      fort: "Fortitude",
+      ref: "Reflex",
+      will: "Will",
+      per: "Perception",
+    },
+    statusBadges: {
+      acPenalty: "AC penalty",
+      lostActions: "Lost actions",
+    },
+    planStatus: {
+      spectator: "Watching the duel.",
+      ready: "Actions are planned.",
+      waiting: "Planning actions...",
+    },
+  };
+}
+
+const DUEL_TEMPLATE_EN = `
+<div id="duel-app">
+  <div class="dl-col-rules">
+    <div class="dl-rule-header"><span>{{ui.rulesHeader}}</span></div>
+    <div style="margin-bottom:10px; line-height: 1.3;">{{{ui.rulesHtml}}}</div>
+  </div>
+
+  <div class="dl-col-main">
+    <div class="dl-header-thematic"><h2>{{ui.headerTitle}}</h2></div>
+    {{#each players}}
+      <div class="dl-player-card {{#if this.isReady}}is-ready{{/if}} {{#if this.isObserverCard}}is-spectator{{/if}}">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img src="{{this.img}}" width="40" height="40" style="border-radius:4px; border:1px solid #A8A9AD;">
+            <div>
+              <div style="font-weight:bold; font-size:16px; color:#fff;">{{this.name}}</div>
+              <div style="font-size:11px; color:#ff4444; font-weight:bold;">
+                {{../ui.woundsLabel}}: {{this.wounds}} / {{this.stats.maxWounds}}
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="dl-join-row">
+              <span class="dl-spectator-chip {{#unless this.spectatorLabel}}is-hidden{{/unless}}">{{this.spectatorLabel}}</span>
+              {{#if ../isJoinPhase}}
+                <label class="dl-join-label"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> {{../ui.joinLabel}}</label>
+              {{/if}}
+            </div>
+            {{#if (and ../isPlayingPhase this.isOwnerParticipant)}}
+              <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}{{../ui.readyLabel}}{{else}}{{../ui.confirmLabel}}{{/if}}</button>
+            {{/if}}
+          </div>
+        </div>
+
+        <div style="margin-top:6px; margin-bottom:4px;">
+          {{#if this.canEditActionPlan}}
+            <select class="dl-weapon-select" data-actor="{{this.id}}">
+              {{#each this.weaponOptions}}
+                <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
+            </select>
+          {{else}}
+            <div style="font-size:11px; color:#ffaa00; text-align:center; background:rgba(0,0,0,0.5); padding:3px; border-radius:3px; border:1px solid #4a0404;">
+              <b>{{../ui.weaponLabel}}:</b> {{this.selectedWeaponLabel}}
+            </div>
+          {{/if}}
+        </div>
+
+        {{#if this.showStats}}
+          <div style="font-size:11px; color:#ccc; margin-bottom:5px; background:rgba(0,0,0,0.3); padding:3px; border-radius:3px; text-align:center; border: 1px dashed #555;">
+            <b>{{../ui.stats.ac}}:</b> {{this.stats.dc_ac}} | <b>{{../ui.stats.fort}}:</b> {{this.stats.dc_fort}} | <b>{{../ui.stats.ref}}:</b> {{this.stats.dc_ref}} | <b>{{../ui.stats.will}}:</b> {{this.stats.dc_will}} | <b>{{../ui.stats.per}}:</b> {{this.stats.dc_per}}
+          </div>
+        {{else}}
+          <div style="font-size:11px; color:#555; margin-bottom:5px; background:rgba(0,0,0,0.1); padding:3px; border-radius:3px; text-align:center; border: 1px dashed #222;">
+            <i>{{../ui.statsHidden}}</i>
+          </div>
+        {{/if}}
+
+        <div class="dl-wound-bar-bg"><div class="dl-wound-bar-fill" style="width:{{this.woundPct}}%;"></div></div>
+
+        {{#if this.statusBadges.length}}
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            {{#each this.statusBadges}}<div class="dl-status-badge">{{this}}</div>{{/each}}
+          </div>
+        {{/if}}
+
+        {{#if ../isPlayingPhase}}
+          {{#if this.canSeeActionPlan}}
+            {{#each this.actionSlots}}
+              <div class="dl-action-row {{#if this.isDisabled}}disabled{{/if}} {{#if this.isReadonly}}disabled{{/if}}">
+                <span style="font-size:12px; font-weight:bold; color:#A8A9AD; width:20px;">{{this.num}}</span>
+                <div class="dl-act-btn {{#if (eq this.planned.type 'attack')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="attack">
+                  {{../../ui.actions.attack}} ({{#if (gte ../stats.atk 0)}}+{{/if}}{{../stats.atk}})
+                </div>
+                <div class="dl-act-btn {{#if (eq this.planned.type 'defense')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="defense">
+                  {{../../ui.actions.defense}}
+                </div>
+                <div class="dl-act-btn {{#if (eq this.planned.type 'maneuver')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="maneuver">
+                  {{../../ui.actions.maneuver}}
+                </div>
+                <select class="dl-select dl-man-sel" data-actor="{{../id}}" data-slot="{{@index}}" {{#if this.maneuverSelectDisabled}}disabled style="opacity:0.3"{{/if}}>
+                  {{#each this.maneuverOptions}}
+                    <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            {{/each}}
+          {{else}}
+            <div style="margin-top:10px; text-align:center; font-style:italic; color:#888; font-size:11px;">{{this.planStatusText}}</div>
+          {{/if}}
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+
+  <div class="dl-col-log">
+    <h4 style="margin:0 0 10px 0; color:#d3d3d3; border-bottom:2px solid #800020; padding-bottom:5px;">{{ui.logTitle}}</h4>
+    {{#each state.log}}<div style="margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px; font-size:11px; line-height:1.2;">{{{this}}}</div>{{/each}}
+  </div>
+
+  <div class="dl-footer">
+    <div class="dl-footer-settings">
+      {{#if isGM}}
+        <label class="dl-debug-label dl-random-rule-label">
+          <input type="checkbox" id="dl-random-lost-action" {{#if state.randomLostActionRule}}checked{{/if}}> {{randomLostActionLabel}}
+        </label>
+        <label class="dl-debug-label dl-gm-debug-label">
+          <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> {{ui.gmModeLabel}}
+        </label>
+      {{/if}}
+    </div>
+    <div class="dl-footer-actions">
+      {{#if isGM}}
+        {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start" {{#unless canStartDuel}}disabled{{/unless}}>{{ui.startLabel}}</button>{{/if}}
+        {{#if (eq state.phase 'play')}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">{{ui.resolveLabel}}</button>{{/if}}
+        <button class="dl-btn-main dl-btn-accent" id="dl-clear">{{ui.clearLabel}}</button>
+        <button class="dl-btn-main dl-btn-muted" id="dl-reset">{{ui.resetLabel}}</button>
+      {{/if}}
+    </div>
+  </div>
+</div>
+`;
 
 function createInitialState() {
   return {
@@ -32,6 +256,7 @@ function createInitialState() {
     log: [],
     debugMode: false,
     randomLostActionRule: false,
+    suppressDefaultPlayers: false,
     openSignal: null,
   };
 }
@@ -74,15 +299,12 @@ async function syncDefaultPlayers(state) {
   state.excludedPlayers ||= {};
   const defaultIds = new Set(defaultActors.map((actor) => actor.id));
 
-  for (const actorId of defaultIds) {
-    delete state.excludedPlayers[actorId];
-  }
-
   for (const [actorId, playerData] of Object.entries(state.players ?? {})) {
     const actor = game.actors.get(actorId);
     const source = playerData.source ?? "auto";
+    const isCharacter = actor?.type === "character";
     if (source === "manual") continue;
-    if (actor?.type === "character" && !defaultIds.has(actorId)) {
+    if (isCharacter && !defaultIds.has(actorId)) {
       delete state.players[actorId];
       continue;
     }
@@ -117,14 +339,14 @@ function getActorDuelStats(actor, selectedStrikeId) {
     for (const [index, action] of actions.entries()) {
       strikes.push({
         id: action.slug || action.item?.id || `strike-${index}`,
-        name: action.label || "Удар",
+        name: action.label || (isEnglishLocale() ? "Strike" : "\u0423\u0434\u0430\u0440"),
         atk: action.totalModifier || 0,
       });
     }
   }
 
   if (!strikes.length) {
-    strikes.push({ id: "default", name: "Безоружная", atk: system.abilities?.str?.mod || 0 });
+    strikes.push({ id: "default", name: isEnglishLocale() ? "Unarmed" : "\u0411\u0435\u0437\u043e\u0440\u0443\u0436\u043d\u0430\u044f", atk: system.abilities?.str?.mod || 0 });
   }
 
   const selectedStrike = strikes.find((entry) => entry.id === selectedStrikeId) ?? strikes[0];
@@ -164,6 +386,28 @@ function getDegreeKey(degree) {
 }
 
 function getClashFlavor(typeA, subA, typeB, subB, degreeA, degreeB, nameA, nameB) {
+  if (isEnglishLocale()) {
+    const leftType = typeA === "maneuver" ? subA : (typeA === "none" ? "none" : (typeA === "defense" ? "def" : "atk"));
+    const rightType = typeB === "maneuver" ? subB : (typeB === "none" ? "none" : (typeB === "defense" ? "def" : "atk"));
+    const leftName = `<b style="color:#d3d3d3">${escapeHtml(nameA)}</b>`;
+    const rightName = `<b style="color:#d3d3d3">${escapeHtml(nameB)}</b>`;
+    const leftDegree = leftType === "none" ? "none" : getDegreeKey(degreeA);
+    const rightDegree = rightType === "none" ? "none" : getDegreeKey(degreeB);
+
+    if (leftType === "none" && rightType === "none") {
+      return `${leftName} and ${rightName} circle each other without committing to an attack.`;
+    }
+
+    return formatEnglishTemplate("{n1} commits to {a1} ({d1}), while {n2} answers with {a2} ({d2}).", {
+      n1: leftName,
+      n2: rightName,
+      a1: EN_DUEL_TEXT.clashActions[leftType] ?? leftType,
+      a2: EN_DUEL_TEXT.clashActions[rightType] ?? rightType,
+      d1: EN_DUEL_TEXT.degreeNames[leftDegree] ?? leftDegree,
+      d2: EN_DUEL_TEXT.degreeNames[rightDegree] ?? rightDegree,
+    });
+  }
+
   const leftType = typeA === "maneuver" ? subA : (typeA === "none" ? "none" : (typeA === "defense" ? "def" : "atk"));
   const rightType = typeB === "maneuver" ? subB : (typeB === "none" ? "none" : (typeB === "defense" ? "def" : "atk"));
   const leftName = `<b style="color:#d3d3d3">${escapeHtml(nameA)}</b>`;
@@ -307,13 +551,17 @@ function startDuel(state) {
     playerData.acPenalty = 0;
     setPlayerLostActions(playerData, 0, state.randomLostActionRule);
   }
-  state.log.unshift("<div style=\"text-align:center; color:#ff4444; border:2px solid #800020; background:rgba(128,0,32,0.2); padding:5px; margin-bottom:10px; font-weight:bold;\">ДУЭЛЬ НАЧАЛАСЬ!</div>");
+  state.log.unshift(isEnglishLocale()
+    ? "<div style=\"text-align:center; color:#ff4444; border:2px solid #800020; background:rgba(128,0,32,0.2); padding:5px; margin-bottom:10px; font-weight:bold;\">THE DUEL BEGINS!</div>"
+    : "<div style=\"text-align:center; color:#ff4444; border:2px solid #800020; background:rgba(128,0,32,0.2); padding:5px; margin-bottom:10px; font-weight:bold;\">\u0414\u0423\u042d\u041b\u042c \u041d\u0410\u0427\u0410\u041b\u0410\u0421\u042c!</div>");
 }
 
 function clearDuel(state) {
   state.phase = "join";
   state.round = 1;
-  state.log = ["<div style='text-align:center; color:#2ecc71; background:rgba(46, 204, 113, 0.1); border:1px solid #2ecc71; padding:5px; border-radius:3px; font-weight:bold;'>--- Дуэль очищена, раны исцелены ---</div>"];
+  state.log = [isEnglishLocale()
+    ? "<div style='text-align:center; color:#2ecc71; background:rgba(46, 204, 113, 0.1); border:1px solid #2ecc71; padding:5px; border-radius:3px; font-weight:bold;'>--- Duel cleared, wounds healed ---</div>"
+    : "<div style='text-align:center; color:#2ecc71; background:rgba(46, 204, 113, 0.1); border:1px solid #2ecc71; padding:5px; border-radius:3px; font-weight:bold;'>--- \u0414\u0443\u044d\u043b\u044c \u043e\u0447\u0438\u0449\u0435\u043d\u0430, \u0440\u0430\u043d\u044b \u0438\u0441\u0446\u0435\u043b\u0435\u043d\u044b ---</div>"];
   for (const playerData of Object.values(state.players ?? {})) {
     playerData.planned = [];
     playerData.isReady = false;
@@ -326,7 +574,7 @@ function clearDuel(state) {
 async function resolveRound(state) {
   const activeIds = getParticipatingActorIds(state);
   if (activeIds.length !== 2) {
-    ui.notifications?.warn("Для раунда нужно ровно 2 активных дуэлянта!");
+    ui.notifications?.warn(isEnglishLocale() ? EN_DUEL_TEXT.warnings.startNeedsTwo : "\u0414\u043b\u044f \u0440\u0430\u0443\u043d\u0434\u0430 \u043d\u0443\u0436\u043d\u043e \u0440\u043e\u0432\u043d\u043e 2 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u0434\u0443\u044d\u043b\u044f\u043d\u0442\u0430!");
     return false;
   }
 
@@ -335,7 +583,7 @@ async function resolveRound(state) {
   const p2 = state.players[p2Id];
   const useRandomLostActionRule = Boolean(state.randomLostActionRule);
 
-  state.log.unshift(`<div style="text-align:center; background:linear-gradient(90deg, transparent, #800020, transparent); color:#A8A9AD; font-weight:bold; padding:4px; margin:10px 0; border-top:1px solid #A8A9AD; border-bottom:1px solid #A8A9AD; text-transform:uppercase; letter-spacing:2px;">⚔️ РАУНД ${state.round} ⚔️</div>`);
+  state.log.unshift(`<div style="text-align:center; background:linear-gradient(90deg, transparent, #800020, transparent); color:#A8A9AD; font-weight:bold; padding:4px; margin:10px 0; border-top:1px solid #A8A9AD; border-bottom:1px solid #A8A9AD; text-transform:uppercase; letter-spacing:2px;">${isEnglishLocale() ? `ROUND ${state.round}` : `\u0420\u0410\u0423\u041d\u0414 ${state.round}`}</div>`);
 
   let p1NextLost = 0;
   let p2NextLost = 0;
@@ -353,16 +601,16 @@ async function resolveRound(state) {
 
     if (act1.type === "none" && act2.type === "none") {
       state.log.unshift(`<div style="border-left: 3px solid #71797E; background: rgba(0,0,0,0.4); padding: 5px; margin-bottom: 5px; border-radius:3px;">
-        <div style="text-align:center; font-size:11px; color:#A8A9AD; margin-bottom:6px; letter-spacing:2px; font-family:'Modesto Condensed', serif;">-- ДЕЙСТВИЕ ${slot + 1} --</div>
+        <div style="text-align:center; font-size:11px; color:#A8A9AD; margin-bottom:6px; letter-spacing:2px; font-family:'Modesto Condensed', serif;">-- ${isEnglishLocale() ? "ACTION" : "\u0414\u0415\u0419\u0421\u0422\u0412\u0418\u0415"} ${slot + 1} --</div>
         <div style="text-align:center; background: rgba(0,0,0,0.6); padding: 6px; margin-bottom: 6px; border-radius:3px; border-left: 3px solid #800020; font-size: 11.5px; font-style: italic; color:#d3d3d3;">
-          📜 ${getClashFlavor("none", null, "none", null, null, null, p1.name, p2.name)}
+          ${getClashFlavor("none", null, "none", null, null, null, p1.name, p2.name)}
         </div>
       </div>`);
       continue;
     }
 
     let logEntry = `<div style="border-left: 3px solid #71797E; background: rgba(0,0,0,0.4); padding: 5px; margin-bottom: 5px; border-radius:3px;">`;
-    logEntry += `<div style="text-align:center; font-size:11px; color:#A8A9AD; margin-bottom:6px; letter-spacing:2px; font-family:'Modesto Condensed', serif;">-- ДЕЙСТВИЕ ${slot + 1} --</div>`;
+    logEntry += `<div style="text-align:center; font-size:11px; color:#A8A9AD; margin-bottom:6px; letter-spacing:2px; font-family:'Modesto Condensed', serif;">-- ${isEnglishLocale() ? "ACTION" : "\u0414\u0415\u0419\u0421\u0422\u0412\u0418\u0415"} ${slot + 1} --</div>`;
 
     const evalAct = async (attacker, defender, attackAction, defenseAction, mapState) => {
       if (attackAction.type === "none" || attackAction.type === "defense") return { html: "", degree: null };
@@ -382,15 +630,21 @@ async function resolveRound(state) {
 
       if (defenseAction.type === "defense") {
         rollFormula = "2d20kl + @m";
-        interactionText += " | Взаимодействие: <span style='color:#ffaa00'>По Обороне (Неудача 2d20kl)</span>";
+        interactionText += isEnglishLocale()
+          ? " | Interaction: <span style='color:#ffaa00'>Against Defense (2d20, keep the lower result)</span>"
+          : " | Взаимодействие: <span style='color:#ffaa00'>По Обороне (Неудача 2d20kl)</span>";
       }
       if (attackAction.type === "maneuver" && defenseAction.type === "attack") {
         rollModifier -= 2;
-        interactionText += " | Взаимодействие: <span style='color:#ffaa00'>-2 (vs Атака)</span>";
+        interactionText += isEnglishLocale()
+          ? " | Interaction: <span style='color:#ffaa00'>-2 (vs Attack)</span>"
+          : " | Взаимодействие: <span style='color:#ffaa00'>-2 (vs Атака)</span>";
       }
       if (attackAction.type === "maneuver" && defenseAction.type === "defense") {
         dcPenalty += 2;
-        interactionText += " | Взаимодействие: <span style='color:#2ecc71'>Преимущество (КС цели -2)</span>";
+        interactionText += isEnglishLocale()
+          ? " | Interaction: <span style='color:#2ecc71'>Advantage (target DC -2)</span>"
+          : " | Взаимодействие: <span style='color:#2ecc71'>Преимущество (КС цели -2)</span>";
       }
 
       const totalModifier = baseModifier + rollModifier;
@@ -407,8 +661,8 @@ async function resolveRound(state) {
       const diceResults = roll.dice[0]?.results?.map((result) => result.result) ?? [d20];
       const total = roll.total;
       const diceString = diceResults.length > 1
-        ? `🎲[${diceResults.join(", ")}] ➔ Наименьшее: <b>${d20}</b>`
-        : `🎲 ${d20}`;
+        ? (isEnglishLocale() ? `Rolls [${diceResults.join(", ")}] -> keep <b>${d20}</b>` : `🎲[${diceResults.join(", ")}] ➔ Наименьшее: <b>${d20}</b>`)
+        : (isEnglishLocale() ? `Roll ${d20}` : `🎲 ${d20}`);
 
       let degree = total >= (dc + 10) ? 4 : (total >= dc ? 3 : (total <= (dc - 10) ? 1 : 2));
       if (d20 === 20) degree = Math.min(degree + 1, 4);
@@ -423,12 +677,16 @@ async function resolveRound(state) {
 
         if (woundDelta > 0) {
           defender.wounds = (defender.wounds || 0) + woundDelta;
-          effectText = `<b>Эффект:</b> Цель получает <b style="color:#ff4444">+${woundDelta} ${woundDelta === 1 ? "рану" : "раны"}</b>.<br>`;
+          effectText = isEnglishLocale()
+            ? `<b>Effect:</b> The target takes <b style="color:#ff4444">+${woundDelta} ${woundDelta === 1 ? "wound" : "wounds"}</b>.<br>`
+            : `<b>Эффект:</b> Цель получает <b style="color:#ff4444">+${woundDelta} ${woundDelta === 1 ? "рану" : "раны"}</b>.<br>`;
         }
         if (degree === 1) {
           if (attacker.id === p1Id) p1NextLost += 1;
           else p2NextLost += 1;
-          effectText = "<b>Эффект:</b> <b style=\"color:#ffaa00\">Вы теряете 1 действие.</b><br>";
+          effectText = isEnglishLocale()
+            ? "<b>Effect:</b> <b style=\"color:#ffaa00\">You lose 1 action.</b><br>"
+            : "<b>Эффект:</b> <b style=\"color:#ffaa00\">Вы теряете 1 действие.</b><br>";
         }
       } else if (attackAction.type === "maneuver") {
         if (degree === 4) {
@@ -439,31 +697,39 @@ async function resolveRound(state) {
             p2NextAcPen += 2;
             p2NextLost += 1;
           }
-          effectText = "<b>Эффект:</b> <b style=\"color:#2ecc71\">Цель теряет 2 КБ и 1 действие.</b><br>";
+          effectText = isEnglishLocale()
+            ? "<b>Effect:</b> <b style=\"color:#2ecc71\">The target loses 2 AC and 1 action.</b><br>"
+            : "<b>Эффект:</b> <b style=\"color:#2ecc71\">Цель теряет 2 КБ и 1 действие.</b><br>";
         } else if (degree === 3) {
           if (defender.id === p1Id) p1NextAcPen += 2;
           else p2NextAcPen += 2;
-          effectText = "<b>Эффект:</b> <b style=\"color:#2ecc71\">Цель теряет 2 КБ.</b><br>";
+          effectText = isEnglishLocale()
+            ? "<b>Effect:</b> <b style=\"color:#2ecc71\">The target loses 2 AC.</b><br>"
+            : "<b>Эффект:</b> <b style=\"color:#2ecc71\">Цель теряет 2 КБ.</b><br>";
         } else if (degree === 1) {
           if (attacker.id === p1Id) p1NextLost += 1;
           else p2NextLost += 1;
-          effectText = "<b>Эффект:</b> <b style=\"color:#ffaa00\">Вы теряете 1 действие.</b><br>";
+          effectText = isEnglishLocale()
+            ? "<b>Effect:</b> <b style=\"color:#ffaa00\">You lose 1 action.</b><br>"
+            : "<b>Эффект:</b> <b style=\"color:#ffaa00\">Вы теряете 1 действие.</b><br>";
         }
       }
 
       let actionTypeName = "";
-      if (attackAction.type === "attack") actionTypeName = "⚔️ АТАКА";
-      else if (attackAction.sub === "ath") actionTypeName = "🤹 МАНЕВР (Атлетика)";
-      else if (attackAction.sub === "acr") actionTypeName = "🤹 МАНЕВР (Акробатика)";
-      else if (attackAction.sub === "int") actionTypeName = "🤹 МАНЕВР (Запугивание)";
-      else if (attackAction.sub === "dec") actionTypeName = "🤹 МАНЕВР (Обман)";
+      if (attackAction.type === "attack") actionTypeName = isEnglishLocale() ? "ATTACK" : "⚔️ АТАКА";
+      else if (attackAction.sub === "ath") actionTypeName = isEnglishLocale() ? "MANEUVER (Athletics)" : "🤹 МАНЕВР (Атлетика)";
+      else if (attackAction.sub === "acr") actionTypeName = isEnglishLocale() ? "MANEUVER (Acrobatics)" : "🤹 МАНЕВР (Акробатика)";
+      else if (attackAction.sub === "int") actionTypeName = isEnglishLocale() ? "MANEUVER (Intimidation)" : "🤹 МАНЕВР (Запугивание)";
+      else if (attackAction.sub === "dec") actionTypeName = isEnglishLocale() ? "MANEUVER (Deception)" : "🤹 МАНЕВР (Обман)";
 
-      const badge = degree === 4 ? "КРИТ" : (degree === 3 ? "УСПЕХ" : (degree === 2 ? "ПРОМАХ" : "КРИТ ПРОМАХ"));
+      const badge = isEnglishLocale()
+        ? (degree === 4 ? "CRIT" : (degree === 3 ? "SUCCESS" : (degree === 2 ? "MISS" : "CRIT MISS")))
+        : (degree === 4 ? "КРИТ" : (degree === 3 ? "УСПЕХ" : (degree === 2 ? "ПРОМАХ" : "КРИТ ПРОМАХ")));
       const color = degree === 4 ? "#800020" : (degree === 3 ? "#4a0404" : (degree === 2 ? "#555" : "#880000"));
       const html = `<div style="margin-top:4px;"><span style="background:${color}; color:#d3d3d3; padding:1px 4px; border-radius:2px; font-size:9px;">${actionTypeName}: ${badge}</span>
         <div style="font-size:10px; color:#aaa; margin-top:4px; padding:4px; background:rgba(0,0,0,0.5); border-left:2px solid #555;">
-          <b>Модификатор:</b> База (${baseModifier >= 0 ? "+" : ""}${baseModifier}) | ШМА (${mapPenalty})${interactionText} = <b>${totalModifier >= 0 ? "+" : ""}${totalModifier}</b><br>
-          <b>Бросок:</b> ${diceString} + ${totalModifier} = <b>${total}</b> против КС <b>${dc}</b><br>
+          <b>${isEnglishLocale() ? "Modifier" : "Модификатор"}:</b> ${isEnglishLocale() ? "Base" : "База"} (${baseModifier >= 0 ? "+" : ""}${baseModifier}) | ${isEnglishLocale() ? "MAP" : "ШМА"} (${mapPenalty})${interactionText} = <b>${totalModifier >= 0 ? "+" : ""}${totalModifier}</b><br>
+          <b>${isEnglishLocale() ? "Roll" : "Бросок"}:</b> ${diceString} + ${totalModifier} = <b>${total}</b> ${isEnglishLocale() ? "vs DC" : "против КС"} <b>${dc}</b><br>
           ${effectText}
         </div></div>`;
 
@@ -474,7 +740,7 @@ async function resolveRound(state) {
     const wrapBlock = (html, title) => {
       if (!html) return "";
       return `<div style="border: 1px solid #4a0404; background: rgba(10,10,10,0.8); padding: 5px; margin-bottom: 5px; border-radius: 4px;">
-        <div style="font-weight:bold; font-size:11px; color:#ffaa00; border-bottom:1px dashed #4a0404; margin-bottom:4px; padding-bottom:2px;">Ход: ${escapeHtml(title)}</div>
+        <div style="font-weight:bold; font-size:11px; color:#ffaa00; border-bottom:1px dashed #4a0404; margin-bottom:4px; padding-bottom:2px;">${isEnglishLocale() ? "Turn" : "Ход"}: ${escapeHtml(title)}</div>
         ${html}
       </div>`;
     };
@@ -484,15 +750,15 @@ async function resolveRound(state) {
     const res1 = await evalAct(p1, p2, act1, act2, mapP1);
     const res2 = await evalAct(p2, p1, act2, act1, mapP2);
     logEntry += `<div style="text-align:center; background: rgba(0,0,0,0.6); padding: 6px; margin-bottom: 6px; border-radius:3px; border-left: 3px solid #800020; font-size: 11.5px; font-style: italic; color:#d3d3d3;">
-      📜 ${getClashFlavor(act1.type, act1.sub, act2.type, act2.sub, res1.degree, res2.degree, p1.name, p2.name)}
+      ${getClashFlavor(act1.type, act1.sub, act2.type, act2.sub, res1.degree, res2.degree, p1.name, p2.name)}
     </div>`;
 
-    if (act1.type === "defense") p1Log += "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">🛡️ Уходит в глухую оборону.</div>";
-    if (act1.type === "none") p1Log += "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">⏳ Потеря или пропуск действия...</div>";
+    if (act1.type === "defense") p1Log += isEnglishLocale() ? "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">Falls into total defense.</div>" : "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">🛡️ Уходит в глухую оборону.</div>";
+    if (act1.type === "none") p1Log += isEnglishLocale() ? "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">Lost or skipped action...</div>" : "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">⏳ Потеря или пропуск действия...</div>";
     if (res1.html) p1Log += res1.html;
 
-    if (act2.type === "defense") p2Log += "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">🛡️ Уходит в глухую оборону.</div>";
-    if (act2.type === "none") p2Log += "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">⏳ Потеря или пропуск действия...</div>";
+    if (act2.type === "defense") p2Log += isEnglishLocale() ? "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">Falls into total defense.</div>" : "<div style=\"font-size:11px; margin-bottom:4px; font-weight:bold; color:#A8A9AD;\">🛡️ Уходит в глухую оборону.</div>";
+    if (act2.type === "none") p2Log += isEnglishLocale() ? "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">Lost or skipped action...</div>" : "<div style=\"font-size:11px; margin-bottom:4px; font-style:italic; color:#888;\">⏳ Потеря или пропуск действия...</div>";
     if (res2.html) p2Log += res2.html;
 
     if (p1Log) logEntry += wrapBlock(p1Log, p1.name);
@@ -520,9 +786,9 @@ async function resolveRound(state) {
   if (p1Dead || p2Dead) {
     state.phase = "end";
     let endText = "";
-    if (p1Dead && p2Dead) endText = "НИЧЬЯ! Оба дуэлянта падают, истекая кровью.";
-    else if (p1Dead) endText = `🏆 ПОБЕДА: ${escapeHtml(p2.name)}! Противник сломлен.`;
-    else endText = `🏆 ПОБЕДА: ${escapeHtml(p1.name)}! Противник сломлен.`;
+    if (p1Dead && p2Dead) endText = isEnglishLocale() ? "DRAW! Both duelists collapse, bleeding out." : "НИЧЬЯ! Оба дуэлянта падают, истекая кровью.";
+    else if (p1Dead) endText = isEnglishLocale() ? `VICTORY: ${escapeHtml(p2.name)}! The opponent is broken.` : `🏆 ПОБЕДА: ${escapeHtml(p2.name)}! Противник сломлен.`;
+    else endText = isEnglishLocale() ? `VICTORY: ${escapeHtml(p1.name)}! The opponent is broken.` : `🏆 ПОБЕДА: ${escapeHtml(p1.name)}! Противник сломлен.`;
     state.log.unshift(`<div style="background:linear-gradient(135deg, #4a0404, #800020, #4a0404); border:2px solid #A8A9AD; padding:10px; border-radius:5px; color:#d3d3d3; text-align:center; font-weight:bold; font-size:13px; text-shadow:1px 1px 2px black;">${endText}</div>`);
   }
 
@@ -545,7 +811,7 @@ class DuelCombatApplication extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: APP_ID,
-      title: gt(definition, "Title", "Дуэль - Боевая"),
+      title: isEnglishLocale() ? EN_DUEL_TEXT.title : "\u0411\u043e\u0435\u0432\u0430\u044f \u0434\u0443\u044d\u043b\u044c",
       width: 1400,
       height: 800,
       resizable: true,
@@ -565,7 +831,8 @@ class DuelCombatApplication extends Application {
 
   async _renderInner(data) {
     registerHandlebarsHelpers();
-    return $(DUEL_STYLE + Handlebars.compile(DUEL_TEMPLATE)(data));
+    const template = isEnglishLocale() ? DUEL_TEMPLATE_EN : DUEL_TEMPLATE;
+    return $(DUEL_STYLE + Handlebars.compile(template)(data));
   }
 
   async refresh() {
@@ -582,6 +849,7 @@ class DuelCombatApplication extends Application {
 
   getData() {
     const state = this.getState();
+    const ui = isEnglishLocale() ? getEnglishDuelUi() : null;
     state.randomLostActionRule = Boolean(state.randomLostActionRule);
     const players = [];
     const activeCombatants = Object.values(state.players ?? {}).filter((entry) => entry.isParticipating);
@@ -618,6 +886,12 @@ class DuelCombatApplication extends Application {
           isDisabled: isActionSlotLost(playerData, index),
           isReadonly: !canEditActionPlan,
           maneuverSelectDisabled: !canEditActionPlan || planned.type !== "maneuver",
+          maneuverOptions: ui ? [
+            { value: "ath", selected: planned.sub === "ath", label: `${ui.maneuvers.ath} (${formatSignedNumber(stats.ath)}) vs ${ui.saves.fort}` },
+            { value: "acr", selected: planned.sub === "acr", label: `${ui.maneuvers.acr} (${formatSignedNumber(stats.acr)}) vs ${ui.saves.ref}` },
+            { value: "int", selected: planned.sub === "int", label: `${ui.maneuvers.int} (${formatSignedNumber(stats.int)}) vs ${ui.saves.will}` },
+            { value: "dec", selected: planned.sub === "dec", label: `${ui.maneuvers.dec} (${formatSignedNumber(stats.dec)}) vs ${ui.saves.per}` },
+          ] : [],
           planned,
         });
       }
@@ -630,11 +904,26 @@ class DuelCombatApplication extends Application {
         isObserverCard,
         canEditActionPlan,
         canSeeActionPlan,
-        spectatorLabel: isObserverCard ? gt(definition, "Spectator", "Наблюдает") : "",
+        spectatorLabel: isObserverCard ? (isEnglishLocale() ? EN_DUEL_TEXT.spectator : "\u041d\u0430\u0431\u043b\u044e\u0434\u0430\u0435\u0442") : "",
         showStats,
         wounds,
         woundPct,
         stats,
+        weaponOptions: ui
+          ? stats.availableStrikes.map((entry) => ({
+            id: entry.id,
+            selected: entry.id === (playerData.selectedStrikeId ?? stats.availableStrikes[0]?.id),
+            label: `${entry.name} (${formatSignedNumber(entry.atk)})`,
+          }))
+          : [],
+        selectedWeaponLabel: `${stats.strikeName} (${formatSignedNumber(stats.atk)})`,
+        statusBadges: [
+          ...(playerData.acPenalty ? [`${ui?.statusBadges?.acPenalty ?? "AC penalty"}: -${playerData.acPenalty}`] : []),
+          ...(playerData.lostActions ? [`${ui?.statusBadges?.lostActions ?? "Lost actions"}: ${playerData.lostActions}`] : []),
+        ],
+        planStatusText: isObserverCard
+          ? (ui?.planStatus?.spectator ?? "")
+          : (playerData.isReady ? (ui?.planStatus?.ready ?? "") : (ui?.planStatus?.waiting ?? "")),
         actionSlots,
       });
     }
@@ -642,11 +931,13 @@ class DuelCombatApplication extends Application {
     return {
       state,
       players,
+      ui,
+      isEnglish: isEnglishLocale(),
       isGM: game.user.isGM,
       isJoinPhase: state.phase === "join",
       isPlayingPhase: state.phase === "play",
       canStartDuel: participatingCount === 2,
-      randomLostActionLabel: gt(definition, "Footer.RandomLostAction", "Потеряно случайное действие"),
+      randomLostActionLabel: isEnglishLocale() ? EN_DUEL_TEXT.randomLostActionLabel : "\u041f\u043e\u0442\u0435\u0440\u044f\u043d\u043e \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435",
     };
   }
 
@@ -761,7 +1052,7 @@ const definition = {
         if (nextParticipating) {
           const activeIds = getParticipatingActorIds(state).filter((actorId) => actorId !== data.actorId);
           if (activeIds.length >= 2) {
-            notify("warn", "Games.DuelCombat.StartNeedsTwo", {}, "В дуэли должно быть ровно 2 участника.");
+            ui.notifications?.warn(isEnglishLocale() ? EN_DUEL_TEXT.warnings.startNeedsTwo : "\u0412 \u0434\u0443\u044d\u043b\u0438 \u0434\u043e\u043b\u0436\u043d\u043e \u0431\u044b\u0442\u044c \u0440\u043e\u0432\u043d\u043e 2 \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u0430.");
             return false;
           }
         }
@@ -805,7 +1096,7 @@ const definition = {
       case "start-duel": {
         if (!senderIsGM) return false;
         if (!canStartDuelWithState(state)) {
-          notify("warn", "Games.DuelCombat.StartNeedsTwo", {}, "В дуэли должно быть ровно 2 участника.");
+          ui.notifications?.warn(isEnglishLocale() ? EN_DUEL_TEXT.warnings.startNeedsTwo : "\u0412 \u0434\u0443\u044d\u043b\u0438 \u0434\u043e\u043b\u0436\u043d\u043e \u0431\u044b\u0442\u044c \u0440\u043e\u0432\u043d\u043e 2 \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u0430.");
           return false;
         }
         startDuel(state);
@@ -823,7 +1114,6 @@ const definition = {
       case "reset-game": {
         if (!senderIsGM) return false;
         replaceStateContents(state, createInitialState());
-        await syncDefaultPlayers(state);
         return true;
       }
       case "add-actor": {

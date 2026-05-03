@@ -1,11 +1,12 @@
-import { MODULE_ID } from "../core.js";
+import { MODULE_ID, i18nKey, t } from "../core.js";
 
 const SETTING_ENABLE = "enableThumb";
+const I18N_ROOT = "Settings.Thumb";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
-    name: "Enable Scene Thumb",
-    hint: "Adds a custom thumbnail field to the scene configuration form.",
+    name: i18nKey(`${I18N_ROOT}.Name`),
+    hint: i18nKey(`${I18N_ROOT}.Hint`),
     scope: "world",
     config: true,
     default: true,
@@ -25,7 +26,7 @@ function createThumbField(scene) {
   wrapper.className = "form-group tsu-scene-thumb-field";
 
   const label = document.createElement("label");
-  label.textContent = "Thumb Image";
+  label.textContent = t(`${I18N_ROOT}.Label`, "Thumb Image");
 
   const formFields = document.createElement("div");
   formFields.className = "form-fields";
@@ -37,7 +38,7 @@ function createThumbField(scene) {
 
   const hint = document.createElement("p");
   hint.className = "hint";
-  hint.textContent = "Custom thumbnail used for this scene in the navigation and directory.";
+  hint.textContent = t(`${I18N_ROOT}.FieldHint`, "Custom thumbnail used for this scene in the navigation and directory.");
 
   formFields.append(picker);
   wrapper.append(label, formFields, hint);

@@ -1,22 +1,25 @@
 import {
   comparePlayerEntriesForDisplay,
   getPinnedPlayerActorIdForDisplay,
-  getActorUuidFromDropData,
-  getDroppedActors,
   MODULE_ID,
+  moduleLog,
   escapeHtml,
   formatSignedNumber,
   getActorLoreModifier,
+  getActorUuidFromDropData,
+  getDroppedActors,
   getGameState,
   getNonGmCharacters,
   isActorControlledByNonGm,
-  gobj,
+  notify,
   gt,
   gtf,
-  notify,
+  gobj,
   patchApplicationRegions,
   randomChoice,
+  refreshApplication,
   requestGameAction,
+  saveGameState,
   t,
   userCanControlActor,
 } from "../core.js";
@@ -40,9 +43,9 @@ const COIN_CURRENCIES = Object.freeze({
 });
 
 const TARGETS = Object.freeze({
-  tongue: { levelOffset: -2, manualDcOffset: 0, points: 1, key: "Tongue" },
-  nose: { levelOffset: 2, manualDcOffset: 4, points: 2, key: "Nose" },
-  horns: { levelOffset: 6, manualDcOffset: 8, points: 3, key: "Horns" },
+  tongue: { dcOffset: -2, points: 1, key: "Tongue" },
+  nose: { dcOffset: 2, points: 2, key: "Nose" },
+  horns: { dcOffset: 6, points: 3, key: "Horns" },
 });
 
 const SKILLS = Object.freeze({
@@ -62,6 +65,7 @@ function createInitialState() {
     log: [],
     results: null,
     debugMode: false,
+    suppressDefaultPlayers: false,
     openSignal: null,
     currency: "sp",
     payoutClaimed: false,
@@ -182,16 +186,7 @@ function hasManualBaseDcOverride(state) {
 function getTargetDc(state, targetOrId) {
   const target = typeof targetOrId === "string" ? TARGETS[targetOrId] : targetOrId;
   if (!target) return DEFAULT_BASE_DC;
-  
-  if (hasManualBaseDcOverride(state)) {
-    return getBaseDc(state) + (target.manualDcOffset || 0);
-  }
-
-  // 1. Сначала вычисляем сам базовый DC по уровню (без смещений уровня)
-  const baseDc = getLevelBasedDc(getSuggestedBaseLevel(state));
-
-  // 2. Добавляем корректировку уже к готовому DC 
-  return baseDc + (target.levelOffset || 0);
+  return getBaseDc(state) + (target.dcOffset || 0);
 }
 
 function getDcLabel(definition) {
@@ -334,7 +329,7 @@ function getLoreModifier(actor) {
       || name.includes("untrained improvisation");
   });
   const untrainedModifier = intelligence + (hasUntrainedImprovisation ? Math.max(level - 2, 0) : 0);
-  const lore = actor.items.find((item) => item.type === "lore" && ["game", "games", "����", "����"].some((term) => item.name.toLowerCase().includes(term)));
+  const lore = actor.items.find((item) => item.type === "lore" && GAMES_LORE_SELECTOR.some((term) => item.name.toLowerCase().includes(term)));
   if (!lore) return untrainedModifier;
   if (isNpc) return lore.system.mod?.value || intelligence;
   const rank = lore.system.proficient?.value || 0;
@@ -521,10 +516,6 @@ async function syncDefaultPlayers(state) {
   const defaultActors = getNonGmCharacters();
   state.excludedPlayers ||= {};
   const defaultIds = new Set(defaultActors.map((actor) => actor.id));
-
-  for (const actorId of defaultIds) {
-    delete state.excludedPlayers[actorId];
-  }
 
   for (const [actorId, playerData] of Object.entries(state.players ?? {})) {
     const actor = game.actors.get(actorId);
@@ -1444,7 +1435,7 @@ class DevilsPinApplication extends Application {
         .sort((a, b) => comparePlayerEntriesForDisplay(a, b, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
         .map(([actorId, playerData]) => createPlayerPresentation(definition, state, actorId, playerData));
 
-      console.log(`${MODULE_ID} | devils-pin getData`, {
+      moduleLog(`devils-pin getData`, {
         phase: state.phase,
         statePlayers: Object.keys(state.players ?? {}),
         discoveredPlayers: Array.from(discoveredIds),
@@ -1643,7 +1634,7 @@ class DevilsPinApplication extends Application {
   async _onDrop(event) {
     event.preventDefault();
     const data = TextEditor.getDragEventData(event);
-    console.log(`${MODULE_ID} | devils-pin drop`, data);
+    moduleLog(`devils-pin drop`, data);
     const uuid = getActorUuidFromDropData(data);
     if (!uuid) return;
     await requestGameAction(GAME_ID, "add-actor", { uuid });
@@ -1757,7 +1748,7 @@ const definition = {
           const actor = game.actors.get(actorId);
           if (actor?.type === "character") {
             playerData.cachedAtk = await getDartModifierForCharacter(actor);
-            console.log(`${MODULE_ID} | devils-pin: start-game attack cache`, {
+            moduleLog(`devils-pin: start-game attack cache`, {
               actorId,
               actor: actor.name,
               cachedAtk: playerData.cachedAtk,
@@ -1787,7 +1778,6 @@ const definition = {
       case "reset-game": {
         if (!senderIsGM) return false;
         replaceStateContents(state, createInitialState());
-        await syncDefaultPlayers(state);
         return true;
       }
       case "clear": {
@@ -1848,7 +1838,7 @@ const definition = {
       case "add-actor": {
         if (!data.uuid) return false;
         const actors = await getDroppedActors(data.uuid);
-        console.log(`${MODULE_ID} | devils-pin add-actor`, {
+        moduleLog(`devils-pin add-actor`, {
           requestedUuid: data.uuid,
           resolvedActors: actors.map((actor) => ({ id: actor.id, name: actor.name, type: actor.type })),
         });
@@ -1864,7 +1854,7 @@ const definition = {
           state.players[actor.id].source = "manual";
           if (actor.type === "npc") state.players[actor.id].isParticipating = true;
           addedCount += 1;
-          console.log(`${MODULE_ID} | devils-pin add-actor upsert`, {
+          moduleLog(`devils-pin add-actor upsert`, {
             actorId: actor.id,
             actorName: actor.name,
             alreadyPresent,
@@ -1873,7 +1863,7 @@ const definition = {
             source: state.players?.[actor.id]?.source ?? null,
           });
         }
-        console.log(`${MODULE_ID} | devils-pin add-actor result`, {
+        moduleLog(`devils-pin add-actor result`, {
           addedCount,
           playerIds: Object.keys(state.players ?? {}),
           excluded: Object.keys(state.excludedPlayers ?? {}),

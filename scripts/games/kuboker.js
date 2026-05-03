@@ -1,4 +1,4 @@
-﻿import {
+import {
   getActorUuidFromDropData,
   getDroppedActors,
   MODULE_ID,
@@ -80,6 +80,7 @@ function createInitialState() {
     currentDC: 15,
     dcOverride: null,
     debugMode: false,
+    suppressDefaultPlayers: false,
     openSignal: null,
     betting: {
       enabled: false,
@@ -658,10 +659,6 @@ async function syncDefaultPlayers(state) {
   state.excludedPlayers ||= {};
   const defaultIds = new Set(defaultActors.map((actor) => actor.id));
 
-  for (const actorId of defaultIds) {
-    delete state.excludedPlayers[actorId];
-  }
-
   for (const [actorId, playerData] of Object.entries(state.players ?? {})) {
     const actor = game.actors.get(actorId);
     const isCharacter = actor?.type === "character";
@@ -1011,25 +1008,7 @@ function unwrapChronicleEntry(html) {
 }
 
 function getChronicleOutcomeLabel(outcomeKey) {
-  const isRu = (game?.i18n?.lang ?? "en").startsWith("ru");
-  const labels = isRu
-    ? {
-        UberCrit: "НАТ 20 UBER",
-        CriticalSuccess: "КРИТ. УСПЕХ",
-        Success: "УСПЕХ",
-        Failure: "ПРОВАЛ",
-        CriticalFailure: "КРИТ. ПРОВАЛ",
-        UberFailure: "НАТ 1 UBER",
-      }
-    : {
-        UberCrit: "NAT 20 UBER",
-        CriticalSuccess: "CRIT. SUCCESS",
-        Success: "SUCCESS",
-        Failure: "FAILURE",
-        CriticalFailure: "CRIT. FAILURE",
-        UberFailure: "NAT 1 UBER",
-      };
-  return labels[outcomeKey] ?? outcomeKey.toUpperCase();
+  return gt(definition, `ChronicleOutcomes.${outcomeKey}`, outcomeKey.toUpperCase());
 }
 
 function getChronicleOutcomeVisual(outcomeKey) {
@@ -1078,8 +1057,7 @@ function buildChronicleNote(content, { color = "#ffd700", centered = false } = {
 }
 
 function buildChronicleHeader(definition, dc) {
-  const isRu = (game?.i18n?.lang ?? "en").startsWith("ru");
-  const title = isRu ? `ПРОВЕРКА СТРАТЕГИЙ (КС ${dc})` : `STRATEGY CHECKS (DC ${dc})`;
+  const title = gtf(definition, "Log.StrategyHeaderText", { dc }, ({ dc: localDc }) => `STRATEGY CHECKS (DC ${localDc})`);
   return `<div style="text-align:center; color:#ffd700; border-top:1px solid #d4af37; border-bottom:1px solid #d4af37; background:rgba(212,175,55,0.1); padding:4px; margin:10px 0; font-weight:bold; font-size:12px;">${title}</div>`;
 }
 
@@ -1545,7 +1523,7 @@ class KubokerApplication extends Application {
       .sort((a, b) => comparePlayerEntriesForDisplay(a, b, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
       .map(([actorId, playerData]) => createPlayerPresentation(definition, state, actorId, playerData, visibleCheatersMap));
 
-    console.log(`${MODULE_ID} | kuboker getData`, {
+    moduleLog(`kuboker getData`, {
       phase: state.phase,
       statePlayers: Object.keys(state.players ?? {}).length,
       visiblePlayers: players.length,
@@ -1837,7 +1815,7 @@ class KubokerApplication extends Application {
   async _onDrop(event) {
     event.preventDefault();
     const data = TextEditor.getDragEventData(event);
-    console.log(`${MODULE_ID} | kuboker drop`, data);
+    moduleLog(`kuboker drop`, data);
     const uuid = getActorUuidFromDropData(data);
     if (!uuid) return;
     await requestGameAction(GAME_ID, "add-actor", { uuid });
@@ -2190,7 +2168,6 @@ const definition = {
       case "reset-game": {
         if (!senderIsGM) return false;
         replaceStateContents(state, createInitialState());
-        await syncDefaultPlayers(state);
         return true;
       }
       case "toggle-debug": {

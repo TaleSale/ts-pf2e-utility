@@ -1,7 +1,8 @@
-import { MODULE_ID } from "../core.js";
+import { MODULE_ID, i18nKey, t } from "../core.js";
 
 const FLAG_KEY = "spellMods";
 const SETTING_ENABLE = "enableSpellAtWill";
+const I18N_ROOT = "Settings.SpellAtWill";
 const TAG_SEPARATOR = " / ";
 const MOD_TAGS = Object.freeze([
   { key: "atWill", labels: { en: "At Will", ru: "\u041f\u043e \u0436\u0435\u043b\u0430\u043d\u0438\u044e" }, row: "counteraction" },
@@ -205,8 +206,8 @@ async function onCheckboxChange(item, input) {
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
-    name: "Enable spell tags",
-    hint: "Adds At Will, Constant, and Self toggles to the PF2E spell sheet.",
+    name: i18nKey(`${I18N_ROOT}.Name`),
+    hint: i18nKey(`${I18N_ROOT}.Hint`),
     scope: "world",
     config: true,
     default: true,

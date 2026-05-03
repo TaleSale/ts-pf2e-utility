@@ -183,7 +183,16 @@
             "Style": "background: rgba(135,10,10,0.34); border: 1px solid rgba(255,95,95,0.55);"
           }
         },
+        "ChronicleOutcomes": {
+          "UberCrit": "NAT 20 UBER",
+          "CriticalSuccess": "CRIT. SUCCESS",
+          "Success": "SUCCESS",
+          "Failure": "FAILURE",
+          "CriticalFailure": "CRIT. FAILURE",
+          "UberFailure": "NAT 1 UBER"
+        },
         "Log": {
+          "StrategyHeaderText": "STRATEGY CHECKS (DC {dc})",
           "StrategyHeader": "<div class=\"tsu-log-entry\" style=\"text-align:center;\"><b>Strategy checks (DC {dc})</b></div>",
           "StrategyResult": "<div class=\"tsu-log-entry\" style=\"{style}\"><div style=\"display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px;\"><span style=\"background:{color};color:black;padding:1px 8px;border-radius:999px;font-weight:700;\">{prefix}: {label}</span><span style=\"font-size:10px;opacity:0.72;\">[{d20}+{mod}{penalty}={total} vs DC {dc}]</span></div><div>{flavor}</div></div>",
           "CheatPenalty": "<div class=\"tsu-log-entry\" style=\"text-align:center;color:#ff8f8f;\"><b>Cheater penalty from eagle eyes: {penalty}</b></div>",

@@ -5,6 +5,36 @@
         "NoPlayers": "No players found. Assign characters to users or drag actors into the game window."
       }
     },
+    "Settings": {
+      "SupportMessage": "Support the author and the module on Boosty:",
+      "Sections": {
+        "Scene": "Scene",
+        "Spells": "Spells",
+        "Journals": "Journals"
+      },
+      "SceneEye": {
+        "Name": "Enable Scene Eye",
+        "Hint": "Adds a quick-view eye button next to scene links in chat and journal entries (GM only).",
+        "ButtonTitle": "View scene as GM",
+        "MissingScene": "Scene was not found."
+      },
+      "Thumb": {
+        "Name": "Enable Scene Thumb",
+        "Hint": "Adds a custom thumbnail field to the scene configuration form.",
+        "Label": "Thumb Image",
+        "FieldHint": "Custom thumbnail used for this scene in the navigation and directory."
+      },
+      "SpellAtWill": {
+        "Name": "Enable spell tags",
+        "Hint": "Adds At Will, Constant, and Self toggles to the PF2E spell sheet."
+      },
+      "Journals": {
+        "Read": {
+          "Name": "Enable read sections",
+          "Hint": "Activates .read sections in journals so the marked block can be posted to chat from the sheet."
+        }
+      }
+    },
     "Notifications": {
       "SceneRequired": "An active scene is required.",
       "OnlyGM": "Only the GM can open this game.",

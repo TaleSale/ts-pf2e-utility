@@ -1,11 +1,12 @@
-import { MODULE_ID } from "../core.js";
+import { MODULE_ID, i18nKey, t } from "../core.js";
 
 const SETTING_ENABLE = "enableSceneEye";
+const I18N_ROOT = "Settings.SceneEye";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
-    name: "Enable Scene Eye",
-    hint: "Adds a quick-view eye button next to scene links in chat and journal entries (GM only).",
+    name: i18nKey(`${I18N_ROOT}.Name`),
+    hint: i18nKey(`${I18N_ROOT}.Hint`),
     scope: "world",
     config: true,
     default: true,
@@ -36,7 +37,7 @@ function createEyeButton(sceneId) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "tsu-scene-eye-button";
-  button.title = "View scene as GM";
+  button.title = t(`${I18N_ROOT}.ButtonTitle`, "View scene as GM");
   button.setAttribute("aria-label", button.title);
   button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
   button.addEventListener("click", async (event) => {
@@ -45,7 +46,7 @@ function createEyeButton(sceneId) {
 
     const scene = game.scenes?.get(sceneId);
     if (!scene) {
-      ui.notifications?.warn("Scene was not found.");
+      ui.notifications?.warn(t(`${I18N_ROOT}.MissingScene`, "Scene was not found."));
       return;
     }
 

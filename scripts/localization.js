@@ -1,7 +1,9 @@
-import { MODULE_ID } from "./core.js";
+import { MODULE_ID, moduleLog } from "./core.js";
 
 const SUPPORTED_LANGUAGES = Object.freeze(["en", "ru"]);
 const LOCALIZATION_FILES = Object.freeze([
+  "beer-furious.json",
+  "bug-race.json",
   "devils-pin.json",
   "duel-combat.json",
   "kuboker.json",
@@ -38,6 +40,5 @@ export function registerModularLocalization() {
     }
 
     await mergeLocalizationSet(targetLang, game.i18n.translations);
-    console.log(`${MODULE_ID} | Localization loaded for: ${targetLang}`);
-  });
+    moduleLog(`Localization loaded for: ${targetLang}`);  });
 }

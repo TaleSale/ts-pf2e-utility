@@ -2,6 +2,21 @@ export const MODULE_ID = "ts-pf2e-utility";
 export const SOCKET_CHANNEL = `module.${MODULE_ID}`;
 export const I18N_PREFIX = "TS_PF2E_UTILITY";
 
+const SETTING_DEBUG_LOGGING = "enableDebugLogging";
+
+export function isDebugLoggingEnabled() {
+  try {
+    return Boolean(game.settings?.get(MODULE_ID, SETTING_DEBUG_LOGGING));
+  } catch {
+    return false;
+  }
+}
+
+export function moduleLog(...args) {
+  if (!isDebugLoggingEnabled()) return;
+  console.log(`${MODULE_ID} |`, ...args);
+}
+
 const SOCKET_ACTIONS = Object.freeze({
   playerAction: "player-action",
 });
@@ -10,10 +25,14 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
     packId: `${MODULE_ID}.games`,
     rootFolder: "99.TS-PF2E-UTILITY",
     sourceFiles: Object.freeze([
+      "pack-src/games/Open_Beer_Furious_BrF0rsh1P1v00001.json",
+      "pack-src/games/Open_Bug_Race_BrUgR4cE2026pF2.json",
       "pack-src/games/Open_Kuboker_uK8pV4mX2rQ7nHs5.json",
       "pack-src/games/Open_Devils_Pin_YwNQfY3G4kP1mL2a.json",
     ]),
     iconUpdates: Object.freeze({
+      BrF0rsh1P1v00001: "icons/consumables/drinks/alcohol-beer-mug-yellow.webp",
+      BrUgR4cE2026pF20: "icons/creatures/invertebrates/beetle-stag-tan-brown.webp",
       uK8pV4mX2rQ7nHs5: "icons/skills/trades/gaming-gambling-dice-gray.webp",
       YwNQfY3G4kP1mL2a: "icons/magic/death/skull-horned-goat-pentagram-red.webp",
     }),
@@ -43,7 +62,6 @@ const PARTIAL_REFRESH_SCROLL_SELECTORS = [
   ".tsu-log-list",
   ".kb-log-list",
 ].join(", ");
-
 function gameFlagKey(gameId) {
   return `gameState-${gameId}`;
 }
@@ -194,11 +212,16 @@ export function getGameState(gameId, scene = getCurrentScene()) {
   return scene.getFlag(MODULE_ID, gameFlagKey(gameId)) ?? null;
 }
 
-export async function saveGameState(gameId, state, scene = getCurrentScene()) {
+export async function saveGameState(gameId, state, scene = getCurrentScene(), { replaceExisting = false } = {}) {
   if (!scene) return;
   state.syncToken = Date.now();
   const flagKey = gameFlagKey(gameId);
   const snapshot = clone(state);
+  if (replaceExisting) {
+    // Foundry document updates can preserve stale nested flag data when a reset
+    // shrinks large objects like players/excludedPlayers down to empty objects.
+    await scene.unsetFlag(MODULE_ID, flagKey);
+  }
   await scene.setFlag(MODULE_ID, flagKey, snapshot);
 }
 
@@ -411,28 +434,30 @@ export function getNonGmCharacters() {
   }
 
   const selectedCharacters = Array.from(characters.values());
-  console.groupCollapsed(`${MODULE_ID} | player discovery`);
-  if (!onlineUsers.length) {
-    console.warn(`${MODULE_ID} | no active non-GM users found, auto player discovery is empty`);
+  if (isDebugLoggingEnabled()) {
+    console.groupCollapsed(`${MODULE_ID} | player discovery`);
+    if (!onlineUsers.length) {
+      console.warn(`${MODULE_ID} | no active non-GM users found, auto player discovery is empty`);
+    }
+    console.table(allPlayerUsers.map((user) => ({
+      id: user.id,
+      name: user.name,
+      active: Boolean(user.active),
+      characterId: user.character?.id ?? "",
+      characterName: user.character?.name ?? "",
+    })));
+    console.table(rankedParties.map(({ party, members, matchedUsers }) => ({
+      partyId: party.id,
+      partyName: party.name,
+      members: members.map((member) => member.name).join(", "),
+      matchedUsers: matchedUsers.map((user) => user.name).join(", "),
+    })));
+    console.table(selectedCharacters.map((actor) => ({
+      actorId: actor.id,
+      actorName: actor.name,
+    })));
+    console.groupEnd();
   }
-  console.table(allPlayerUsers.map((user) => ({
-    id: user.id,
-    name: user.name,
-    active: Boolean(user.active),
-    characterId: user.character?.id ?? "",
-    characterName: user.character?.name ?? "",
-  })));
-  console.table(rankedParties.map(({ party, members, matchedUsers }) => ({
-    partyId: party.id,
-    partyName: party.name,
-    members: members.map((member) => member.name).join(", "),
-    matchedUsers: matchedUsers.map((user) => user.name).join(", "),
-  })));
-  console.table(selectedCharacters.map((actor) => ({
-    actorId: actor.id,
-    actorName: actor.name,
-  })));
-  console.groupEnd();
 
   return selectedCharacters;
 }
@@ -541,7 +566,14 @@ export async function openGameForEveryone(gameId) {
     return;
   }
 
-  let state = clone(getGameState(gameId, scene) ?? definition.createInitialState());
+  const savedState = getGameState(gameId, scene);
+  const hasSavedState = savedState != null;
+  let state = clone(savedState ?? definition.createInitialState());
+  if (state.excludedPlayers && typeof state.excludedPlayers === "object") {
+    for (const actor of getNonGmCharacters()) {
+      delete state.excludedPlayers[actor.id];
+    }
+  }
   if (typeof definition.syncDefaultPlayers === "function") {
     await definition.syncDefaultPlayers(state);
   } else {
@@ -549,22 +581,24 @@ export async function openGameForEveryone(gameId) {
   }
 
   const visiblePlayers = Object.entries(state.players ?? {}).filter(([actorId]) => !state.excludedPlayers?.[actorId]);
-  if (!visiblePlayers.length && typeof definition.ensureDefaultPlayers === "function") {
+  if (!hasSavedState && !visiblePlayers.length && typeof definition.ensureDefaultPlayers === "function") {
     console.warn(`${MODULE_ID} | no visible players after sync for ${gameId}, clearing exclusions and rebuilding defaults`);
     state.excludedPlayers = {};
     state.players = {};
     await definition.ensureDefaultPlayers(state);
   }
 
-  console.groupCollapsed(`${MODULE_ID} | openGameForEveryone ${gameId}`);
-  console.table(Object.entries(state.players ?? {}).map(([actorId, playerData]) => ({
-    actorId,
-    name: playerData.name,
-    source: playerData.source ?? "",
-    excluded: Boolean(state.excludedPlayers?.[actorId]),
-    participating: Boolean(playerData.isParticipating),
-  })));
-  console.groupEnd();
+  if (isDebugLoggingEnabled()) {
+    console.groupCollapsed(`${MODULE_ID} | openGameForEveryone ${gameId}`);
+    console.table(Object.entries(state.players ?? {}).map(([actorId, playerData]) => ({
+      actorId,
+      name: playerData.name,
+      source: playerData.source ?? "",
+      excluded: Boolean(state.excludedPlayers?.[actorId]),
+      participating: Boolean(playerData.isParticipating),
+    })));
+    console.groupEnd();
+  }
 
   state.openSignal = Date.now();
   await saveGameState(gameId, state, scene);
@@ -640,9 +674,14 @@ async function processGameAction(message) {
   });
 
   if (changed) {
-    await saveGameState(payload.gameId, state, scene);
+    const needsFullReplace = payload.action === "reset-game" || payload.action === "remove-player";
+    await saveGameState(payload.gameId, state, scene, { replaceExisting: needsFullReplace });
     const app = getOpenGameWindow(payload.gameId);
-    await refreshApplication(app);
+    if (needsFullReplace && app?.rendered) {
+      app.render(false);
+    } else {
+      await refreshApplication(app);
+    }
   }
 }
 
@@ -788,7 +827,7 @@ async function syncModuleMacroCompendiumMetadata(config) {
   try {
     if (wasLocked) await pack.configure({ locked: false });
     await pack.documentClass.updateDocuments(updates, { pack: pack.collection });
-    console.log(`${MODULE_ID} | updated macro icons in ${config.packId}`, updates);
+    moduleLog(`updated macro icons in ${config.packId}`, updates);
   } catch (error) {
     console.warn(`${MODULE_ID} | failed to update macro icons in ${config.packId}`, error);
   } finally {
@@ -869,7 +908,7 @@ async function syncModuleMacroCompendiumDocuments(config) {
     if (updates.length) {
       await pack.documentClass.updateDocuments(updates, { pack: pack.collection });
     }
-    console.log(`${MODULE_ID} | synced compendium entries in ${config.packId}`, {
+    moduleLog(`synced compendium entries in ${config.packId}`, {
       created: creates.map((entry) => entry._id),
       deleted: deletes,
       updated: updates.map((entry) => entry._id),
@@ -923,18 +962,61 @@ export function initializeModuleRuntime() {
       group.before(header);
     }
 
+    insertSectionHeader("enableDebugLogging", "===Отладка===");
     insertSectionHeader("enableSceneEye", "===Сцена===");
     insertSectionHeader("enableSpellAtWill", "===Существа===");
+  });
+
+  Hooks.on("renderSettingsConfig", (_app, element) => {
+    const root = element instanceof HTMLElement ? element : element[0];
+    if (!root) return;
+
+    const firstGroup = root.querySelector(`[name^="${MODULE_ID}."]`)?.closest(".form-group");
+    if (!(firstGroup instanceof HTMLElement)) return;
+
+    let supportMsg = root.querySelector(".tsu-support-message");
+    if (!(supportMsg instanceof HTMLParagraphElement)) {
+      supportMsg = document.createElement("p");
+      supportMsg.className = "tsu-support-message notes";
+      firstGroup.before(supportMsg);
+    }
+
+    const supportText = t("Settings.SupportMessage", "Support the author and the module on Boosty:");
+    supportMsg.innerHTML = `${escapeHtml(supportText)} <a href="https://boosty.to/tale_sale" target="_blank" rel="noopener noreferrer">https://boosty.to/tale_sale</a>`;
+
+    function localizeSectionHeader(settingKey, text) {
+      const group = root.querySelector(`[name="${MODULE_ID}.${settingKey}"]`)?.closest(".form-group");
+      if (!(group instanceof HTMLElement)) return;
+
+      let header = group.previousElementSibling;
+      if (!(header instanceof HTMLHeadingElement) || !header.classList.contains("tsu-settings-section-header")) {
+        header = document.createElement("h3");
+        header.className = "tsu-settings-section-header";
+        group.before(header);
+      }
+
+      header.textContent = text;
+    }
+
+    localizeSectionHeader("enableDebugLogging", t("Settings.Sections.Debug", "Debug"));
+    localizeSectionHeader("enableSceneEye", t("Settings.Sections.Scene", "Scene"));
+    localizeSectionHeader("enableSpellAtWill", t("Settings.Sections.Spells", "Spells"));
+  });
+
+  Hooks.once("init", () => {
+    game.settings.register(MODULE_ID, SETTING_DEBUG_LOGGING, {
+      name: i18nKey("Settings.DebugLogging.Name"),
+      hint: i18nKey("Settings.DebugLogging.Hint"),
+      scope: "world",
+      config: true,
+      default: false,
+      type: Boolean,
+    });
   });
 
   Hooks.once("ready", () => {
     installModuleApi();
     registerSocket();
-    void ensureModuleCompendiumFolderStructure();
-    for (const config of MODULE_COMPENDIUM_CONFIGS) {
-      void syncModuleMacroCompendiumDocuments(config);
-      void syncModuleMacroCompendiumMetadata(config);
-    }
     Hooks.on("updateScene", handleSceneUpdate);
     for (const definition of getRegisteredGames()) {
       seenOpenSignals.set(definition.id, getGameState(definition.id)?.openSignal ?? null);

@@ -3046,3 +3046,1246 @@
 .tsu-spell-mod-table input[type=checkbox] {
   margin: 0;
 }
+
+.tsu-beer-furious {
+  color: #f4d9ae;
+  background: #120b05;
+  border: 2px solid #8a5c1d;
+  grid-template-columns: 1fr 2.7fr 1.45fr;
+  position: relative;
+}
+
+.tsu-beer-furious .tsu-panel--rules,
+.tsu-beer-furious .tsu-panel--log {
+  padding: 10px 12px;
+  background:
+    linear-gradient(180deg, rgba(34, 18, 8, 0.98), rgba(16, 9, 4, 0.98)),
+    #140a04;
+  color: #d8b17a;
+  border-color: rgba(138, 92, 29, 0.45);
+}
+
+.tsu-beer-furious .tsu-panel--main {
+  padding: 12px 14px 46px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 221, 122, 0.2), rgba(255, 221, 122, 0.04) 24%, rgba(0, 0, 0, 0) 56%),
+    radial-gradient(circle at 50% 82%, rgba(184, 94, 21, 0.18), rgba(184, 94, 21, 0.05) 24%, rgba(0, 0, 0, 0) 56%),
+    repeating-linear-gradient(135deg, rgba(255, 234, 182, 0.03) 0 2px, rgba(0, 0, 0, 0) 2px 16px),
+    linear-gradient(180deg, #4d2d12 0%, #291608 58%, #150a04 100%);
+  color: #f8e9d1;
+}
+
+.tsu-beer-furious .tsu-game-header {
+  margin: -12px -14px 10px;
+  padding: 7px 10px;
+  background: linear-gradient(90deg, rgba(73, 39, 12, 0), #6d3d12 18%, #c07924 50%, #6d3d12 82%, rgba(73, 39, 12, 0));
+  border-top: 1px solid #f5cb75;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.55);
+}
+
+.tsu-beer-furious .tsu-game-header h2 {
+  color: #fff1cb;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgba(62, 31, 8, 0.85);
+}
+
+.tsu-beer-furious .tsu-status-line {
+  color: #f9dc9a;
+  font-size: 10px;
+}
+
+.tsu-beer-furious .tsu-panel-title {
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(245, 203, 117, 0.3);
+  color: #f1c66a;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  justify-content: center;
+}
+
+.tsu-beer-furious .tsu-rule-header {
+  color: #f1c66a;
+  font-size: 10px;
+  padding-bottom: 3px;
+  margin: 8px 0 4px;
+  border-bottom: 1px solid rgba(241, 198, 106, 0.3);
+  opacity: 1;
+}
+
+.tsu-beer-furious .tsu-rule-block {
+  margin-bottom: 8px;
+}
+
+.tsu-beer-furious .tsu-rule-list,
+.tsu-beer-furious .tsu-log-list,
+.tsu-beer-furious .tsu-player-list {
+  gap: 6px;
+}
+
+.tsu-beer-furious .bf-col-rules .tsu-rule-list {
+  display: block;
+}
+
+.tsu-beer-furious .tsu-rule-item,
+.tsu-beer-furious .tsu-chip,
+.tsu-beer-furious .tsu-button,
+.tsu-beer-furious .tsu-small-button,
+.tsu-beer-furious .tsu-help-button,
+.tsu-beer-furious .tsu-icon-button {
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.tsu-beer-furious .tsu-help-button,
+.tsu-beer-furious .tsu-icon-button {
+  width: 22px;
+  height: 22px;
+  color: #f4cc7f;
+  border-color: #8a5c1d;
+  background: rgba(47, 24, 8, 0.94);
+}
+
+.tsu-beer-furious .tsu-player-card {
+  padding: 10px 12px 9px;
+  background:
+    linear-gradient(180deg, rgba(255, 233, 191, 0.9), rgba(219, 162, 75, 0.94)),
+    rgba(219, 162, 75, 0.92);
+  color: #351c08;
+  border: 1px solid #d89c3f;
+  border-left: 4px solid #8a4f16;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 224, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.tsu-beer-furious .tsu-player-card--active {
+  background:
+    linear-gradient(180deg, rgba(255, 241, 212, 0.94), rgba(231, 176, 88, 0.96)),
+    rgba(231, 176, 88, 0.94);
+  border-color: #efba62;
+  border-left-color: #efba62;
+}
+
+.tsu-beer-furious .tsu-player-card--winner {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 224, 0.98), rgba(244, 197, 102, 0.99)),
+    rgba(244, 197, 102, 0.98);
+  border-color: #ffe0a1;
+  border-left-color: #ffe0a1;
+  box-shadow: 0 0 12px rgba(255, 224, 161, 0.24);
+}
+
+.tsu-beer-furious .bf-player-card--eliminated,
+.tsu-beer-furious .tsu-player-card--spectator {
+  opacity: 0.78;
+}
+
+.tsu-beer-furious .tsu-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 3px;
+  border: 1px solid #9d6e33;
+  background: rgba(255, 245, 224, 0.9);
+}
+
+.tsu-beer-furious .tsu-player-name {
+  font-size: 16px;
+  color: #4a2409;
+}
+
+.tsu-beer-furious .tsu-player-subline {
+  margin-top: 4px;
+  gap: 6px;
+  font-size: 11px;
+  color: #6a4218;
+}
+
+.tsu-beer-furious .bf-card-headrail {
+  position: absolute;
+  top: 8px;
+  right: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tsu-beer-furious .bf-oo-badge {
+  position: static;
+  min-width: 72px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #5d3511;
+  color: #ffe6a9;
+  border: 1px solid #ffd077;
+  font-size: 11px;
+}
+
+.tsu-beer-furious .bf-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #8d3616;
+  border-color: rgba(141, 54, 22, 0.28);
+  background: rgba(255, 244, 219, 0.65);
+}
+
+.tsu-beer-furious .bf-remove-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  color: #fff4d2;
+  border-color: rgba(141, 54, 22, 0.55);
+  background: linear-gradient(180deg, #8d3616, #5d220d);
+}
+
+.tsu-beer-furious .bf-chip,
+.tsu-beer-furious .bf-confirm-btn,
+.tsu-beer-furious .bf-doping-btn,
+.tsu-beer-furious .bf-btn {
+  background: linear-gradient(180deg, #6d3d12, #47250b);
+  color: #ffe1a4;
+  border: 1px solid #d5a04b;
+}
+
+.tsu-beer-furious .bf-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.tsu-beer-furious .bf-confirm-btn,
+.tsu-beer-furious .bf-doping-btn,
+.tsu-beer-furious .bf-btn {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.tsu-beer-furious .bf-chip:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-beer-furious .bf-confirm-btn:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-beer-furious .bf-doping-btn:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-beer-furious .bf-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  background: linear-gradient(180deg, #8a4f18, #5b3010);
+  color: #fff0c8;
+}
+
+.tsu-beer-furious .bf-confirm-btn.is-confirmed,
+.tsu-beer-furious .bf-doping-btn.is-selected,
+.tsu-beer-furious .bf-tech-btn.is-selected {
+  border: 2px solid #fff2c1;
+  box-shadow: 0 0 0 1px rgba(255, 242, 193, 0.25);
+}
+
+.tsu-beer-furious .bf-tech-grid {
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.tsu-beer-furious .bf-tech-btn {
+  display: flex;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 6px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #5a2f0e, #331a08);
+  color: #ffe6af;
+  border: 1px solid #cd9644;
+}
+
+.tsu-beer-furious .bf-tech-btn i {
+  font-size: 16px;
+}
+
+.tsu-beer-furious .bf-tech-btn small {
+  color: #f4c66b;
+  font-size: 10px;
+}
+
+.tsu-beer-furious .bf-tech-preview,
+.tsu-beer-furious .bf-signature-row,
+.tsu-beer-furious .bf-waiting {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(82, 48, 17, 0.14);
+  border: 1px solid rgba(109, 61, 18, 0.22);
+  border-radius: 4px;
+}
+
+.tsu-beer-furious .bf-tech-preview__title {
+  font-weight: 700;
+  color: #5d2d0e;
+}
+
+.tsu-beer-furious .bf-tech-preview__copy {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tsu-beer-furious .bf-signature-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.tsu-beer-furious .bf-signature-select {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  border: 1px solid #b27a2f;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fff1cf, #efcc8a);
+  color: #4a2208;
+  font-size: 11px;
+}
+
+.tsu-beer-furious .bf-bar {
+  height: 10px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(73, 39, 12, 0.3);
+  border: 1px solid rgba(109, 61, 18, 0.25);
+}
+
+.tsu-beer-furious .bf-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffe38a, #f0a322 45%, #a64012);
+}
+
+.tsu-beer-furious .bf-doping-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tsu-beer-furious .bf-rule-item {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  align-items: flex-start;
+}
+
+.tsu-beer-furious .bf-rule-item__label {
+  min-width: 0;
+  font-weight: 700;
+  color: #f8d58a;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tsu-beer-furious .bf-rule-item__copy {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #b98047;
+  text-align: left;
+}
+
+.tsu-beer-furious #bf-log-area .tsu-log-entry {
+  padding: 7px 8px;
+  background: rgba(255, 242, 211, 0.04);
+  border: 1px solid rgba(245, 203, 117, 0.08);
+  color: #efd9b0;
+}
+
+.tsu-beer-furious .bf-log-divider {
+  text-align: center;
+  background: linear-gradient(90deg, rgba(255, 210, 107, 0.08), rgba(255, 210, 107, 0.22), rgba(255, 210, 107, 0.08)) !important;
+  color: #ffd97d !important;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tsu-beer-furious .bf-log-finale {
+  text-align: center;
+  background: linear-gradient(90deg, #e6b34d, #ffd97d, #e6b34d) !important;
+  color: #2f1605 !important;
+  font-weight: 700;
+}
+
+.tsu-beer-furious .bf-log-elimination,
+.tsu-beer-furious .bf-log-warning {
+  background: rgba(118, 31, 12, 0.28) !important;
+  color: #ffe0bf !important;
+}
+
+.tsu-beer-furious .bf-log-doping {
+  background: rgba(153, 94, 16, 0.25) !important;
+  color: #ffe0a6 !important;
+}
+
+.tsu-beer-furious .bf-log-entry__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.tsu-beer-furious .bf-log-entry__name {
+  color: #fff0c8;
+}
+
+.tsu-beer-furious .bf-log-entry__tech {
+  color: #f7cb73;
+}
+
+.tsu-beer-furious .bf-log-entry__body,
+.tsu-beer-furious .bf-log-entry__flavor {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tsu-beer-furious .bf-log-entry__calc {
+  color: #c8a16e;
+  font-size: 10px;
+}
+
+.tsu-beer-furious .bf-log-entry__effect {
+  display: block;
+  margin-top: 4px;
+  color: #f5ce82;
+  font-style: italic;
+}
+
+.tsu-beer-furious .bf-log-entry--critical-success {
+  border-left: 3px solid #e7ff97 !important;
+}
+
+.tsu-beer-furious .bf-log-entry--success {
+  border-left: 3px solid #9fe46c !important;
+}
+
+.tsu-beer-furious .bf-log-entry--failure {
+  border-left: 3px solid #f2b050 !important;
+}
+
+.tsu-beer-furious .bf-log-entry--critical-failure {
+  border-left: 3px solid #e26f4c !important;
+}
+
+.tsu-beer-furious .tsu-empty-state {
+  background: rgba(255, 240, 208, 0.08);
+  color: #f7dca3;
+  border: 1px solid rgba(245, 203, 117, 0.15);
+}
+
+.tsu-beer-furious .tsu-footer {
+  min-height: 38px;
+  height: auto;
+  padding: 6px 12px;
+  gap: 6px;
+  background: linear-gradient(180deg, #1b0f06, #0d0703);
+  border-top: 1px solid #d8a450;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.tsu-beer-furious .bf-footer-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: fit-content;
+  flex-wrap: wrap;
+}
+
+.tsu-beer-furious .bf-debug-label,
+.tsu-beer-furious .bf-join-label {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  gap: 4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tsu-beer-furious .bf-join-label {
+  color: #6a4218;
+  font-size: 11px;
+}
+
+.tsu-beer-furious .bf-debug-label {
+  color: #8a5c1d;
+}
+
+.tsu-beer-furious .bf-join-label input,
+.tsu-beer-furious .bf-debug-label input {
+  display: block;
+  margin: 0;
+  width: 12px;
+  min-width: 12px;
+  max-width: 12px;
+  height: 12px;
+  min-height: 12px;
+  max-height: 12px;
+  inline-size: 12px;
+  block-size: 12px;
+  flex: 0 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #d5a04b;
+  border-radius: 0;
+  background: linear-gradient(180deg, #8a4f18, #5b3010);
+  box-shadow: inset 0 1px 0 rgba(255, 243, 217, 0.14);
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.tsu-beer-furious .bf-join-label input {
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  inline-size: 14px;
+  block-size: 14px;
+  flex: 0 0 14px;
+}
+
+.tsu-beer-furious .bf-join-label input:hover,
+.tsu-beer-furious .bf-debug-label input:hover {
+  background: linear-gradient(180deg, #a56221, #6d3d12);
+  box-shadow: 0 0 6px rgba(216, 164, 80, 0.28);
+}
+
+.tsu-beer-furious .bf-join-label input:checked,
+.tsu-beer-furious .bf-debug-label input:checked {
+  background: linear-gradient(180deg, #b56f28, #7b4417);
+  border-color: #ffe0a1;
+}
+
+.tsu-beer-furious .bf-join-label input:checked::after,
+.tsu-beer-furious .bf-debug-label input:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 7px;
+  border: solid #fff0c8;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -58%) rotate(45deg);
+}
+
+.tsu-beer-furious .bf-doping-mode {
+  color: #f4cc7f;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.tsu-beer-furious .tsu-footer-actions {
+  display: flex;
+  gap: 6px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tsu-beer-furious .bf-btn {
+  display: inline-flex;
+  flex: 0 0 96px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 2px;
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tsu-beer-furious .bf-btn.is-main {
+  background: linear-gradient(180deg, #8a4f18, #5b3010);
+  color: #fff0c8;
+  border-color: #f0bd6c;
+}
+
+.tsu-beer-furious .bf-btn.is-reset {
+  background: linear-gradient(180deg, #7c3014, #511e0d);
+}
+
+.tsu-beer-furious .bf-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  transform: none;
+  box-shadow: 0 0 7px rgba(216, 164, 80, 0.3);
+}
+
+.tsu-beer-furious .bf-btn:disabled {
+  background: #8c7d6a;
+  color: #eadfce;
+  border-color: #b9ab97;
+  opacity: 1;
+}
+
+.tsu-beer-furious .bf-is-doping .bf-player-card:not(.bf-player-card--eliminated):not(.tsu-player-card--spectator) {
+  box-shadow: 0 0 0 1px rgba(255, 242, 193, 0.3), 0 0 12px rgba(255, 221, 122, 0.28);
+}
+
+.bf-help {
+  font-size: 13px;
+}
+
+.bf-help h3 {
+  margin: 14px 0 8px;
+}
+
+.bf-help-tech + .bf-help-tech {
+  margin-top: 8px;
+}
+
+.bf-help-tech__head {
+  margin-bottom: 2px;
+}
+
+.tsu-bug-race {
+  color: #f4e1d2;
+  background: #1a0f0a;
+  border: 2px solid #5d3a24;
+  grid-template-columns: 1fr 2.7fr 1.45fr;
+  position: relative;
+}
+
+.tsu-bug-race .tsu-panel--rules,
+.tsu-bug-race .tsu-panel--log {
+  padding: 10px 12px;
+  background:
+    linear-gradient(180deg, rgba(43, 29, 22, 0.98), rgba(23, 14, 10, 0.98)),
+    #24150f;
+  color: #d4b18c;
+  border-color: rgba(93, 58, 36, 0.52);
+}
+
+.tsu-bug-race .tsu-panel--main {
+  padding: 12px 14px 46px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(212, 175, 55, 0.18), rgba(212, 175, 55, 0.04) 24%, rgba(0, 0, 0, 0) 58%),
+    radial-gradient(circle at 50% 82%, rgba(93, 58, 36, 0.18), rgba(93, 58, 36, 0.05) 24%, rgba(0, 0, 0, 0) 58%),
+    repeating-linear-gradient(135deg, rgba(244, 225, 210, 0.02) 0 2px, rgba(0, 0, 0, 0) 2px 18px),
+    linear-gradient(180deg, #3d2b1f 0%, #24150f 56%, #140c08 100%);
+  color: #f7ebde;
+}
+
+.tsu-bug-race .tsu-game-header {
+  margin: -12px -14px 10px;
+  padding: 7px 10px;
+  background: linear-gradient(90deg, rgba(52, 30, 18, 0), #5d3a24 16%, #d4af37 50%, #5d3a24 84%, rgba(52, 30, 18, 0));
+  border-top: 1px solid #e4c76f;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.55);
+}
+
+.tsu-bug-race .tsu-game-header h2 {
+  color: #fff3d2;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgba(38, 23, 13, 0.9);
+}
+
+.tsu-bug-race .tsu-status-line {
+  color: #f5de9a;
+  font-size: 10px;
+}
+
+.tsu-bug-race .tsu-panel-title {
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  color: #e4c76f;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  justify-content: center;
+}
+
+.tsu-bug-race .tsu-rule-header {
+  color: #e4c76f;
+  font-size: 10px;
+  padding-bottom: 3px;
+  margin: 8px 0 4px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.24);
+  opacity: 1;
+}
+
+.tsu-bug-race .tsu-rule-block {
+  margin-bottom: 8px;
+}
+
+.tsu-bug-race .tsu-rule-list,
+.tsu-bug-race .tsu-log-list,
+.tsu-bug-race .tsu-player-list {
+  gap: 6px;
+}
+
+.tsu-bug-race .br-col-rules .tsu-rule-list {
+  display: block;
+}
+
+.tsu-bug-race .tsu-rule-item,
+.tsu-bug-race .tsu-chip,
+.tsu-bug-race .tsu-button,
+.tsu-bug-race .tsu-small-button,
+.tsu-bug-race .tsu-help-button,
+.tsu-bug-race .tsu-icon-button {
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.tsu-bug-race .tsu-help-button,
+.tsu-bug-race .tsu-icon-button {
+  width: 22px;
+  height: 22px;
+  color: #f6d77a;
+  border-color: #7a5435;
+  background: rgba(25, 15, 10, 0.94);
+}
+
+.tsu-bug-race .tsu-player-card {
+  padding: 10px 12px 9px;
+  background:
+    linear-gradient(180deg, rgba(51, 32, 23, 0.95), rgba(33, 20, 15, 0.97)),
+    rgba(33, 20, 15, 0.95);
+  color: #f4e1d2;
+  border: 1px solid #6f4a31;
+  border-left: 4px solid #5d3a24;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 237, 220, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.tsu-bug-race .tsu-player-card--active {
+  border-color: #8a613d;
+  border-left-color: #d4af37;
+}
+
+.tsu-bug-race .tsu-player-card--winner {
+  border-color: #d4af37;
+  border-left-color: #ffe08c;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.22);
+}
+
+.tsu-bug-race .br-player-card--dead,
+.tsu-bug-race .tsu-player-card--spectator {
+  opacity: 0.78;
+}
+
+.tsu-bug-race .tsu-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 3px;
+  border: 1px solid #8a613d;
+  background: rgba(255, 245, 224, 0.08);
+}
+
+.tsu-bug-race .tsu-player-name {
+  font-size: 16px;
+  color: #ffd978;
+}
+
+.tsu-bug-race .tsu-player-subline {
+  margin-top: 4px;
+  gap: 6px;
+  font-size: 11px;
+  color: #d2b292;
+}
+
+.tsu-bug-race .br-card-headrail {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tsu-bug-race .br-distance-badge {
+  position: static;
+  min-width: 72px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #100905;
+  color: #ffe8a3;
+  border: 1px solid #d4af37;
+  font-size: 11px;
+}
+
+.tsu-bug-race .br-remove-btn {
+  color: #d38a6b;
+  border-color: rgba(211, 138, 107, 0.26);
+  background: rgba(31, 19, 13, 0.68);
+}
+
+.tsu-bug-race .br-remove-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  color: #fff0d0;
+  border-color: rgba(211, 138, 107, 0.55);
+  background: linear-gradient(180deg, #7c3014, #4a1c0d);
+}
+
+.tsu-bug-race .br-chip,
+.tsu-bug-race .br-confirm-btn,
+.tsu-bug-race .br-luck-btn,
+.tsu-bug-race .br-btn,
+.tsu-bug-race .br-stat-btn {
+  background: linear-gradient(180deg, #5d3a24, #2f1c13);
+  color: #ffe4a5;
+  border: 1px solid #aa8354;
+}
+
+.tsu-bug-race .br-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.tsu-bug-race .br-confirm-btn,
+.tsu-bug-race .br-luck-btn,
+.tsu-bug-race .br-btn,
+.tsu-bug-race .br-stat-btn {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.tsu-bug-race .br-chip:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-bug-race .br-confirm-btn:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-bug-race .br-luck-btn:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-bug-race .br-btn:hover:not(:disabled):not(.is-disabled):not(.disabled),
+.tsu-bug-race .br-stat-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  background: linear-gradient(180deg, #7a4e31, #43281b);
+  color: #fff2cf;
+}
+
+.tsu-bug-race .br-tech-grid {
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.tsu-bug-race .br-tech-btn {
+  display: flex;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 6px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #2a1811, #140c08);
+  color: #f8e4bc;
+  border: 1px solid #8a613d;
+}
+
+.tsu-bug-race .br-tech-btn i {
+  font-size: 16px;
+}
+
+.tsu-bug-race .br-tech-btn small {
+  color: #d4af37;
+  font-size: 10px;
+}
+
+.tsu-bug-race .br-tech-btn.is-selected,
+.tsu-bug-race .br-confirm-btn.is-confirmed {
+  border: 2px solid #ffe08c;
+  box-shadow: 0 0 0 1px rgba(255, 224, 140, 0.2);
+}
+
+.tsu-bug-race .br-tech-preview,
+.tsu-bug-race .br-build-panel,
+.tsu-bug-race .br-waiting,
+.tsu-bug-race .br-name-row,
+.tsu-bug-race .br-luck-panel {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  border-radius: 4px;
+}
+
+.tsu-bug-race .br-tech-preview__title,
+.tsu-bug-race .br-build-panel__title,
+.tsu-bug-race .br-luck-panel__title {
+  font-weight: 700;
+  color: #ffd978;
+}
+
+.tsu-bug-race .br-tech-preview__copy {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tsu-bug-race .br-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.tsu-bug-race .br-name-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #8a613d;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #120b08, #0a0604);
+  color: #ffe7b8;
+  font-size: 11px;
+}
+
+.tsu-bug-race .br-stat-grid {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tsu-bug-race .br-stat-box {
+  padding: 6px 7px;
+  background: rgba(244, 225, 210, 0.04);
+  border: 1px solid rgba(138, 97, 61, 0.38);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.tsu-bug-race .br-stat-box.is-upgrade {
+  border-color: #ffe08c;
+  box-shadow: 0 0 0 1px rgba(255, 224, 140, 0.16);
+}
+
+.tsu-bug-race .br-stat-box.is-danger {
+  border-color: rgba(226, 111, 76, 0.7);
+}
+
+.tsu-bug-race .br-stat-box.is-warning {
+  border-color: rgba(212, 175, 55, 0.7);
+}
+
+.tsu-bug-race .br-stat-box__label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #ccb48e;
+}
+
+.tsu-bug-race .br-stat-box__value {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff0cb;
+}
+
+.tsu-bug-race .br-rule-item {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  align-items: flex-start;
+}
+
+.tsu-bug-race .br-rule-item__label {
+  min-width: 0;
+  font-weight: 700;
+  color: #f8d58a;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tsu-bug-race .br-rule-item__copy {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #ccb48e;
+  text-align: left;
+}
+
+.tsu-bug-race #br-log-area .tsu-log-entry {
+  padding: 7px 8px;
+  background: rgba(255, 239, 220, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+  color: #f0dcc4;
+}
+
+.tsu-bug-race .br-log-entry--divider {
+  text-align: center;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.08)) !important;
+  color: #ffe08c !important;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tsu-bug-race .br-log-entry--phase {
+  text-align: center;
+  background: rgba(212, 175, 55, 0.12) !important;
+  color: #ffe8a6 !important;
+  font-weight: 700;
+}
+
+.tsu-bug-race .br-log-entry--success {
+  background: rgba(46, 204, 113, 0.12) !important;
+}
+
+.tsu-bug-race .br-log-entry--warning,
+.tsu-bug-race .br-log-entry--death {
+  background: rgba(118, 31, 12, 0.26) !important;
+}
+
+.tsu-bug-race .br-log-entry--detail.is-success {
+  border-left: 3px solid #9fe46c !important;
+}
+
+.tsu-bug-race .br-log-entry--detail.is-failure {
+  border-left: 3px solid #e26f4c !important;
+}
+
+.tsu-bug-race .br-log-entry--detail.is-warning {
+  border-left: 3px solid #d4af37 !important;
+}
+
+.tsu-bug-race .br-log-line__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.tsu-bug-race .br-log-line__body {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tsu-bug-race .br-log-line__calc {
+  color: #c8a16e;
+  font-size: 10px;
+}
+
+.tsu-bug-race .br-log-line__effect {
+  display: block;
+  margin-top: 4px;
+  color: #f2d58e;
+  font-style: italic;
+}
+
+.tsu-bug-race .br-log-pill {
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.18);
+  color: #ffe8ad;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.tsu-bug-race .tsu-empty-state {
+  background: rgba(244, 225, 210, 0.06);
+  color: #f7e2c3;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.tsu-bug-race .tsu-footer {
+  min-height: 38px;
+  height: auto;
+  padding: 6px 12px;
+  gap: 6px;
+  background: linear-gradient(180deg, #140c08, #080504);
+  border-top: 1px solid #d4af37;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.tsu-bug-race .br-footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: fit-content;
+  flex-wrap: wrap;
+}
+
+.tsu-bug-race .br-debug-label,
+.tsu-bug-race .br-join-label {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  gap: 4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tsu-bug-race .br-join-label {
+  color: #d2b292;
+  font-size: 11px;
+}
+
+.tsu-bug-race .br-debug-label {
+  color: #d4b170;
+}
+
+.tsu-bug-race .br-join-label input,
+.tsu-bug-race .br-debug-label input {
+  display: block;
+  margin: 0;
+  width: 12px;
+  min-width: 12px;
+  max-width: 12px;
+  height: 12px;
+  min-height: 12px;
+  max-height: 12px;
+  inline-size: 12px;
+  block-size: 12px;
+  flex: 0 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #aa8354;
+  border-radius: 0;
+  background: linear-gradient(180deg, #5d3a24, #2f1c13);
+  box-shadow: inset 0 1px 0 rgba(255, 236, 204, 0.12);
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.tsu-bug-race .br-join-label input {
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  inline-size: 14px;
+  block-size: 14px;
+  flex: 0 0 14px;
+}
+
+.tsu-bug-race .br-join-label input:hover,
+.tsu-bug-race .br-debug-label input:hover {
+  background: linear-gradient(180deg, #7a4e31, #43281b);
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.24);
+}
+
+.tsu-bug-race .br-join-label input:checked,
+.tsu-bug-race .br-debug-label input:checked {
+  background: linear-gradient(180deg, #8d633b, #573523);
+  border-color: #ffe08c;
+}
+
+.tsu-bug-race .br-join-label input:checked::after,
+.tsu-bug-race .br-debug-label input:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 7px;
+  border: solid #fff0cb;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -58%) rotate(45deg);
+}
+
+.tsu-bug-race .tsu-footer-actions {
+  display: flex;
+  gap: 6px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tsu-bug-race .br-btn {
+  display: inline-flex;
+  flex: 0 0 96px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 2px;
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tsu-bug-race .br-btn.is-main {
+  background: linear-gradient(180deg, #7a4e31, #43281b);
+  color: #fff2cf;
+  border-color: #d9b37b;
+}
+
+.tsu-bug-race .br-btn.is-reset,
+.tsu-bug-race .br-luck-btn.is-secondary {
+  background: linear-gradient(180deg, #5f2213, #39140c);
+}
+
+.tsu-bug-race .br-btn:hover:not(:disabled):not(.is-disabled):not(.disabled) {
+  transform: none;
+  box-shadow: 0 0 7px rgba(212, 175, 55, 0.28);
+}
+
+.tsu-bug-race .br-btn:disabled {
+  background: #5b504a;
+  color: #ddd4c6;
+  border-color: #84786a;
+  opacity: 1;
+}
+
+.br-help {
+  font-size: 13px;
+}
+
+.br-help h3 {
+  margin: 14px 0 8px;
+}
+
+.br-help-tech + .br-help-tech {
+  margin-top: 8px;
+}
+
+.br-help-tech__head {
+  margin-bottom: 2px;
+}

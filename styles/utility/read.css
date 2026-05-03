@@ -1,0 +1,48 @@
+body.tsu-journal-read-enabled .journal-sheet {
+  --tsu-read-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.32));
+  --tsu-read-bg-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+  --tsu-read-border: rgba(94, 1, 10, 0.45);
+  --tsu-read-icon-bg: #fff;
+  --tsu-read-icon-color: #7d161a;
+  --tsu-read-shadow: 0 10px 22px rgba(33, 20, 12, 0.12);
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read {
+  position: relative;
+  margin: 0.75em 0;
+  padding: 0.65em 0.85em;
+  border: 1px solid var(--tsu-read-border);
+  border-radius: 10px;
+  background: var(--tsu-read-bg);
+  box-shadow: var(--tsu-read-shadow);
+  cursor: pointer;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read:hover {
+  background: var(--tsu-read-bg-hover);
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read::after {
+  content: "\f4ad";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--tsu-read-border);
+  border-radius: 999px;
+  background: var(--tsu-read-icon-bg);
+  color: var(--tsu-read-icon-color);
+  font: var(--fa-font-solid);
+  font-size: 10px;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :first-child {
+  margin-top: 0;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :last-child {
+  margin-bottom: 0;
+}
