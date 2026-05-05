@@ -55,7 +55,7 @@ const SKILL_KEYS = Object.freeze({
   itm: "Intimidation",
   lore: "GamesLore",
 });
-const GAMES_LORE_SELECTOR = ["game", "games", "\u0438\u0433\u0440"];
+const GAMES_LORE_SELECTOR = ["game", "games", "игр"];
 
 const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
 const HAND_PREVIEW_LAYOUTS = Object.freeze({
@@ -80,7 +80,6 @@ function createInitialState() {
     currentDC: 15,
     dcOverride: null,
     debugMode: false,
-    suppressDefaultPlayers: false,
     openSignal: null,
     betting: {
       enabled: false,
@@ -303,7 +302,7 @@ function getActorModifiers(actor) {
       : (actor.skills?.[slug]?.mod || 0);
   };
 
-  const lore = actor.items.find((item) => item.type === "lore" && ["game", "games", "пїЅпїЅпїЅпїЅ", "пїЅпїЅпїЅпїЅ"].some((term) => item.name.toLowerCase().includes(term)));
+  const lore = actor.items.find((item) => item.type === "lore" && ["game", "games", "игр"].some((term) => item.name.toLowerCase().includes(term)));
   let loreMod = untrainedLoreModifier;
   if (lore) {
     if (isNpc) loreMod = lore.system.mod?.value || intelligence;
@@ -658,6 +657,10 @@ async function syncDefaultPlayers(state) {
   const defaultActors = getNonGmCharacters();
   state.excludedPlayers ||= {};
   const defaultIds = new Set(defaultActors.map((actor) => actor.id));
+
+  for (const actorId of defaultIds) {
+    delete state.excludedPlayers[actorId];
+  }
 
   for (const [actorId, playerData] of Object.entries(state.players ?? {})) {
     const actor = game.actors.get(actorId);
@@ -1057,8 +1060,8 @@ function buildChronicleNote(content, { color = "#ffd700", centered = false } = {
 }
 
 function buildChronicleHeader(definition, dc) {
-  const title = gtf(definition, "Log.StrategyHeaderText", { dc }, ({ dc: localDc }) => `STRATEGY CHECKS (DC ${localDc})`);
-  return `<div style="text-align:center; color:#ffd700; border-top:1px solid #d4af37; border-bottom:1px solid #d4af37; background:rgba(212,175,55,0.1); padding:4px; margin:10px 0; font-weight:bold; font-size:12px;">${title}</div>`;
+  const title = gtf(definition, "Log.StrategyHeaderText", { dc }, ({ dc: value }) => `STRATEGY CHECKS (DC ${value})`);
+  return `<div style="text-align:center; color:#ffd700; border-top:1px solid #d4af37; border-bottom:1px solid #d4af37; background:rgba(212,175,55,0.1); padding:4px; margin:10px 0; font-weight:bold; font-size:12px;">${escapeHtml(title)}</div>`;
 }
 
 function buildChronicleResultEntry(definition, playerData, d20, modifier, penalty, total, dc, degree, prefixKey) {
@@ -1523,7 +1526,7 @@ class KubokerApplication extends Application {
       .sort((a, b) => comparePlayerEntriesForDisplay(a, b, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
       .map(([actorId, playerData]) => createPlayerPresentation(definition, state, actorId, playerData, visibleCheatersMap));
 
-    moduleLog(`kuboker getData`, {
+    console.log(`${MODULE_ID} | kuboker getData`, {
       phase: state.phase,
       statePlayers: Object.keys(state.players ?? {}).length,
       visiblePlayers: players.length,
@@ -1815,7 +1818,7 @@ class KubokerApplication extends Application {
   async _onDrop(event) {
     event.preventDefault();
     const data = TextEditor.getDragEventData(event);
-    moduleLog(`kuboker drop`, data);
+    console.log(`${MODULE_ID} | kuboker drop`, data);
     const uuid = getActorUuidFromDropData(data);
     if (!uuid) return;
     await requestGameAction(GAME_ID, "add-actor", { uuid });
@@ -2168,6 +2171,7 @@ const definition = {
       case "reset-game": {
         if (!senderIsGM) return false;
         replaceStateContents(state, createInitialState());
+        await syncDefaultPlayers(state);
         return true;
       }
       case "toggle-debug": {

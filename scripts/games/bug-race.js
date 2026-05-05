@@ -14,12 +14,16 @@ import {
 
 const GAME_ID = "bug-race";
 const APP_ID = `${MODULE_ID}-${GAME_ID}`;
+const I18N_ROOT = "TS_PF2E_UTILITY.Games.BugRace";
 const GAME_TITLE = "Cockroach Dash";
 const DEFAULT_IMG = "icons/svg/mystery-man.svg";
 const BUG_ICON = "icons/creatures/invertebrates/beetle-stag-tan-brown.webp";
 const BUG_ITEM_TYPE = "racing_cockroach_v14";
 const LEGACY_ITEM_SCOPE = "world";
-const ROUND_SUPPORT_DCS = [15, 20, 25];
+const DEFAULT_BASE_DC = 15;
+const PF2E_DC_BY_LEVEL = [12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 42, 44, 46, 48];
+const TECHNIQUE_DC_OFFSETS = Object.freeze([-2, 2, 6]);
+const MANUAL_SUPPORT_DC_ROUND_OFFSETS = Object.freeze([0, 2, 6]);
 const OBSTACLE_DCS = Object.freeze({ 1: 12, 2: 17, 3: 22 });
 const STATUS_BY_PHASE = Object.freeze({
   join: "Подготовка забега",
@@ -32,22 +36,32 @@ const STATUS_BY_PHASE = Object.freeze({
 const BUG_NAMES = Object.freeze([
   "Борис",
   "Шумахер",
+  "Хруст",
   "Турбо-Ус",
+  "Тень",
   "Кипиш",
+  "Генерал Шевелюн",
   "Ракета",
   "Зенит",
   "Стасик",
   "Феррари",
+  "Жужжала",
   "Метеор",
   "Титан",
   "Вспышка",
   "Болт",
+  "Танк",
   "Самурай",
   "Ниндзя",
   "Адмирал",
   "Молния",
   "Вихрь",
   "Стриж",
+  "Барон",
+  "Цезарь",
+  "Монарх",
+  "Атлант",
+  "Скипидар",
   "Дизель",
   "Нитро",
   "Форсаж",
@@ -62,14 +76,64 @@ const BUG_NAMES = Object.freeze([
   "Мираж",
   "Шелест",
   "Шепот",
+  "Шорох",
+  "Челюсть",
   "Панцирь",
   "Хитин",
   "Усач",
   "Рыжик",
   "Прусак",
+  "Тапок-Неуловимый",
   "Ахиллес",
   "Гермес",
   "Спиди",
+  "Вжик",
+  "Пуля",
+  "Ядро",
+  "Тайфун",
+  "Циклон",
+  "Зефир",
+  "Борей",
+  "Люцифер",
+  "Вельзевул",
+  "Скорпион",
+  "Жук-Олень",
+  "Скарабей",
+  "Фараон",
+  "Шейх",
+  "Султан",
+  "Витязь",
+  "Корсар",
+  "Пират",
+  "Викинг",
+  "Бродяга",
+  "Странник",
+  "Кочевник",
+  "Аскет",
+  "Гладиатор",
+  "Спартанец",
+  "Царь",
+  "Вождь",
+  "Снайпер",
+  "Трассер",
+  "Раптор",
+  "Тиран",
+  "Веном",
+  "Агент",
+  "Флэш",
+  "Соник",
+  "Рихтер",
+  "Вулкан",
+  "Магнат",
+  "Олигарх",
+  "Рейнджер",
+  "Сталкер",
+  "Хантер",
+  "Сармат",
+  "Авангард",
+  "Маршал",
+  "Шторм",
+  "Гром"
 ]);
 const BUG_NAMES_EN = Object.freeze([
   "Boris",
@@ -422,25 +486,112 @@ function isRussianLocale() {
   return String(game.i18n?.lang ?? "en").startsWith("ru");
 }
 
+function localizeGameKey(path, fallback = "") {
+  const fullKey = `${I18N_ROOT}.${path}`;
+  const localized = game.i18n?.localize?.(fullKey);
+  return localized && localized !== fullKey ? localized : fallback;
+}
+
+function formatGameKey(path, data = {}, fallback = "") {
+  const fullKey = `${I18N_ROOT}.${path}`;
+  const formatted = game.i18n?.format?.(fullKey, data);
+  if (formatted && formatted !== fullKey) return formatted;
+  return String(fallback).replace(/\{(\w+)\}/g, (_match, token) => String(data[token] ?? ""));
+}
+
+function getRawGameLocalization(path) {
+  const fullPath = `${I18N_ROOT}.${path}`.split(".");
+  const roots = [game.i18n?.translations, game.i18n?._fallback];
+  for (const root of roots) {
+    let value = root;
+    for (const part of fullPath) {
+      if (!value || typeof value !== "object" || !(part in value)) {
+        value = undefined;
+        break;
+      }
+      value = value[part];
+    }
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value.filter((entry) => typeof entry === "string" && entry.length);
+  if (typeof value === "string" && value.length) return [value];
+  return [];
+}
+
+function localizeGameArray(path, fallback = []) {
+  const localized = getRawGameLocalization(path);
+  const localizedArray = asArray(localized);
+  if (localizedArray.length) return localizedArray;
+  const fallbackArray = asArray(fallback);
+  return fallbackArray.length ? fallbackArray : [String(fallback ?? "")];
+}
+
+function formatRacePhrase(template, trainerName, bugName) {
+  return String(template ?? "")
+    .replaceAll("{trainer}", trainerName)
+    .replaceAll("{bug}", bugName)
+    .replaceAll("{c}", trainerName)
+    .replaceAll("{b}", bugName);
+}
+
+function pickRacePhrase(lines, trainerName, bugName) {
+  return escapeHtml(formatRacePhrase(randomChoice(asArray(lines), String(lines ?? "")), trainerName, bugName));
+}
+
+function getGameTitle() {
+  return localizeGameKey("Title", isRussianLocale() ? "Тараканьи бега" : GAME_TITLE);
+}
+
 function tx(key) {
   const entry = TEXT[key];
-  if (!entry) return key;
-  return isRussianLocale() ? entry.ru : entry.en;
+  const fallback = entry ? (isRussianLocale() ? entry.ru : entry.en) : key;
+  return localizeGameKey(`Text.${key}`, fallback);
 }
 
 function tf(key, data = {}) {
-  return tx(key).replace(/\{(\w+)\}/g, (_match, token) => String(data[token] ?? ""));
+  const entry = TEXT[key];
+  const fallback = entry ? (isRussianLocale() ? entry.ru : entry.en) : key;
+  return formatGameKey(`Text.${key}`, data, fallback);
+}
+
+function getPhaseLabel(phase) {
+  const fallback = isRussianLocale()
+    ? (STATUS_BY_PHASE[phase] ?? "Подготовка")
+    : (PHASES_EN[phase] ?? STATUS_BY_PHASE[phase] ?? "Setup");
+  return localizeGameKey(`Phases.${phase}`, fallback);
 }
 
 function getTechniqueData(key) {
   const base = TECHNIQUES[key];
   if (!base) return null;
-  if (isRussianLocale()) return base;
-  return { ...base, ...(TECHNIQUES_EN[key] ?? {}) };
+  const fallback = isRussianLocale() ? base : { ...base, ...(TECHNIQUES_EN[key] ?? {}) };
+  return {
+    ...base,
+    name: localizeGameKey(`Techniques.${key}.name`, fallback.name),
+    successText: localizeGameKey(`Techniques.${key}.successText`, fallback.successText),
+    failureText: localizeGameKey(`Techniques.${key}.failureText`, fallback.failureText),
+    supportSuccess: localizeGameArray(`Techniques.${key}.supportSuccess`, fallback.supportSuccess),
+    supportFailure: localizeGameArray(`Techniques.${key}.supportFailure`, fallback.supportFailure),
+    obstacleCriticalSuccess: localizeGameArray(`Techniques.${key}.obstacleCriticalSuccess`, fallback.obstacleCriticalSuccess ?? fallback.supportSuccess),
+    obstacleSuccess: localizeGameArray(`Techniques.${key}.obstacleSuccess`, fallback.obstacleSuccess ?? fallback.supportSuccess),
+    obstacleFailure: localizeGameArray(`Techniques.${key}.obstacleFailure`, fallback.obstacleFailure ?? fallback.supportFailure),
+    obstacleCriticalFailure: localizeGameArray(`Techniques.${key}.obstacleCriticalFailure`, fallback.obstacleCriticalFailure ?? fallback.supportFailure),
+    sprintBand1: localizeGameArray(`Techniques.${key}.sprintBand1`, fallback.sprintBand1),
+    sprintBand2: localizeGameArray(`Techniques.${key}.sprintBand2`, fallback.sprintBand2),
+    sprintBand3: localizeGameArray(`Techniques.${key}.sprintBand3`, fallback.sprintBand3),
+    sprintBand4: localizeGameArray(`Techniques.${key}.sprintBand4`, fallback.sprintBand4),
+    sprintBand5: localizeGameArray(`Techniques.${key}.sprintBand5`, fallback.sprintBand5),
+    sprintBand6: localizeGameArray(`Techniques.${key}.sprintBand6`, fallback.sprintBand6),
+  };
 }
 
 function getBugNamePool() {
-  return isRussianLocale() ? BUG_NAMES : BUG_NAMES_EN;
+  const names = localizeGameArray("Names", isRussianLocale() ? BUG_NAMES : BUG_NAMES_EN);
+  return names.length ? names : (isRussianLocale() ? BUG_NAMES : BUG_NAMES_EN);
 }
 
 function getStatLabel(stat) {
@@ -450,6 +601,10 @@ function getStatLabel(stat) {
     int: tx("StatInt"),
     luck: tx("StatLuck"),
   })[stat] ?? String(stat ?? "").toUpperCase();
+}
+
+function formatDcLabel(dc) {
+  return isRussianLocale() ? `КС ${dc}` : `DC ${dc}`;
 }
 
 function createInitialState() {
@@ -463,6 +618,7 @@ function createInitialState() {
     ],
     winnerId: "",
     debugMode: false,
+    supportDcOverrides: {},
     suppressDefaultPlayers: false,
     openSignal: null,
   };
@@ -620,50 +776,105 @@ function allActivePlayersConfirmed(state) {
   return activeEntries.every(([, playerData]) => playerData.isConfirmed && TECHNIQUES[playerData.selectedTech]);
 }
 
+function getLevelBasedDc(level) {
+  const safeLevel = Math.max(0, Math.min(PF2E_DC_BY_LEVEL.length - 1, Math.trunc(Number(level) || 0)));
+  return PF2E_DC_BY_LEVEL[safeLevel] || DEFAULT_BASE_DC;
+}
+
+function getActorLevel(actor) {
+  return Math.max(0, Math.trunc(Number(actor?.level || actor?.system?.details?.level?.value || 0) || 0));
+}
+
+function getSuggestedTechniqueBaseLevel(state) {
+  const activeEntries = getActiveAliveEntries(state);
+  const entries = activeEntries.length ? activeEntries : getActiveEntries(state);
+  if (!entries.length) return 0;
+  return Math.min(...entries.map(([actorId]) => getActorLevel(game.actors?.get(actorId))));
+}
+
+function getSuggestedTechniqueBaseDc(state) {
+  return getLevelBasedDc(getSuggestedTechniqueBaseLevel(state));
+}
+
+function getTechniqueDcOffsetForRound(round) {
+  const roundIndex = Math.max(0, Math.min(TECHNIQUE_DC_OFFSETS.length - 1, getObstacleRoundKey(round) - 1));
+  return TECHNIQUE_DC_OFFSETS[roundIndex] ?? TECHNIQUE_DC_OFFSETS[0];
+}
+
+function getDefaultRoundSupportDc(state, round = state?.round) {
+  return getSuggestedTechniqueBaseDc(state) + getTechniqueDcOffsetForRound(round);
+}
+
+function getManualSupportDcRoundOne(state) {
+  const override = Math.trunc(Number(state?.supportDcOverrides?.[1]));
+  return Number.isFinite(override) && override > 0 ? override : null;
+}
+
+function hasManualSupportDcOverride(state) {
+  const override = getManualSupportDcRoundOne(state);
+  return Number.isFinite(override) && override > 0;
+}
+
+function getManualSupportDcOffsetForRound(round) {
+  const roundIndex = Math.max(0, Math.min(MANUAL_SUPPORT_DC_ROUND_OFFSETS.length - 1, getObstacleRoundKey(round) - 1));
+  return MANUAL_SUPPORT_DC_ROUND_OFFSETS[roundIndex] ?? MANUAL_SUPPORT_DC_ROUND_OFFSETS[0];
+}
+
+function getManualRoundSupportDc(state, round = state?.round) {
+  const override = getManualSupportDcRoundOne(state);
+  return Number.isFinite(override) && override > 0
+    ? override + getManualSupportDcOffsetForRound(round)
+    : null;
+}
+
 function currentRoundSupportDc(state) {
-  return ROUND_SUPPORT_DCS[Math.max(0, Math.min(ROUND_SUPPORT_DCS.length - 1, (state.round || 1) - 1))];
+  const roundKey = getObstacleRoundKey(state?.round);
+  const manualDc = getManualRoundSupportDc(state, roundKey);
+  if (Number.isFinite(manualDc) && manualDc > 0) return manualDc;
+  return getDefaultRoundSupportDc(state, roundKey);
+}
+
+function getObstacleRoundKey(round) {
+  return Math.max(1, Math.min(3, Math.trunc(Number(round) || 1)));
+}
+
+function getDefaultObstacleDc(roundOrState) {
+  const round = typeof roundOrState === "number" ? getObstacleRoundKey(roundOrState) : getObstacleRoundKey(roundOrState?.round);
+  return OBSTACLE_DCS[round] ?? OBSTACLE_DCS[3];
 }
 
 function currentObstacleDc(state) {
-  return OBSTACLE_DCS[state.round] ?? OBSTACLE_DCS[3];
+  return getDefaultObstacleDc(state);
 }
 
 function addSystemLog(state, text) {
   state.log.unshift(`<div class="tsu-log-entry br-log-entry br-log-entry--system">${text}</div>`);
 }
 
-function buildRoundDivider(round) {
-  return `<div class="tsu-log-entry br-log-entry br-log-entry--divider">${tf("StatusSupport", { round, dc: currentRoundSupportDc({ round }) }).split(" · ")[0]}</div>`;
+function buildRoundDivider(state, round = state?.round) {
+  return `<div class="tsu-log-entry br-log-entry br-log-entry--divider">${tf("StatusSupport", { round, dc: currentRoundSupportDc({ ...state, round }) }).split(" · ")[0]}</div>`;
 }
 
-function formatTechniqueFlavor(template, trainerName, bugName) {
-  return escapeHtml(String(template)
-    .replaceAll("{trainer}", trainerName)
-    .replaceAll("{bug}", bugName));
+function formatTechniqueFlavor(templateOrLines, trainerName, bugName) {
+  return pickRacePhrase(templateOrLines, trainerName, bugName);
 }
 
 function describeObstacleOutcome(playerData, degree) {
   const technique = getTechniqueData(playerData.roundRes?.key || "ath") ?? getTechniqueData("ath");
-  switch (degree) {
-    case "CRIT":
-      return escapeHtml(tf("OutcomeObstacleCrit", { name: playerData.name, technique: technique.name }));
-    case "CFAIL":
-      return escapeHtml(tf("OutcomeObstacleCritFail", { name: playerData.name }));
-    case "FAIL":
-      return escapeHtml(tf("OutcomeObstacleFail", { name: playerData.name }));
-    default:
-      return escapeHtml(tf("OutcomeObstacleSuccess", { name: playerData.name }));
-  }
+  if (degree === "CRIT") return pickRacePhrase(technique.obstacleCriticalSuccess, "", playerData.name);
+  if (degree === "CFAIL") return pickRacePhrase(technique.obstacleCriticalFailure, "", playerData.name);
+  if (degree === "FAIL") return pickRacePhrase(technique.obstacleFailure, "", playerData.name);
+  return pickRacePhrase(technique.obstacleSuccess, "", playerData.name);
 }
 
-function describeSprintBand(totalGain) {
-  if (totalGain >= 30) return tx("SprintBand30");
-  if (totalGain >= 25) return tx("SprintBand25");
-  if (totalGain >= 20) return tx("SprintBand20");
-  if (totalGain >= 15) return tx("SprintBand15");
-  if (totalGain >= 10) return tx("SprintBand10");
-  if (totalGain > 0) return tx("SprintBand1");
-  return tx("SprintBand0");
+function describeSprintBand(playerData, totalGain) {
+  const technique = getTechniqueData(playerData?.roundRes?.key || "ath") ?? getTechniqueData("ath");
+  if (totalGain >= 30) return pickRacePhrase(technique.sprintBand6, "", playerData.name);
+  if (totalGain >= 25) return pickRacePhrase(technique.sprintBand5, "", playerData.name);
+  if (totalGain >= 20) return pickRacePhrase(technique.sprintBand4, "", playerData.name);
+  if (totalGain >= 15) return pickRacePhrase(technique.sprintBand3, "", playerData.name);
+  if (totalGain >= 10) return pickRacePhrase(technique.sprintBand2, "", playerData.name);
+  return pickRacePhrase(technique.sprintBand1, "", playerData.name);
 }
 
 function getTechniqueModifier(actor, technique) {
@@ -739,7 +950,7 @@ function pickThreeTechniques() {
 }
 
 function setupRound(state) {
-  state.log.unshift(buildRoundDivider(state.round));
+  state.log.unshift(buildRoundDivider(state));
   for (const [, playerData] of getActiveAliveEntries(state)) {
     playerData.isConfirmed = false;
     playerData.selectedTech = "";
@@ -823,7 +1034,7 @@ async function processSupport(state) {
     await roll.evaluate();
 
     const success = roll.total >= dc;
-    playerData.roundRes = { key: techKey, s: success };
+    playerData.roundRes = { key: techKey, s: success, dc };
 
     const flavor = formatTechniqueFlavor(
       success ? technique.supportSuccess : technique.supportFailure,
@@ -1088,7 +1299,7 @@ async function processSprint(state) {
           <span class="br-log-pill">${escapeHtml(tx("SprintBurst"))}</span>
           ${escapeHtml(tf("SprintHead", { name: playerData.name, distance: totalGain }))}
         </div>
-        <div class="br-log-line__body">${escapeHtml(describeSprintBand(totalGain))}</div>
+        <div class="br-log-line__body">${describeSprintBand(playerData, totalGain)}</div>
         <div class="br-log-line__calc">${escapeHtml(tf("SprintCalc", { formula, bonus, total: roll.total, mods: modifiers.length ? ` · ${modifiers.join(", ")}` : "" }))}</div>
         <div class="br-log-line__effect"><b>${escapeHtml(tx("Effect"))}</b> ${escapeHtml(tf("SprintDistance", { distance: playerData.distance }))}</div>
       </div>
@@ -1182,17 +1393,33 @@ function resetStateForNewTable(state) {
   state.log = fresh.log;
   state.winnerId = "";
   state.debugMode = false;
+  state.supportDcOverrides = fresh.supportDcOverrides;
   state.suppressDefaultPlayers = false;
+  state.openSignal = fresh.openSignal;
 }
 
-function buildRulesSections() {
+function buildRulesSections(state) {
+  const round1SupportDc = currentRoundSupportDc({ ...state, round: 1 });
+  const round2SupportDc = currentRoundSupportDc({ ...state, round: 2 });
+  const round3SupportDc = currentRoundSupportDc({ ...state, round: 3 });
   return [
     {
       title: tx("RuleRoundsTitle"),
       items: [
-        { label: "1", copy: tx("RuleRound1") },
-        { label: "2", copy: tx("RuleRound2") },
-        { label: "3", copy: tx("RuleRound3") },
+        { label: "1", copy: `${isRussianLocale() ? "Поддержка" : "Support"} ${formatDcLabel(round1SupportDc)}, ${isRussianLocale() ? "затем препятствие" : "then obstacle"} ${formatDcLabel(12)} ${isRussianLocale() ? "и спринт." : "and sprint."}` },
+        { label: "2", copy: `${isRussianLocale() ? "Поддержка" : "Support"} ${formatDcLabel(round2SupportDc)}, ${isRussianLocale() ? "затем препятствие" : "then obstacle"} ${formatDcLabel(17)} ${isRussianLocale() ? "и спринт." : "and sprint."}` },
+        { label: "3", copy: `${isRussianLocale() ? "Поддержка" : "Support"} ${formatDcLabel(round3SupportDc)}, ${isRussianLocale() ? "затем препятствие" : "then obstacle"} ${formatDcLabel(22)} ${isRussianLocale() ? "и спринт." : "and sprint."}` },
+      ],
+    },
+    {
+      title: isRussianLocale() ? "Техники" : "Techniques",
+      items: [
+        {
+          label: isRussianLocale() ? "КС" : "DCs",
+          copy: isRussianLocale()
+            ? "КС техник считаются от базового КС по уровню: 1 раунд -2, 2 раунд +2, 3 раунд +6."
+            : "Technique DCs use the base DC by level: round 1 is -2, round 2 is +2, round 3 is +6.",
+        },
       ],
     },
     {
@@ -1229,9 +1456,12 @@ function buildHelpHtml() {
 
   return `
     <div class="tsu-dialog-content br-help">
-      <p>${escapeHtml(tf("HelpIntro1", { title: GAME_TITLE }))}</p>
+      <p>${escapeHtml(tf("HelpIntro1", { title: getGameTitle() }))}</p>
       <p>${escapeHtml(tx("HelpIntro2"))}</p>
       <p>${escapeHtml(tx("HelpIntro3"))}</p>
+      <p>${escapeHtml(isRussianLocale()
+        ? "В фазе поддержки весь раунд использует один КС техник: в 1 раунде -2 от базы, во 2 раунде +2, в 3 раунде +6."
+        : "Each support round uses one shared technique DC: round 1 is -2 from base, round 2 is +2, round 3 is +6.")}</p>
       <h3>${escapeHtml(tx("HelpTechniques"))}</h3>
       ${items}
     </div>
@@ -1243,6 +1473,7 @@ const template = `
   <section class="tsu-panel tsu-panel--rules br-col-rules">
     <div class="tsu-panel-title">
       <span>{{ui.rulesTitle}}</span>
+      {{#if isGM}}<input type="number" class="br-dc-input" min="1" max="99" step="1" value="{{dcInputValue}}" placeholder="{{dcPlaceholder}}">{{/if}}
       <button type="button" class="tsu-help-button" data-action="help">?</button>
     </div>
     {{#each ui.ruleSections}}
@@ -1390,7 +1621,7 @@ class BugRaceApplication extends Application {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: APP_ID,
       classes: ["tsu-window"],
-      title: GAME_TITLE,
+      title: getGameTitle(),
       width: 1460,
       height: 860,
       resizable: true,
@@ -1475,7 +1706,7 @@ class BugRaceApplication extends Application {
       state,
       players,
       ui: {
-        title: GAME_TITLE,
+        title: getGameTitle(),
         rulesTitle: tx("RulesTitle"),
         nameChampion: tx("NameChampion"),
         successLabel: `${tx("Success")}:`,
@@ -1484,7 +1715,7 @@ class BugRaceApplication extends Application {
         acceptLabel: tx("AcceptButton"),
         chronicleTitle: tx("ChronicleTitle"),
         debugMode: tx("DebugMode"),
-        ruleSections: buildRulesSections(),
+        ruleSections: buildRulesSections(state),
       },
       statusLine: state.phase === "support"
         ? tf("StatusSupport", { round: state.round, dc: currentRoundSupportDc(state) })
@@ -1492,10 +1723,12 @@ class BugRaceApplication extends Application {
           ? tf("StatusObstacle", { round: state.round, dc: currentObstacleDc(state) })
           : state.phase === "sprint"
             ? tf("StatusSprint", { round: state.round })
-            : (isRussianLocale() ? STATUS_BY_PHASE[state.phase] : (PHASES_EN[state.phase] ?? STATUS_BY_PHASE[state.phase] ?? "Setup")),
+            : getPhaseLabel(state.phase),
       isGM: Boolean(game.user?.isGM),
       showEmptyState: players.length === 0,
       emptyState: tx("EmptyState"),
+      dcInputValue: hasManualSupportDcOverride(state) ? `${getManualSupportDcRoundOne(state)}` : "",
+      dcPlaceholder: formatDcLabel(getSuggestedTechniqueBaseDc(state)),
       footerButtons,
     };
   }
@@ -1608,6 +1841,22 @@ class BugRaceApplication extends Application {
       if (!game.user?.isGM) return;
       void requestGameAction(GAME_ID, "toggle-debug", { enabled: event.currentTarget.checked });
     });
+    html.on("change", ".br-dc-input", (event) => {
+      if (!game.user?.isGM) return;
+      const rawValue = String(event.currentTarget.value ?? "").trim();
+      if (!rawValue) {
+        void requestGameAction(GAME_ID, "set-dc", { auto: true });
+        return;
+      }
+      const value = Math.trunc(Number(rawValue));
+      if (!Number.isFinite(value) || value < 1) return;
+      void requestGameAction(GAME_ID, "set-dc", { value });
+    });
+    html.on("keydown", ".br-dc-input", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      event.currentTarget.blur();
+    });
     html.on("dragover", (event) => {
       event.preventDefault();
     });
@@ -1627,7 +1876,7 @@ class BugRaceApplication extends Application {
     switch (action) {
       case "help":
         new Dialog({
-          title: GAME_TITLE,
+          title: getGameTitle(),
           content: buildHelpHtml(),
           buttons: {
             close: { label: tx("Close") },
@@ -1803,6 +2052,19 @@ const definition = {
         const playerData = state.players[actorId];
         if (state.phase !== "obstacle" || !playerData || !playerData.needsLuck || !canSenderOperateActor(actorId, senderId)) return false;
         await resolveObstacleFailure(state, actorId);
+        return true;
+      }
+      case "set-dc": {
+        if (!game.user?.isGM) return false;
+        state.supportDcOverrides ||= {};
+        const roundKey = 1;
+        if (data.auto) {
+          delete state.supportDcOverrides[roundKey];
+          return true;
+        }
+        const value = Math.max(1, Math.min(99, Math.trunc(Number(data.value) || 0)));
+        if (!value) return false;
+        state.supportDcOverrides[roundKey] = value;
         return true;
       }
       case "advance-phase":

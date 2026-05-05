@@ -2,20 +2,8 @@ export const MODULE_ID = "ts-pf2e-utility";
 export const SOCKET_CHANNEL = `module.${MODULE_ID}`;
 export const I18N_PREFIX = "TS_PF2E_UTILITY";
 
-const SETTING_DEBUG_LOGGING = "enableDebugLogging";
 
-export function isDebugLoggingEnabled() {
-  try {
-    return Boolean(game.settings?.get(MODULE_ID, SETTING_DEBUG_LOGGING));
-  } catch {
-    return false;
-  }
-}
-
-export function moduleLog(...args) {
-  if (!isDebugLoggingEnabled()) return;
-  console.log(`${MODULE_ID} |`, ...args);
-}
+export function moduleLog(..._args) {}
 
 const SOCKET_ACTIONS = Object.freeze({
   playerAction: "player-action",
@@ -434,30 +422,6 @@ export function getNonGmCharacters() {
   }
 
   const selectedCharacters = Array.from(characters.values());
-  if (isDebugLoggingEnabled()) {
-    console.groupCollapsed(`${MODULE_ID} | player discovery`);
-    if (!onlineUsers.length) {
-      console.warn(`${MODULE_ID} | no active non-GM users found, auto player discovery is empty`);
-    }
-    console.table(allPlayerUsers.map((user) => ({
-      id: user.id,
-      name: user.name,
-      active: Boolean(user.active),
-      characterId: user.character?.id ?? "",
-      characterName: user.character?.name ?? "",
-    })));
-    console.table(rankedParties.map(({ party, members, matchedUsers }) => ({
-      partyId: party.id,
-      partyName: party.name,
-      members: members.map((member) => member.name).join(", "),
-      matchedUsers: matchedUsers.map((user) => user.name).join(", "),
-    })));
-    console.table(selectedCharacters.map((actor) => ({
-      actorId: actor.id,
-      actorName: actor.name,
-    })));
-    console.groupEnd();
-  }
 
   return selectedCharacters;
 }
@@ -586,18 +550,6 @@ export async function openGameForEveryone(gameId) {
     state.excludedPlayers = {};
     state.players = {};
     await definition.ensureDefaultPlayers(state);
-  }
-
-  if (isDebugLoggingEnabled()) {
-    console.groupCollapsed(`${MODULE_ID} | openGameForEveryone ${gameId}`);
-    console.table(Object.entries(state.players ?? {}).map(([actorId, playerData]) => ({
-      actorId,
-      name: playerData.name,
-      source: playerData.source ?? "",
-      excluded: Boolean(state.excludedPlayers?.[actorId]),
-      participating: Boolean(playerData.isParticipating),
-    })));
-    console.groupEnd();
   }
 
   state.openSignal = Date.now();
@@ -941,32 +893,7 @@ export function initializeModuleRuntime() {
   Hooks.once("init", installModuleApi);
   Hooks.once("setup", installModuleApi);
 
-  Hooks.on("renderSettingsConfig", (_app, element) => {
-    const root = element instanceof HTMLElement ? element : element[0];
-    if (!root) return;
-
-    const firstGroup = root.querySelector(`[name^="${MODULE_ID}."]`)?.closest(".form-group");
-    if (!firstGroup) return;
-
-    const supportMsg = document.createElement("p");
-    supportMsg.className = "tsu-support-message notes";
-    supportMsg.innerHTML = `Поддержите автора и модуль по ссылке — <a href="https://boosty.to/tale_sale" target="_blank" rel="noopener noreferrer">https://boosty.to/tale_sale</a>`;
-    firstGroup.before(supportMsg);
-
-    function insertSectionHeader(settingKey, text) {
-      const group = root.querySelector(`[name="${MODULE_ID}.${settingKey}"]`)?.closest(".form-group");
-      if (!(group instanceof HTMLElement)) return;
-      const header = document.createElement("h3");
-      header.className = "tsu-settings-section-header";
-      header.textContent = text;
-      group.before(header);
-    }
-
-    insertSectionHeader("enableDebugLogging", "===Отладка===");
-    insertSectionHeader("enableSceneEye", "===Сцена===");
-    insertSectionHeader("enableSpellAtWill", "===Существа===");
-  });
-
+  
   Hooks.on("renderSettingsConfig", (_app, element) => {
     const root = element instanceof HTMLElement ? element : element[0];
     if (!root) return;
@@ -998,22 +925,12 @@ export function initializeModuleRuntime() {
       header.textContent = text;
     }
 
-    localizeSectionHeader("enableDebugLogging", t("Settings.Sections.Debug", "Debug"));
-    localizeSectionHeader("enableSceneEye", t("Settings.Sections.Scene", "Scene"));
-    localizeSectionHeader("enableSpellAtWill", t("Settings.Sections.Spells", "Spells"));
+    localizeSectionHeader("enableSceneEye", `===${t("Settings.Sections.Scene", "Scene")}===`);
+    localizeSectionHeader("enableSpellAtWill", `===${t("Settings.Sections.Spells", "Spells")}===`);
+    localizeSectionHeader("enableJournalRead", `===${t("Settings.Sections.Journals", "Journals")}===`);
   });
 
-  Hooks.once("init", () => {
-    game.settings.register(MODULE_ID, SETTING_DEBUG_LOGGING, {
-      name: i18nKey("Settings.DebugLogging.Name"),
-      hint: i18nKey("Settings.DebugLogging.Hint"),
-      scope: "world",
-      config: true,
-      default: false,
-      type: Boolean,
-    });
-  });
-
+  
   Hooks.once("ready", () => {
     installModuleApi();
     registerSocket();

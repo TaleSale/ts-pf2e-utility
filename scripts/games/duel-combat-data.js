@@ -1846,34 +1846,12 @@ export const DUEL_STYLE = `
 export const DUEL_TEMPLATE = `
 <div id="duel-app">
   <div class="dl-col-rules">
-    <div class="dl-rule-header"><span>📜 ПРАВИЛА ДУЭЛИ</span></div>
-    <div style="margin-bottom:10px; line-height: 1.3;">
-      <b>Цель:</b> Нанести противнику Раны, равные его порогу Смерти (базово 4). Черта <i>"Живучесть"</i> (Diehard) увеличивает порог, а состояние <i>"Обречен"</i> (Doomed) — снижает его.<br>
-      <b>Действия:</b> 3 слота в раунд.<br>
-      <hr style="border-color:#4a0404; margin: 8px 0;">
-      <b>🗡️ Атака:</b> Выбранное оружие vs КБ.<br>
-        • <i style="color:#2ecc71">Успех:</i> 1 Рана | <i style="color:#2ecc71">Крит:</i> 2 Раны<br>
-      <b>🛡️ Оборона:</b> Глухая защита.<br>
-      <b>🤹 Маневр:</b> Атл vs Стк, Акр vs Реф, Зап vs Воля, Обм vs Восп.<br>
-        • <i style="color:#2ecc71">Успех:</i> -2 КБ цели | <i style="color:#2ecc71">Крит:</i> -2 КБ и -1 действие<br>
-      <hr style="border-color:#4a0404; margin: 8px 0;">
-      <b>К-Н-Б (Взаимодействие действий):</b><br>
-      • <i>Атака vs Оборона:</i> Атакующий получает штраф <b>-2</b>.<br>
-      • <i>Маневр vs Атака:</i> Маневрирующий получает штраф <b>-2</b>.<br>
-      • <i>Маневр vs Оборона:</i> Оборона прорвана. КС Обороняющегося снижен на <b>-2</b>.<br>
-      <hr style="border-color:#4a0404; margin: 8px 0;">
-      <b>Оборона (Глухая защита):</b><br>
-      Любые враждебные проверки по персонажу в Обороне бросаются с Неудачей: атакующий бросает <b>2d20</b> и берет <b>наименьший</b> результат.<br>
-      <hr style="border-color:#4a0404; margin: 8px 0;">
-      <b>ШМА (Штраф Множественной Атаки):</b><br>
-      Считается <b>отдельно</b> для Атаки и каждого вида Маневра.<br>
-      1-е: <b>0</b> | 2-е: <b>-4</b> | 3-е: <b>-8</b>.<br>
-      Оборона не имеет штрафов.
-    </div>
+    <div class="dl-rule-header"><span>{{ui.rulesHeader}}</span></div>
+    {{{ui.rulesHtml}}}
   </div>
 
   <div class="dl-col-main">
-    <div class="dl-header-thematic"><h2>🩸 БОЕВАЯ ДУЭЛЬ 🩸</h2></div>
+    <div class="dl-header-thematic"><h2>🩸 {{ui.headerTitle}} 🩸</h2></div>
     {{#each players}}
       <div class="dl-player-card {{#if this.isReady}}is-ready{{/if}} {{#if this.isObserverCard}}is-spectator{{/if}}">
         <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -1882,7 +1860,7 @@ export const DUEL_TEMPLATE = `
                 <div>
                     <div style="font-weight:bold; font-size:16px; color:#fff;">{{this.name}}</div>
                     <div style="font-size:11px; color:#ff4444; font-weight:bold;">
-                        Раны: {{this.wounds}} / {{this.stats.maxWounds}}
+                        {{../ui.woundsLabel}}: {{this.wounds}} / {{this.stats.maxWounds}}
                     </div>
                 </div>
             </div>
@@ -1890,11 +1868,11 @@ export const DUEL_TEMPLATE = `
               <div class="dl-join-row">
                   <span class="dl-spectator-chip {{#unless this.spectatorLabel}}is-hidden{{/unless}}">{{this.spectatorLabel}}</span>
               {{#if ../isJoinPhase}}
-                  <label class="dl-join-label"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> Я В ИГРЕ</label>
+                  <label class="dl-join-label"><input type="checkbox" class="dl-join-cb" data-actor="{{this.id}}" {{#if this.isParticipating}}checked{{/if}}> {{../ui.joinLabel}}</label>
               {{/if}}
               </div>
               {{#if (and ../isPlayingPhase this.isOwnerParticipant)}}
-                  <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}ГОТОВ{{else}}ПОДТВЕРДИТЬ{{/if}}</button>
+                  <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}{{../ui.readyLabel}}{{else}}{{../ui.confirmLabel}}{{/if}}</button>
               {{/if}}
             </div>
         </div>
@@ -1908,18 +1886,18 @@ export const DUEL_TEMPLATE = `
                 </select>
             {{else}}
                 <div style="font-size:11px; color:#ffaa00; text-align:center; background:rgba(0,0,0,0.5); padding:3px; border-radius:3px; border:1px solid #4a0404;">
-                    <b>Оружие:</b> {{this.stats.strikeName}} (+{{this.stats.atk}})
+                    <b>{{../ui.weaponLabel}}:</b> {{this.stats.strikeName}} (+{{this.stats.atk}})
                 </div>
             {{/if}}
         </div>
 
         {{#if this.showStats}}
             <div style="font-size:11px; color:#ccc; margin-bottom:5px; background:rgba(0,0,0,0.3); padding:3px; border-radius:3px; text-align:center; border: 1px dashed #555;">
-                <b>КБ:</b> {{this.stats.dc_ac}} | <b>СТК:</b> {{this.stats.dc_fort}} | <b>РЕФ:</b> {{this.stats.dc_ref}} | <b>ВОЛ:</b> {{this.stats.dc_will}} | <b>ВОСП:</b> {{this.stats.dc_per}}
+                <b>{{../ui.stats.ac}}:</b> {{this.stats.dc_ac}} | <b>{{../ui.stats.fort}}:</b> {{this.stats.dc_fort}} | <b>{{../ui.stats.ref}}:</b> {{this.stats.dc_ref}} | <b>{{../ui.stats.will}}:</b> {{this.stats.dc_will}} | <b>{{../ui.stats.per}}:</b> {{this.stats.dc_per}}
             </div>
         {{else}}
             <div style="font-size:11px; color:#555; margin-bottom:5px; background:rgba(0,0,0,0.1); padding:3px; border-radius:3px; text-align:center; border: 1px dashed #222;">
-                <i>Защитные характеристики скрыты</i>
+                <i>{{../ui.statsHidden}}</i>
             </div>
         {{/if}}
         
@@ -1927,8 +1905,8 @@ export const DUEL_TEMPLATE = `
         
         {{#if (or this.acPenalty this.lostActions)}}
             <div style="display:flex; gap:5px;">
-                {{#if this.acPenalty}}<div class="dl-status-badge">Накоплен штраф КБ: -{{this.acPenalty}}</div>{{/if}}
-                {{#if this.lostActions}}<div class="dl-status-badge">Потеряно действий: {{this.lostActions}}</div>{{/if}}
+                {{#if this.acPenalty}}<div class="dl-status-badge">{{../ui.statusBadges.acPenalty}}: -{{this.acPenalty}}</div>{{/if}}
+                {{#if this.lostActions}}<div class="dl-status-badge">{{../ui.statusBadges.lostActions}}: {{this.lostActions}}</div>{{/if}}
             </div>
         {{/if}}
 
@@ -1938,25 +1916,25 @@ export const DUEL_TEMPLATE = `
                     <div class="dl-action-row {{#if this.isDisabled}}disabled{{/if}} {{#if this.isReadonly}}disabled{{/if}}">
                         <span style="font-size:12px; font-weight:bold; color:#A8A9AD; width:20px;">{{this.num}}</span>
                         <div class="dl-act-btn {{#if (eq this.planned.type 'attack')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="attack">
-                            ⚔️ Атака ({{#if (gte ../stats.atk 0)}}+{{/if}}{{../stats.atk}})
+                            ⚔️ {{../../ui.actions.attack}} ({{#if (gte ../stats.atk 0)}}+{{/if}}{{../stats.atk}})
                         </div>
                         <div class="dl-act-btn {{#if (eq this.planned.type 'defense')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="defense">
-                            🛡️ Оборона
+                            🛡️ {{../../ui.actions.defense}}
                         </div>
                         <div class="dl-act-btn {{#if (eq this.planned.type 'maneuver')}}active{{/if}}" data-actor="{{../id}}" data-slot="{{@index}}" data-type="maneuver">
-                            🤹 Маневр
+                            🤹 {{../../ui.actions.maneuver}}
                         </div>
                         <select class="dl-select dl-man-sel" data-actor="{{../id}}" data-slot="{{@index}}" {{#if this.maneuverSelectDisabled}}disabled style="opacity:0.3"{{/if}}>
-                            <option value="ath" {{#if (eq this.planned.sub 'ath')}}selected{{/if}}>Атлетика ({{#if (gte ../stats.ath 0)}}+{{/if}}{{../stats.ath}}) vs Стойкость</option>
-                            <option value="acr" {{#if (eq this.planned.sub 'acr')}}selected{{/if}}>Акробатика ({{#if (gte ../stats.acr 0)}}+{{/if}}{{../stats.acr}}) vs Рефлекс</option>
-                            <option value="int" {{#if (eq this.planned.sub 'int')}}selected{{/if}}>Запугив. ({{#if (gte ../stats.int 0)}}+{{/if}}{{../stats.int}}) vs Воля</option>
-                            <option value="dec" {{#if (eq this.planned.sub 'dec')}}selected{{/if}}>Обман ({{#if (gte ../stats.dec 0)}}+{{/if}}{{../stats.dec}}) vs Восприятие</option>
+                            <option value="ath" {{#if (eq this.planned.sub 'ath')}}selected{{/if}}>{{../../ui.maneuvers.ath}} ({{#if (gte ../stats.ath 0)}}+{{/if}}{{../stats.ath}}) vs {{../../ui.saves.fort}}</option>
+                            <option value="acr" {{#if (eq this.planned.sub 'acr')}}selected{{/if}}>{{../../ui.maneuvers.acr}} ({{#if (gte ../stats.acr 0)}}+{{/if}}{{../stats.acr}}) vs {{../../ui.saves.ref}}</option>
+                            <option value="int" {{#if (eq this.planned.sub 'int')}}selected{{/if}}>{{../../ui.maneuvers.int}} ({{#if (gte ../stats.int 0)}}+{{/if}}{{../stats.int}}) vs {{../../ui.saves.will}}</option>
+                            <option value="dec" {{#if (eq this.planned.sub 'dec')}}selected{{/if}}>{{../../ui.maneuvers.dec}} ({{#if (gte ../stats.dec 0)}}+{{/if}}{{../stats.dec}}) vs {{../../ui.saves.per}}</option>
                         </select>
                     </div>
                 {{/each}}
             {{else}}
                 <div style="margin-top:10px; text-align:center; font-style:italic; color:#888; font-size:11px;">
-                    {{#if this.isObserverCard}}Наблюдает за дуэлью.{{else}}{{#if this.isReady}}Действия спланированы.{{else}}Планирует действия...{{/if}}{{/if}}
+                    {{#if this.isObserverCard}}{{../ui.planStatus.spectator}}{{else}}{{#if this.isReady}}{{../ui.planStatus.ready}}{{else}}{{../ui.planStatus.waiting}}{{/if}}{{/if}}
                 </div>
             {{/if}}
         {{/if}}
@@ -1965,7 +1943,7 @@ export const DUEL_TEMPLATE = `
   </div>
 
   <div class="dl-col-log">
-    <h4 style="margin:0 0 10px 0; color:#d3d3d3; border-bottom:2px solid #800020; padding-bottom:5px;">📜 ЖУРНАЛ БОЯ</h4>
+    <h4 style="margin:0 0 10px 0; color:#d3d3d3; border-bottom:2px solid #800020; padding-bottom:5px;">{{ui.logTitle}}</h4>
     {{#each state.log}}<div style="margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px; font-size:11px; line-height:1.2;">{{{this}}}</div>{{/each}}
   </div>
 
@@ -1976,16 +1954,16 @@ export const DUEL_TEMPLATE = `
             <input type="checkbox" id="dl-random-lost-action" {{#if state.randomLostActionRule}}checked{{/if}}> {{randomLostActionLabel}}
         </label>
         <label class="dl-debug-label dl-gm-debug-label">
-            <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> Режим ГМ
+            <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> {{ui.gmModeLabel}}
         </label>
       {{/if}}
     </div>
     <div class="dl-footer-actions">
       {{#if isGM}}
-        {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start" {{#unless canStartDuel}}disabled{{/unless}}>НАЧАТЬ</button>{{/if}}
-        {{#if (eq state.phase 'play')}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">РАУНД</button>{{/if}}
-        <button class="dl-btn-main dl-btn-accent" id="dl-clear">ОЧИСТИТЬ</button>
-        <button class="dl-btn-main dl-btn-muted" id="dl-reset">СБРОС</button>
+        {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start" {{#unless canStartDuel}}disabled{{/unless}}>{{ui.startLabel}}</button>{{/if}}
+        {{#if (eq state.phase 'play')}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">{{ui.resolveLabel}}</button>{{/if}}
+        <button class="dl-btn-main dl-btn-accent" id="dl-clear">{{ui.clearLabel}}</button>
+        <button class="dl-btn-main dl-btn-muted" id="dl-reset">{{ui.resetLabel}}</button>
       {{/if}}
     </div>
   </div>

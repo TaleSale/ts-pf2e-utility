@@ -23,7 +23,7 @@
         "FlavorFallback": "The dart flies true.",
         "Rules": {
           "PanelTitle": "Rules",
-          "HelpTitle": "\ud83d\udcd6 Encyclopedia of Devil's Pin",
+          "HelpTitle": "📖 Encyclopedia of Devil's Pin",
           "DcShort": "DC",
           "DcPlaceholder": "DC {dc}",
           "TargetsHeader": "Targets",
@@ -37,7 +37,7 @@
             "NoSameInterferenceLabel": "Repeat interference",
             "NoSameInterferenceSummary": "You cannot target the same player's throw in consecutive rounds."
           },
-          "HelpHtml": "\n          <div style=\"font-family:'Signika',sans-serif; line-height:1.5; color:#1a1a1a; padding:15px; background: url('ui/parchment.jpg'); border: 2px solid #540000;\">\n            <h2 style=\"border-bottom:2px solid #700; color:#700; text-align:center; font-family: 'Modesto Condensed', 'Georgia', serif;\">FATE SCROLL</h2>\n            \n            <p><b>Devil's Pin</b> is a tavern game of deadly precision, beloved in rough districts and among those unafraid of infernal bargains. The players throw darts at a wall board painted with the devil's face.</p>\n            \n            <h3 style=\"color:#900; margin-top:15px;\">1. SETUP AND GOAL</h3>\n            <ul>\n                <li>Every player begins with an <b>Infernal Debt of 10 points</b>.</li>\n                <li><b>Goal:</b> reduce that debt to <b>0</b>.</li>\n                <li>Debt cannot go below <b>0</b>.</li>\n                <li>The match lasts exactly <b>3 rounds</b>. Even if someone reaches zero early, play continues until the end of round three.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">2. THROW RULES</h3>\n            <p>The thrower stands 10 feet from the board. On each turn they declare a target:</p>\n            <table style=\"width:100%; border-collapse:collapse; font-size:12px;\">\n                <tr style=\"background:rgba(0,0,0,0.1)\"><td>\ud83d\udc45 <b>Tongue</b></td><td>Base DC - 2</td><td>-1 debt</td></tr>\n                <tr><td>\ud83d\udc43 <b>Nose</b></td><td>Base DC + 2</td><td>-2 debt</td></tr>\n                <tr style=\"background:rgba(0,0,0,0.1)\"><td>\ud83e\udd18 <b>Horns</b></td><td>Base DC + 6</td><td>-3 debt</td></tr>\n            </table>\n\n            <h3 style=\"color:#900; margin-top:15px;\">3. DEGREES OF SUCCESS</h3>\n            <p style=\"font-size:12px;\">The game uses Pathfinder 2e degrees of success (critical at \u00b110 from the DC). Natural 20 and natural 1 shift the degree as usual.</p>\n            <ul style=\"font-size:12px;\">\n                <li>\ud83c\udf1f <b>Nat 20 Uber:</b> if the roll is already a critical success, halve the debt and then reduce it by <b>double stakes</b>.</li>\n                <li>\ud83c\udfaf <b>Critical Success:</b> halve the debt, then reduce it by the target's stakes.</li>\n                <li>\u2705 <b>Success:</b> reduce debt by the target's stakes.</li>\n                <li>\u274c <b>Failure:</b> increase debt by the target's stakes.</li>\n                <li>\u26a0\ufe0f <b>Critical Failure:</b> double the debt, then add the target's stakes.</li>\n                <li>\ud83d\udc80 <b>Nat 1 Uber:</b> if the roll is already a critical failure, double the debt and add <b>double stakes</b>.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">4. ATTACKING ANOTHER THROW</h3>\n            <ul>\n                <li>You may aim not at the face, but at <b>another player's throw</b>. In that case the DC is <b>their chosen style modifier + 10</b>.</li>\n                <li>Your throw then resolves against the <b>same final face target</b> as that player. Uber, critical, and normal success worsen that player's degree by 1. Critical and Uber failure improve that player's degree by 1. A normal failure leaves their degree unchanged.</li>\n                <li>For your own debt, interference only helps if you rolled especially well: Uber success counts as your critical success, critical success counts as your success, and all remaining results count as your failure.</li>\n                <li>If you target a player who is also targeting another throw, the game follows the chain until it finds the first real face target. Resolution waits until <b>all participants confirm</b>, then the chronology is revealed together.</li>\n                <li>If a chain loops or never reaches a face target, everyone in that broken chain suffers a <b>critical tongue failure</b> and cannot aim at the tongue in the next round.</li>\n                <li>A player who aimed directly at the face this round gains a <b>fair play bonus</b>: debt is reduced by 1 more.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">5. HARD RESTRICTIONS</h3>\n            <ul>\n                <li><b>Curse of Repetition:</b> you cannot use the same skill twice in a row.</li>\n                <li><b>Changing the Mark:</b> you cannot end on the same face part in two consecutive rounds.</li>\n                <li><b>Changing the Interference Target:</b> you cannot aim at the same player's throw in two consecutive rounds.</li>\n                <li><b>Equipment:</b> standard darts are used; attack rolls usually rely on Dexterity for thrown weapons.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">6. WINNER AND TIES</h3>\n            <p>At the end of round three, the winner is the participant with the <b>lowest debt</b>. The winner takes a silver pot equal to the total remaining debts of all losers. If several players tie for the lowest debt, they split the pot evenly.</p>\n          </div>"
+          "HelpHtml": "\n          <div style=\"font-family:'Signika',sans-serif; line-height:1.5; color:#1a1a1a; padding:15px; background: url('ui/parchment.jpg'); border: 2px solid #540000;\">\n            <h2 style=\"border-bottom:2px solid #700; color:#700; text-align:center; font-family: 'Modesto Condensed', 'Georgia', serif;\">FATE SCROLL</h2>\n            \n            <p><b>Devil's Pin</b> is a tavern game of deadly precision, beloved in rough districts and among those unafraid of infernal bargains. The players throw darts at a wall board painted with the devil's face.</p>\n            \n            <h3 style=\"color:#900; margin-top:15px;\">1. SETUP AND GOAL</h3>\n            <ul>\n                <li>Every player begins with an <b>Infernal Debt of 10 points</b>.</li>\n                <li><b>Goal:</b> reduce that debt to <b>0</b>.</li>\n                <li>Debt cannot go below <b>0</b>.</li>\n                <li>The match lasts exactly <b>3 rounds</b>. Even if someone reaches zero early, play continues until the end of round three.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">2. THROW RULES</h3>\n            <p>The thrower stands 10 feet from the board. On each turn they declare a target:</p>\n            <table style=\"width:100%; border-collapse:collapse; font-size:12px;\">\n                <tr style=\"background:rgba(0,0,0,0.1)\"><td>👅 <b>Tongue</b></td><td>Base DC - 2</td><td>-1 debt</td></tr>\n                <tr><td>👃 <b>Nose</b></td><td>Base DC + 2</td><td>-2 debt</td></tr>\n                <tr style=\"background:rgba(0,0,0,0.1)\"><td>🤘 <b>Horns</b></td><td>Base DC + 6</td><td>-3 debt</td></tr>\n            </table>\n\n            <h3 style=\"color:#900; margin-top:15px;\">3. DEGREES OF SUCCESS</h3>\n            <p style=\"font-size:12px;\">The game uses Pathfinder 2e degrees of success (critical at ±10 from the DC). Natural 20 and natural 1 shift the degree as usual.</p>\n            <ul style=\"font-size:12px;\">\n                <li>🌟 <b>Nat 20 Uber:</b> if the roll is already a critical success, halve the debt and then reduce it by <b>double stakes</b>.</li>\n                <li>🎯 <b>Critical Success:</b> halve the debt, then reduce it by the target's stakes.</li>\n                <li>✅ <b>Success:</b> reduce debt by the target's stakes.</li>\n                <li>❌ <b>Failure:</b> increase debt by the target's stakes.</li>\n                <li>⚠️ <b>Critical Failure:</b> double the debt, then add the target's stakes.</li>\n                <li>💀 <b>Nat 1 Uber:</b> if the roll is already a critical failure, double the debt and add <b>double stakes</b>.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">4. ATTACKING ANOTHER THROW</h3>\n            <ul>\n                <li>You may aim not at the face, but at <b>another player's throw</b>. In that case the DC is <b>their chosen style modifier + 10</b>.</li>\n                <li>Your throw then resolves against the <b>same final face target</b> as that player. Uber, critical, and normal success worsen that player's degree by 1. Critical and Uber failure improve that player's degree by 1. A normal failure leaves their degree unchanged.</li>\n                <li>For your own debt, interference only helps if you rolled especially well: Uber success counts as your critical success, critical success counts as your success, and all remaining results count as your failure.</li>\n                <li>If you target a player who is also targeting another throw, the game follows the chain until it finds the first real face target. Resolution waits until <b>all participants confirm</b>, then the chronology is revealed together.</li>\n                <li>If a chain loops or never reaches a face target, everyone in that broken chain suffers a <b>critical tongue failure</b> and cannot aim at the tongue in the next round.</li>\n                <li>A player who aimed directly at the face this round gains a <b>fair play bonus</b>: debt is reduced by 1 more.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">5. HARD RESTRICTIONS</h3>\n            <ul>\n                <li><b>Curse of Repetition:</b> you cannot use the same skill twice in a row.</li>\n                <li><b>Changing the Mark:</b> you cannot end on the same face part in two consecutive rounds.</li>\n                <li><b>Changing the Interference Target:</b> you cannot aim at the same player's throw in two consecutive rounds.</li>\n                <li><b>Equipment:</b> standard darts are used; attack rolls usually rely on Dexterity for thrown weapons.</li>\n            </ul>\n\n            <h3 style=\"color:#900;\">6. WINNER AND TIES</h3>\n            <p>At the end of round three, the winner is the participant with the <b>lowest debt</b>. The winner takes a silver pot equal to the total remaining debts of all losers. If several players tie for the lowest debt, they split the pot evenly.</p>\n          </div>"
         },
         "Buttons": {
           "Start": "Start",
@@ -59,15 +59,15 @@
         "Targets": {
           "Tongue": {
             "Name": "Tongue",
-            "Icon": "\ud83d\udc45"
+            "Icon": "👅"
           },
           "Nose": {
             "Name": "Nose",
-            "Icon": "\ud83d\udc43"
+            "Icon": "👃"
           },
           "Horns": {
             "Name": "Horns",
-            "Icon": "\ud83e\udd18"
+            "Icon": "🤘"
           }
         },
         "Skills": {
@@ -116,37 +116,37 @@
         },
         "Outcomes": {
           "UberCrit": {
-            "Label": "\ud83c\udf1f Nat 20 Uber",
+            "Label": "🌟 Nat 20 Uber",
             "Summary": "Natural 20 and critical success: halve debt, then reduce it by double stakes.",
             "Color": "#ffe07a",
             "Style": "background: linear-gradient(135deg, rgba(255,223,122,0.30), rgba(120,30,20,0.25)); border: 1px solid rgba(255,223,122,0.55);"
           },
           "CriticalSuccess": {
-            "Label": "\ud83c\udfaf Critical Success",
+            "Label": "🎯 Critical Success",
             "Summary": "Halve debt, then reduce it by the target stakes.",
             "Color": "#8dffb1",
             "Style": "background: linear-gradient(135deg, rgba(55,150,78,0.25), rgba(8,35,13,0.25)); border: 1px solid rgba(141,255,177,0.40);"
           },
           "Success": {
-            "Label": "\u2705 Success",
+            "Label": "✅ Success",
             "Summary": "Reduce debt by the target stakes.",
             "Color": "#c8f4bf",
             "Style": "background: rgba(40,110,40,0.18); border: 1px solid rgba(200,244,191,0.35);"
           },
           "Failure": {
-            "Label": "\u274c Failure",
+            "Label": "❌ Failure",
             "Summary": "Increase debt by the target stakes.",
             "Color": "#ffd2a8",
             "Style": "background: rgba(120,72,18,0.22); border: 1px solid rgba(255,210,168,0.35);"
           },
           "CriticalFailure": {
-            "Label": "\u26a0\ufe0f Critical Failure",
+            "Label": "⚠️ Critical Failure",
             "Summary": "Double debt, then add the target stakes.",
             "Color": "#ff8b8b",
             "Style": "background: linear-gradient(135deg, rgba(110,18,18,0.32), rgba(40,5,5,0.25)); border: 1px solid rgba(255,139,139,0.40);"
           },
           "UberFailure": {
-            "Label": "\ud83d\udc80 Nat 1 Uber",
+            "Label": "💀 Nat 1 Uber",
             "Summary": "Natural 1 and critical failure: double debt, then add double stakes.",
             "Color": "#ff5f5f",
             "Style": "background: linear-gradient(135deg, rgba(140,8,8,0.40), rgba(35,0,0,0.30)); border: 1px solid rgba(255,95,95,0.55);"

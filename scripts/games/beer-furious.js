@@ -24,6 +24,8 @@ const GAME_TITLE = "Tipsy Dash";
 const DEFAULT_IMG = "icons/svg/mystery-man.svg";
 const ALCOHOL_LORE_SELECTOR = ["alcohol", "beer", "ale", "drink", "drinking", "алког", "пив", "хмел"];
 const PF2E_DC_BY_LEVEL = [14, 15, 16, 18, 19, 20, 22, 23, 24, 26, 27, 28, 30, 31, 32, 34, 35, 36, 38, 39, 40, 42, 44, 46, 48, 50];
+const AUTO_SUPPORT_DC_OFFSETS = Object.freeze([-2, 2, 6]);
+const MANUAL_SUPPORT_DC_OFFSETS = Object.freeze([0, 2, 6]);
 const ROUND_RULES = Object.freeze({
   1: { gainOnSuccess: 0, gainOnFailure: 1, dcAdd: 0 },
   2: { gainOnSuccess: 1, gainOnFailure: 2, dcAdd: 3 },
@@ -395,20 +397,44 @@ function isRussianLocale() {
 }
 
 function tx(key) {
-  const entry = TEXT[key];
-  if (!entry) return key;
-  return isRussianLocale() ? entry.ru : entry.en;
+  const fallback = TEXT[key] ? (isRussianLocale() ? TEXT[key].ru : TEXT[key].en) : key;
+  return gt(definition, `Text.${key}`, fallback);
 }
 
 function tf(key, data = {}) {
-  return tx(key).replace(/\{(\w+)\}/g, (_match, token) => String(data[token] ?? ""));
+  const fallback = TEXT[key] ? (isRussianLocale() ? TEXT[key].ru : TEXT[key].en) : key;
+  return gtf(definition, `Text.${key}`, data, () => fallback.replace(/\{(\w+)\}/g, (_match, token) => String(data[token] ?? "")));
+}
+
+function getRawTranslation(key, fallback) {
+  const paths = [
+    `${MODULE_ID}.${I18N_ROOT}.${key}`,
+    `TS_PF2E_UTILITY.${I18N_ROOT}.${key}`,
+  ];
+  for (const path of paths) {
+    const parts = path.split(".");
+    let value = game.i18n?.translations;
+    for (const part of parts) {
+      value = value?.[part];
+      if (value === undefined || value === null) break;
+    }
+    if (value !== undefined && value !== null) return value;
+  }
+  return fallback;
 }
 
 function getTechniqueData(key) {
   const base = TECHNIQUES[key];
   if (!base) return null;
-  if (isRussianLocale()) return base;
-  return { ...base, ...(TECHNIQUES_EN[key] ?? {}) };
+  const fallback = isRussianLocale() ? base : { ...base, ...(TECHNIQUES_EN[key] ?? {}) };
+  return {
+    ...base,
+    name: gt(definition, `Techniques.${key}.name`, fallback.name),
+    successText: gt(definition, `Techniques.${key}.successText`, fallback.successText),
+    failureText: gt(definition, `Techniques.${key}.failureText`, fallback.failureText),
+    flavorSuccess: getRawTranslation(`Techniques.${key}.flavorSuccess`, fallback.flavorSuccess),
+    flavorFailure: getRawTranslation(`Techniques.${key}.flavorFailure`, fallback.flavorFailure),
+  };
 }
 
 function createInitialState() {
@@ -417,9 +443,11 @@ function createInitialState() {
     excludedPlayers: {},
     round: 1,
     phase: "join",
+    roundStage: "technique",
     log: [],
     results: null,
     debugMode: false,
+    supportDcOverride: null,
     suppressDefaultPlayers: false,
     openSignal: null,
   };
@@ -428,6 +456,10 @@ function createInitialState() {
 function replaceStateContents(target, source) {
   for (const key of Object.keys(target)) delete target[key];
   Object.assign(target, source);
+}
+
+function normalizeRoundStage(state) {
+  state.roundStage = "technique";
 }
 
 function getActorLevel(actor) {
@@ -452,6 +484,7 @@ function createPlayerState(actor, { isParticipating = false, source = "manual" }
     isParticipating,
     currentDCMod: 0,
     permDCMod: 0,
+    roundPool: [],
     hand: [],
     selectedTech: "",
     isConfirmed: false,
@@ -478,6 +511,7 @@ function normalizePlayerState(playerData, actor) {
   playerData.isParticipating = Boolean(playerData.isParticipating);
   playerData.currentDCMod = Number(playerData.currentDCMod) || 0;
   playerData.permDCMod = Number(playerData.permDCMod) || 0;
+  playerData.roundPool = Array.isArray(playerData.roundPool) ? playerData.roundPool.filter((id) => TECHNIQUES[id]) : [];
   playerData.hand = Array.isArray(playerData.hand) ? playerData.hand.filter((id) => TECHNIQUES[id]) : [];
   playerData.selectedTech = TECHNIQUES[playerData.selectedTech] ? playerData.selectedTech : "";
   playerData.isConfirmed = Boolean(playerData.isConfirmed);
@@ -575,12 +609,74 @@ function getActivePlayerIds(state) {
   });
 }
 
-function getRoundBaseDc(state) {
-  const rules = ROUND_RULES[state.round] || ROUND_RULES[1];
+function getSupportDcOffset(offsets, round) {
+  const roundIndex = Math.max(0, Math.min(offsets.length - 1, (Math.trunc(Number(round) || 1) - 1)));
+  return offsets[roundIndex] ?? offsets[0] ?? 0;
+}
+
+function getSuggestedSupportDcRoundOne(state) {
   const levels = getActivePlayerIds(state).map((actorId) => Math.trunc(Number(state.players?.[actorId]?.level) || 0));
-  const maxLevel = levels.length ? Math.max(...levels) : 0;
-  const safeLevel = Math.max(0, Math.min(PF2E_DC_BY_LEVEL.length - 1, maxLevel));
-  return (PF2E_DC_BY_LEVEL[safeLevel] || PF2E_DC_BY_LEVEL[0]) + rules.dcAdd;
+  const minLevel = levels.length ? Math.min(...levels) : 0;
+  const safeLevel = Math.max(0, Math.min(PF2E_DC_BY_LEVEL.length - 1, minLevel));
+  return (PF2E_DC_BY_LEVEL[safeLevel] || PF2E_DC_BY_LEVEL[0]) + getSupportDcOffset(AUTO_SUPPORT_DC_OFFSETS, 1);
+}
+
+function getManualSupportDcRoundOne(state) {
+  const override = Math.trunc(Number(state?.supportDcOverride));
+  return Number.isFinite(override) && override > 0 ? override : null;
+}
+
+function hasManualSupportDcOverride(state) {
+  const override = getManualSupportDcRoundOne(state);
+  return Number.isFinite(override) && override > 0;
+}
+
+function getRoundBaseDc(state, round = state?.round) {
+  const manualRoundOneDc = getManualSupportDcRoundOne(state);
+  if (Number.isFinite(manualRoundOneDc) && manualRoundOneDc > 0) {
+    return manualRoundOneDc + getSupportDcOffset(MANUAL_SUPPORT_DC_OFFSETS, round);
+  }
+  return getSuggestedSupportDcRoundOne(state) + (getSupportDcOffset(AUTO_SUPPORT_DC_OFFSETS, round) - getSupportDcOffset(AUTO_SUPPORT_DC_OFFSETS, 1));
+}
+
+function createShuffledTechniquePool() {
+  const pool = [...TECHNIQUE_ORDER];
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
+  }
+  return pool;
+}
+
+function buildHandFromRoundPool(playerData, round) {
+  const handSize = Math.max(1, Number(playerData.nextRoundEffects?.handSize) || 3);
+  const signature = (round === 1 || round === 3) && TECHNIQUES[playerData.signature] ? playerData.signature : "";
+  const hand = [];
+
+  if (signature) hand.push(signature);
+
+  const seen = new Set(hand);
+  if (!Array.isArray(playerData.roundPool) || !playerData.roundPool.length) {
+    playerData.roundPool = createShuffledTechniquePool();
+  }
+  const pool = playerData.roundPool;
+
+  for (const techId of pool) {
+    if (hand.length >= handSize) break;
+    if (!TECHNIQUES[techId] || seen.has(techId)) continue;
+    hand.push(techId);
+    seen.add(techId);
+  }
+
+  return hand;
+}
+
+function refreshPlayerHand(playerData, round, { preserveSelection = true } = {}) {
+  playerData.hand = buildHandFromRoundPool(playerData, round);
+  if (!preserveSelection || !playerData.hand.includes(playerData.selectedTech)) {
+    playerData.selectedTech = "";
+  }
+  if (playerData.hand.length === 1) playerData.selectedTech = playerData.hand[0];
 }
 
 function pushLog(state, html) {
@@ -654,6 +750,25 @@ function buildTechniqueLog(playerData, technique, result, details) {
   `;
 }
 
+function getStatusLine(state, baseDc) {
+  if (state.phase === "play") {
+    if (state.roundStage === "signature") {
+      return gtf(definition, "Status.Signature", { round: state.round }, ({ round }) => `Раунд ${round} · Выбор коронной техники`);
+    }
+    return gtf(definition, "Status.Round", { round: state.round, dc: baseDc }, ({ round, dc }) => `Раунд ${round} · Базовый КС ${dc}`);
+  }
+  return state.phase === "results"
+    ? gt(definition, "Status.Results", "Итоги")
+    : gt(definition, "Status.Join", "Подготовка");
+}
+
+function getDisplayStatusLine(state, baseDc) {
+  if (state.phase === "play") return gtf(definition, "Status.Round", { round: state.round, dc: baseDc }, ({ round, dc }) => `Раунд ${round} · Базовый КС ${dc}`);
+  return state.phase === "results"
+    ? gt(definition, "Status.Results", "Итоги")
+    : gt(definition, "Status.Join", "Подготовка");
+}
+
 function getRandomOpponentId(state, actorId) {
   const pool = getActivePlayerIds(state).filter((id) => id !== actorId);
   return pool.length ? randomChoice(pool, "") : "";
@@ -661,10 +776,12 @@ function getRandomOpponentId(state, actorId) {
 
 function setupRound(state) {
   const baseDc = getRoundBaseDc(state);
+  state.roundStage = "technique";
   pushLog(state, buildRoundDivider(state.round, baseDc));
 
   for (const [actorId, playerData] of Object.entries(state.players ?? {})) {
     if (!playerData.isParticipating || playerData.isEliminated) {
+      playerData.roundPool = [];
       playerData.hand = [];
       playerData.selectedTech = "";
       playerData.isConfirmed = false;
@@ -675,24 +792,8 @@ function setupRound(state) {
     playerData.selectedTech = "";
     playerData.currentDCMod = 0;
     playerData.isDopingImmune = false;
-
-    const pool = [...TECHNIQUE_ORDER];
-    const handSize = Math.max(1, Number(playerData.nextRoundEffects?.handSize) || 3);
-    const hand = [];
-
-    if ((state.round === 1 || state.round === 3) && playerData.signature && TECHNIQUES[playerData.signature]) {
-      hand.push(playerData.signature);
-      const index = pool.indexOf(playerData.signature);
-      if (index >= 0) pool.splice(index, 1);
-    }
-
-    while (hand.length < handSize && pool.length) {
-      const picked = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-      if (picked) hand.push(picked);
-    }
-
-    playerData.hand = hand;
-    if (hand.length === 1) playerData.selectedTech = hand[0];
+    playerData.roundPool = createShuffledTechniquePool();
+    refreshPlayerHand(playerData, state.round, { preserveSelection: false });
   }
 }
 
@@ -788,7 +889,9 @@ async function processRound(state) {
 
     const success = outcomeRank >= 3;
     const effectText = success ? technique.successText : technique.failureText;
-    const flavorText = (success ? technique.flavorSuccess : technique.flavorFailure).replace("{n}", `<b>${escapeHtml(playerData.name)}</b>`);
+    const flavorPool = success ? technique.flavorSuccess : technique.flavorFailure;
+    const flavorTemplate = Array.isArray(flavorPool) ? randomChoice(flavorPool, "") : flavorPool;
+    const flavorText = String(flavorTemplate || "").replace("{n}", `<b>${escapeHtml(playerData.name)}</b>`);
     let extra = "";
     const randomOpponentId = getRandomOpponentId(state, actorId);
     const randomOpponent = randomOpponentId ? state.players?.[randomOpponentId] : null;
@@ -948,8 +1051,10 @@ function clearPlayerForNewGame(playerData, actor) {
   playerData.oo = 0;
   playerData.limit = fresh.limit;
   playerData.doping = 1;
+  playerData.signature = "";
   playerData.currentDCMod = 0;
   playerData.permDCMod = 0;
+  playerData.roundPool = [];
   playerData.hand = [];
   playerData.selectedTech = "";
   playerData.isConfirmed = false;
@@ -962,22 +1067,24 @@ function clearPlayerForNewGame(playerData, actor) {
   playerData.isLorePenalty = false;
 }
 
-function buildRulesSections() {
+function buildRulesSections(state) {
+  const round1Dc = getRoundBaseDc(state, 1);
+  const round2Dc = getRoundBaseDc(state, 2);
+  const round3Dc = getRoundBaseDc(state, 3);
   return [
     {
       title: gt(definition, "Rules.RoundTitle", "Раунды"),
       items: [
-        { label: "R1", copy: "Успех 0 ОО / Провал 1 ОО" },
-        { label: "R1", copy: tx("RuleRound1") },
-        { label: "R2", copy: tx("RuleRound2") },
-        { label: "R3", copy: tx("RuleRound3") },
+        { label: "R1", copy: `${isRussianLocale() ? "КС" : "DC"} ${round1Dc} · ${tx("RuleRound1")}` },
+        { label: "R2", copy: `${isRussianLocale() ? "КС" : "DC"} ${round2Dc} · ${tx("RuleRound2")}` },
+        { label: "R3", copy: `${isRussianLocale() ? "КС" : "DC"} ${round3Dc} · ${tx("RuleRound3")}` },
       ],
     },
     {
       title: gt(definition, "Rules.CoreTitle", "Основа"),
       items: [
         { label: tx("RuleLimitLabel"), copy: gt(definition, "Rules.Limit", "Телосложение × 2, минимум 2") },
-        { label: tx("RuleHandLabel"), copy: gt(definition, "Rules.Hand", "Обычно 3 техники. В 1 и 3 раунде коронная техника входит в руку.") },
+        { label: tx("RuleHandLabel"), copy: gt(definition, "Rules.Hand", "Обычно 3 техники. Перед забегом можно выбрать коронную технику, и в руку она войдёт только в 1 и 3 раунде.") },
         { label: tx("RuleWinLabel"), copy: gt(definition, "Rules.Win", "Последний на ногах или наименьшие ОО после 3 раунда.") },
       ],
     },
@@ -1004,7 +1111,7 @@ function buildHelpHtml() {
 
   return `
     <div class="tsu-dialog-content bf-help">
-      <p>${tf("HelpIntro", { title: `<b>${GAME_TITLE}</b>` })}</p>
+      <p>${tf("HelpIntro", { title: `<b>${escapeHtml(gt(definition, "Title", GAME_TITLE))}</b>` })}</p>
       <p>${tx("HelpGoal")}</p>
       <p>${tx("HelpCrits")}</p>
       <h3>${escapeHtml(tx("HelpTechniques"))}</h3>
@@ -1018,6 +1125,7 @@ const template = `
   <section class="tsu-panel tsu-panel--rules bf-col-rules">
     <div class="tsu-panel-title bf-rule-headline">
       <span>{{ui.rulesTitle}}</span>
+      {{#if isGM}}<input type="number" class="bf-dc-input" min="1" max="99" step="1" value="{{dcInputValue}}" placeholder="{{dcPlaceholder}}">{{/if}}
       <button type="button" class="tsu-help-button bf-rules-help" data-action="help">?</button>
     </div>
     {{#each ui.ruleSections}}
@@ -1073,7 +1181,7 @@ const template = `
             <div class="bf-bar__fill" style="width:{{ooPct}}%;"></div>
           </div>
 
-          {{#if showJoinControls}}
+          {{#if showSignatureControls}}
             <div class="bf-signature-row">
               <span>{{signatureLabel}}</span>
               <select class="bf-signature-select" data-actor-id="{{id}}">
@@ -1084,6 +1192,10 @@ const template = `
             </div>
           {{/if}}
 
+          {{#if showSignatureWaitingText}}
+            <div class="bf-waiting">{{signatureWaitingText}}</div>
+          {{/if}}
+
           {{#if showActionArea}}
             {{#if showWaitingText}}
               <div class="bf-waiting">{{waitingText}}</div>
@@ -1092,8 +1204,8 @@ const template = `
                 <div class="bf-tech-preview">
                   <div class="bf-tech-preview__title"><i class="fas {{selectedTechnique.icon}}"></i> {{selectedTechnique.name}}</div>
                   <div class="bf-tech-preview__copy">
-                    <div><b>Успех:</b> {{selectedTechnique.successText}}</div>
-                    <div><b>Провал:</b> {{selectedTechnique.failureText}}</div>
+                    <div><b>{{selectedTechnique.successLabel}}</b> {{selectedTechnique.successText}}</div>
+                    <div><b>{{selectedTechnique.failureLabel}}</b> {{selectedTechnique.failureText}}</div>
                   </div>
                 </div>
               {{/if}}
@@ -1198,6 +1310,7 @@ class BeerFuriousApplication extends Application {
 
   getData() {
     const state = this.getState();
+    normalizeRoundStage(state);
     const entries = Object.entries(state.players ?? {});
     for (const [actorId, playerData] of entries) {
       normalizePlayerState(playerData, game.actors?.get(actorId));
@@ -1208,14 +1321,14 @@ class BeerFuriousApplication extends Application {
     const pinnedActorId = getPinnedPlayerActorIdForDisplay(entries, game.user);
     const players = entries
       .filter(([actorId, playerData]) => !state.excludedPlayers?.[actorId] || playerData?.source === "manual")
-      .sort((left, right) => comparePlayerEntriesForDisplay(left, right, { state, user: game.user, locale: game.i18n?.lang || "ru", pinnedActorId }))
+      .sort((left, right) => comparePlayerEntriesForDisplay(left, right, { state, user: game.user, locale: game.i18n?.lang || "en", pinnedActorId }))
       .map(([actorId, playerData]) => this.createPlayerPresentation(state, actorId, playerData));
 
     const footerButtons = [];
     if (game.user?.isGM) {
       const mainButton = {
         action: "advance-phase",
-        label: "Раунд",
+        label: tx("FooterMain"),
         classes: "is-main",
         disabled: false,
       };
@@ -1232,24 +1345,29 @@ class BeerFuriousApplication extends Application {
       footerButtons.push(mainButton);
       footerButtons.push({
         action: "clear",
-        label: "Очистить",
+        label: tx("FooterClear"),
         classes: "is-clear",
         disabled: false,
       });
       footerButtons.push({
         action: "reset-game",
-        label: "Сброс",
+        label: tx("FooterReset"),
         classes: "is-reset",
       });
     }
 
     for (const button of footerButtons) {
-      if (button.action === "advance-phase") button.label = tx("FooterMain");
+      if (button.action === "advance-phase") {
+        if (state.phase === "join") button.label = gt(definition, "Buttons.Start", "Старт");
+        else if (state.phase === "play" && state.roundStage === "signature") button.label = gt(definition, "Buttons.Deal", "Раздать руку");
+        else if (state.phase === "play") button.label = gt(definition, "Buttons.Next", "Подвести раунд");
+        else button.label = tx("FooterMain");
+      }
       if (button.action === "clear") button.label = tx("FooterClear");
       if (button.action === "reset-game") button.label = tx("FooterReset");
     }
     const showEmptyState = players.length === 0;
-    const ruleSections = buildRulesSections();
+    const ruleSections = buildRulesSections(state);
     if (ruleSections[0]?.items?.length > 3) ruleSections[0].items = ruleSections[0].items.slice(-3);
     const emptyState = gt(definition, "Empty.Join", "Добавьте игроков перетаскиванием или включите их участие перед стартом.");
     return {
@@ -1269,11 +1387,14 @@ class BeerFuriousApplication extends Application {
         : (state.phase === "results" ? gt(definition, "Status.Results", "Итоги") : gt(definition, "Status.Join", "Подготовка")),
       showEmptyState,
       emptyState,
+      dcInputValue: hasManualSupportDcOverride(state) ? `${getManualSupportDcRoundOne(state)}` : "",
+      dcPlaceholder: isRussianLocale() ? `КС ${getSuggestedSupportDcRoundOne(state)}` : `DC ${getSuggestedSupportDcRoundOne(state)}`,
       isGM: game.user?.isGM,
       isDopingMode: Boolean(this.pendingDopingSource),
       dopingModeText: this.pendingDopingSource
         ? gtf(definition, "Status.DopingMode", { name: state.players?.[this.pendingDopingSource]?.name || "" }, ({ name }) => `Выберите цель для допинга: ${name}`)
         : "",
+      statusLine: getDisplayStatusLine(state, baseDc),
       footerButtons,
     };
   }
@@ -1285,6 +1406,7 @@ class BeerFuriousApplication extends Application {
     const isPlayPhase = state.phase === "play";
     const isJoinPhase = state.phase === "join";
     const isResultsPhase = state.phase === "results";
+    const isTechniqueStage = isPlayPhase;
     const canShowChoices = canOperate || (isGM && state.debugMode);
     const selectedTechnique = playerData.selectedTech ? getTechniqueData(playerData.selectedTech) : null;
     const statusBadges = [];
@@ -1298,7 +1420,7 @@ class BeerFuriousApplication extends Application {
       if (badge.classes === "is-immune") badge.label = tx("BadgeImmune");
       if (badge.classes === "is-danger") badge.label = tx("BadgeDopingX2");
     }
-    const handButtons = canShowChoices && isPlayPhase && playerData.isParticipating && !playerData.isEliminated && !playerData.isConfirmed
+    const handButtons = canShowChoices && isTechniqueStage && playerData.isParticipating && !playerData.isEliminated && !playerData.isConfirmed
       ? playerData.hand.map((techId) => {
         const technique = getTechniqueData(techId);
         return {
@@ -1321,13 +1443,11 @@ class BeerFuriousApplication extends Application {
       img: actor?.img || playerData.img || DEFAULT_IMG,
       isParticipating: playerData.isParticipating,
       ooPct,
-      ooBadge: `${playerData.oo} / ${playerData.limit} ОО`,
-      dopingLabel: `${playerData.doping} допинг`,
       ooBadge: tf("OoBadge", { current: playerData.oo, limit: playerData.limit }),
       dopingLabel: tf("DopingBadge", { count: playerData.doping }),
       joinCheckbox: isJoinPhase && (canOperate || isGM),
       joinLabel: gt(definition, "JoinLabel", "Я в игре"),
-      showJoinControls: isJoinPhase && canShowChoices,
+      showSignatureControls: isJoinPhase && canShowChoices,
       signatureLabel: gt(definition, "Signature", "Коронная техника"),
       signatureOptions: [
         { value: "", label: gt(definition, "SignatureEmpty", "Без коронной"), selected: !playerData.signature },
@@ -1345,9 +1465,13 @@ class BeerFuriousApplication extends Application {
       showActionArea: isPlayPhase && playerData.isParticipating,
       showWaitingText: isPlayPhase && !canShowChoices,
       waitingText: gt(definition, "Status.Waiting", "Игрок выбирает технику..."),
-      selectedTechnique: selectedTechnique ? {
+      showSignatureWaitingText: false,
+      signatureWaitingText: gt(definition, "Status.WaitingSignature", "Игрок выбирает коронную технику..."),
+      selectedTechnique: isTechniqueStage && selectedTechnique ? {
         icon: selectedTechnique.icon,
         name: selectedTechnique.name,
+        successLabel: tx("UiSuccess"),
+        failureLabel: tx("UiFailure"),
         successText: selectedTechnique.successText,
         failureText: selectedTechnique.failureText,
       } : null,
@@ -1394,6 +1518,22 @@ class BeerFuriousApplication extends Application {
     html.on("change", "#bf-debug-mode", (event) => {
       if (!game.user?.isGM) return;
       void requestGameAction(GAME_ID, "toggle-debug", { enabled: event.currentTarget.checked });
+    });
+    html.on("change", ".bf-dc-input", (event) => {
+      if (!game.user?.isGM) return;
+      const rawValue = String(event.currentTarget.value ?? "").trim();
+      if (!rawValue) {
+        void requestGameAction(GAME_ID, "set-dc", { auto: true });
+        return;
+      }
+      const value = Math.trunc(Number(rawValue));
+      if (!Number.isFinite(value) || value < 1) return;
+      void requestGameAction(GAME_ID, "set-dc", { value });
+    });
+    html.on("keydown", ".bf-dc-input", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      event.currentTarget.blur();
     });
     html.on("click", "[data-actor-card]", (event) => {
       const card = event.currentTarget;
@@ -1519,6 +1659,7 @@ const definition = {
   async handleAction({ action, data, state, senderId, canUserControlActor }) {
     const sender = game.users?.get(senderId);
     const senderIsGM = Boolean(sender?.isGM);
+    normalizeRoundStage(state);
 
     switch (action) {
       case "toggle-join": {
@@ -1529,7 +1670,8 @@ const definition = {
       }
       case "set-signature": {
         const playerData = state.players?.[data.actorId];
-        if (!playerData || state.phase !== "join" || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        const canSetInJoin = state.phase === "join";
+        if (!playerData || !canSetInJoin || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
         playerData.signature = TECHNIQUES[data.signature] ? data.signature : "";
         return true;
       }
@@ -1553,6 +1695,14 @@ const definition = {
         if (!senderIsGM) return false;
         state.debugMode = Boolean(data.enabled);
         return true;
+      case "set-dc":
+        if (!senderIsGM) return false;
+        if (data.auto) {
+          state.supportDcOverride = null;
+          return true;
+        }
+        state.supportDcOverride = Math.max(1, Math.min(99, Math.trunc(Number(data.value) || 0)));
+        return Boolean(state.supportDcOverride);
       case "use-doping": {
         const source = state.players?.[data.actorId];
         const target = state.players?.[data.targetId];

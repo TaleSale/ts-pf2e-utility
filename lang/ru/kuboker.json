@@ -4,102 +4,102 @@
       "Kuboker": {
         "Title": "Кубокер",
         "Spectator": "Наблюдает",
-        "JoinLabel": "Я В ИГРЕ",
-        "DebugMode": "Режим ГМ",
+        "JoinLabel": "Я в игре",
+        "DebugMode": "Отладка ГМа",
         "Currency": {
           "CopperShort": "мм",
           "SilverShort": "см",
           "GoldShort": "зм",
           "PlatinumShort": "пм",
-          "CopperLong": "Медь",
-          "SilverLong": "Серебро",
-          "GoldLong": "Золото",
-          "PlatinumLong": "Платина"
+          "CopperLong": "Медные",
+          "SilverLong": "Серебряные",
+          "GoldLong": "Золотые",
+          "PlatinumLong": "Платиновые"
         },
         "Betting": {
-          "Toggle": "Повышение ставок",
+          "Toggle": "Повысить ставки",
           "InitialStake": "Начальная ставка",
           "Currency": "Валюта",
-          "Step": "Шаг ставки",
-          "RoundLimit": "Лимит ставки на раунд",
+          "Step": "Шаг повышения",
+          "RoundLimit": "Лимит раунда",
           "Bank": "Банк: {amount}",
-          "TotalBet": "Поставлено: {amount}",
+          "TotalBet": "Ставка: {amount}",
           "RoundBet": "Раунд {round}: {amount}",
           "Folded": "Пас",
-          "RoundProgress": "Ставки {current}/{total}"
+          "RoundProgress": "Торги {current}/{total}"
         },
-        "CenterDice": "Кости на столе",
-        "BlackDie": "Черная Кость",
-        "RerollsLeft": "🎲 × {count}",
-        "CrownRerollLabel": "👑 Прикуп",
-        "CrownRerollPrompt": "👑 Сначала замените куб в прикупе или откажитесь",
-        "Winner": "🏆 ПОБЕДИТЕЛЬ",
-        "Disqualified": "🚨 ДИСКВАЛИФИЦИРОВАН",
-        "NoHand": "?",
+        "CenterDice": "Прикуп",
+        "BlackDie": "Черная кость",
+        "RerollsLeft": "Перебросов осталось: {count}",
+        "CrownRerollLabel": "Коронная кость",
+        "CrownRerollPrompt": "👑 Сначала замените кость прикупа или откажитесь",
+        "Winner": "Победитель",
+        "Disqualified": "Дисквалифицирован",
+        "NoHand": "Нет руки",
         "FlavorFallback": "Стол отвечает молчанием.",
         "Rules": {
-          "PanelTitle": "СТИЛИ И ПРАВИЛА",
-          "HelpTitle": "📖 СВИТОК СУДЬБЫ: ВЕЛИКАЯ ЭНЦИКЛОПЕДИЯ КУБОКЕРА",
+          "PanelTitle": "Стили и правила",
+          "HelpTitle": "📖 Свиток судьбы: Великая энциклопедия Кубокера",
           "DcShort": "КС",
           "DcPlaceholder": "КС {dc}",
-          "StrategiesHeader": "СТРАТЕГИИ",
-          "HandsHeader": "КОМБИНАЦИИ (D10)",
-          "BaseDcHeader": "БАЗОВЫЙ КС",
-          "BaseDcCurrent": "Текущий КС",
-          "HelpHtml": "\n          <div style=\"font-family:'Signika',sans-serif; line-height:1.5; padding:15px; background:url('ui/parchment.jpg'); border:2px solid #540000; color:#1a1a1a; max-height: 600px; overflow-y: auto;\">\n            <h2 style=\"border-bottom:2px solid #700; color:#700; text-align:center; font-family: 'Modesto Condensed', serif;\">СТИЛИ И ПРАВИЛА</h2>\n            \n            <h3 style=\"color:#900; border-bottom:1px solid #700;\">1. СТЕПЕНИ УСПЕХА</h3>\n            <p><b>ЧЕСТНО (Общество / Дипломатия / Игра):</b><br>\n            • 🌟 <b>Nat 20 Uber:</b> Вы на пике формы. Получаете <b>2 переброса</b> и <b>1 коронную кость</b> для замены куба в прикупе. Коронная кость используется первой.<br>\n            • 🎯 <b>Крит.Успех:</b> Мастерская игра. Переброс <b>2 костей</b>.<br>\n            • ✅ <b>Успех:</b> Уверенная партия. Переброс <b>1 кости</b>.<br>\n            • ❌ <b>Провал:</b> Удача ускользает. Перебросов нет.<br>\n            • ⚠️ <b>Крит.Провал:</b> Дилер сам перебрасывает вашу кость.<br>\n            • 💀 <b>Nat 1 Uber:</b> Вы получаете <b>Черную Кость (0)</b>.</p>\n\n            <p><b>МУХЛЁЖ (Воровство / Обман / Игра):</b><br>\n            • 🌟 <b>Nat 20 Uber:</b> Мастер теней. Установите любые грани для <b>2 костей</b>. (Видит только Uber-Орел).<br>\n            • 🎯 <b>Крит.Успех:</b> Ловкость рук. Установите грань для <b>1 кости</b>. (Видит только Крит-Орел).<br>\n            • ✅ <b>Успех:</b> Хитрость. Переброс 1 кости. (Видит только Uber-Орел).<br>\n            • ❌ <b>Провал:</b> Ошибка. Перебросов нет. (Видит Крит-Орел).<br>\n            • ⚠️ <b>Крит.Провал:</b> Вас замечают <b>ВСЕ</b> (кроме Крит.Пр Орлов).<br>\n            • 💀 <b>Nat 1 Uber:</b> Позор! Вас замечают <b>АБСОЛЮТНО ВСЕ</b>.</p>\n\n            <p><b>ОРЁЛ (Восприятие / Запугивание / Игра):</b><br>\n            • Успех Орла повышает КС Мухлежа: +2 за 1-го, +1 за каждого след.<br>\n            • 🌟 <b>Nat 20 Uber:</b> Переброс 1 кости. Видит Мухлёж уровня <b>Успех</b>.<br>\n            • 🎯 <b>Крит.Успех:</b> Переброс 1 кости. Видит Мухлёж уровня <b>Провал</b>.<br>\n            • ✅ <b>Успех:</b> Переброс 1 кости. Видит Мухлёж уровня <b>Крит.Провал</b>.<br>\n            • 💀 <b>Nat 1 Uber:</b> Получает <b>Черную Кость</b> незаметно.</p>\n\n            <h3 style=\"color:#900; border-bottom:1px solid #700;\">2. КОМБИНАЦИИ (D10)</h3>\n            <ol>\n                <li><b>КУБОКЕР:</b> 5 одинаковых костей (напр. 8-8-8-8-8).</li>\n                <li><b>Каре:</b> 4 одинаковых кости (напр. 5-5-5-5).</li>\n                <li><b>Фулл-Хаус:</b> Тройка одного номинала + пара другого (напр. 2-2-2 и 6-6).</li>\n                <li><b>Стрит:</b> Пять костей по порядку (напр. 1-2-3-4-5 или 6-7-8-9-10).</li>\n                <li><b>Сет:</b> 3 одинаковых кости (напр. 9-9-9).</li>\n                <li><b>Две пары:</b> Две кости одного числа + две другого (напр. 4-4 и 7-7).</li>\n                <li><b>Пара:</b> Две одинаковых кости (напр. 10-10).</li>\n                <li><b>Старшая кость:</b> Если комбинаций нет, побеждает сумма значений.</li>\n            </ol>\n          </div>"
+          "StrategiesHeader": "Стратегии",
+          "HandsHeader": "Комбинации",
+          "BaseDcHeader": "Базовый КС",
+          "BaseDcCurrent": "Текущий КС стола",
+          "HelpHtml": "\n          <div style=\"font-family:'Signika',sans-serif; line-height:1.5; padding:15px; background:url('ui/parchment.jpg'); border:2px solid #540000; color:#1a1a1a; max-height: 600px; overflow-y: auto;\">\n            <h2 style=\"border-bottom:2px solid #700; color:#700; text-align:center; font-family:'Modesto Condensed', serif;\">СТИЛИ И ПРАВИЛА</h2>\n            <h3 style=\"color:#900; border-bottom:1px solid #700;\">1. СТЕПЕНИ УСПЕХА</h3>\n            <p><b>ЧЕСТНО (Общество / Дипломатия / Игровой фольклор):</b><br>\n            • 🌟 <b>Нат. 20 Uber:</b> идеальная форма. Получаете <b>2 переброса</b> и <b>1 коронный переброс</b> прикупа. Коронный переброс нужно использовать первым.<br>\n            • 🎯 <b>Критический успех:</b> мастерская игра. Перебросьте <b>2 кости</b>.<br>\n            • ✅ <b>Успех:</b> уверенная игра. Перебросьте <b>1 кость</b>.<br>\n            • ❌ <b>Провал:</b> удача ускользает. Перебросов нет.<br>\n            • ⚠️ <b>Критический провал:</b> крупье перебрасывает одну вашу кость за вас.<br>\n            • 💀 <b>Нат. 1 Uber:</b> вы получаете <b>Черную кость (0)</b>.</p>\n            <p><b>ЖУЛЬНИЧАТЬ (Воровство / Обман / Игровой фольклор):</b><br>\n            • 🌟 <b>Нат. 20 Uber:</b> мастер теней. Выставьте любые грани у <b>2 костей</b>. Только Uber-наблюдение замечает этот уровень.<br>\n            • 🎯 <b>Критический успех:</b> ловкость рук. Выставьте грань <b>1 кости</b>. Только крит. наблюдение замечает этот уровень.<br>\n            • ✅ <b>Успех:</b> тонкое жульничество. Перебросьте <b>1 кость</b>. Только Uber-наблюдение замечает его.<br>\n            • ❌ <b>Провал:</b> трюк не выходит. Перебросов нет. Крит. наблюдение может заметить.<br>\n            • ⚠️ <b>Критический провал:</b> вас замечают <b>все</b>, кроме критически проваливших наблюдателей.<br>\n            • 💀 <b>Нат. 1 Uber:</b> позор. Вас замечают <b>абсолютно все</b>.</p>\n            <p><b>НАБЛЮДАТЬ (Внимательность / Запугивание / Игровой фольклор):</b><br>\n            • Успешные проверки наблюдения повышают КС для шулеров: +2 за первый успех, +1 за каждый следующий.<br>\n            • 🌟 <b>Нат. 20 Uber:</b> перебросьте 1 кость и замечайте жульничество вплоть до уровня <b>Успех</b>.<br>\n            • 🎯 <b>Критический успех:</b> перебросьте 1 кость и замечайте жульничество вплоть до уровня <b>Провал</b>.<br>\n            • ✅ <b>Успех:</b> перебросьте 1 кость и замечайте жульничество вплоть до уровня <b>Критический провал</b>.<br>\n            • 💀 <b>Нат. 1 Uber:</b> получите скрытую <b>Черную кость</b>.</p>\n            <h3 style=\"color:#900; border-bottom:1px solid #700;\">2. КОМБИНАЦИИ (D10)</h3>\n            <ol><li><b>КУБОКЕР:</b> 5 одинаковых костей.</li><li><b>Каре:</b> 4 одинаковых кости.</li><li><b>Фулл-хаус:</b> три одного значения и две другого.</li><li><b>Стрит:</b> пять последовательных значений.</li><li><b>Тройка:</b> 3 одинаковые кости.</li><li><b>Две пары:</b> две разные пары.</li><li><b>Пара:</b> 2 одинаковые кости.</li><li><b>Старшая кость:</b> если комбинации нет, решают старшие значения.</li></ol>\n          </div>"
         },
         "Buttons": {
-          "Start": "НАЧАТЬ",
-          "ResetRound": "РАУНД",
-          "ResetGame": "СБРОС",
-          "Deal": "РАЗДАТЬ",
-          "ResolveStrategies": "ПОДТВЕРДИТЬ",
-          "NextRound": "2-Й РАУНД",
-          "Reveal": "ИТОГИ",
-          "Clear": "ОЧИСТИТЬ",
-          "Reset": "СБРОС",
-          "Confirm": "ПОДТВЕРДИТЬ",
-          "Ready": "ГОТОВ",
-          "Advance": "ДАЛЕЕ",
-          "CallAmount": "КОЛЛ {amount}",
-          "RaiseAmount": "РЕЙЗ {amount}",
-          "AllInAmount": "ОЛЛ-ИН {amount}",
-          "Pass": "ПАС",
-          "AwardPot": "ВЫДАТЬ ДЕНЬГИ",
-          "Report": "🚨 СДАТЬ",
-          "Reported": "🚨 ВЫ СДАЛИ",
-          "Help": "ПРАВИЛА",
+          "Start": "Старт",
+          "ResetRound": "Раунд",
+          "ResetGame": "Полный сброс",
+          "Deal": "Раздать",
+          "ResolveStrategies": "Разыграть стратегии",
+          "NextRound": "Раунд 2",
+          "Reveal": "Вскрытие",
+          "Clear": "Очистить стол",
+          "Reset": "Полный сброс",
+          "Confirm": "Подтвердить",
+          "Ready": "Готово",
+          "Advance": "Продолжить",
+          "CallAmount": "Уравнять {amount}",
+          "RaiseAmount": "Повысить на {amount}",
+          "AllInAmount": "Ва-банк {amount}",
+          "Pass": "Пас",
+          "AwardPot": "Выдать банк",
+          "Report": "Пожаловаться",
+          "Reported": "Жалоба",
+          "Help": "Правила",
           "CloseRules": "Да начнется игра!",
           "Accept": "Принять",
           "Decline": "Отказаться"
         },
         "Dialogs": {
-          "SetDieTitle": "Установить грань"
+          "SetDieTitle": "Выставить кость"
         },
         "Phases": {
           "join": "Ожидание игроков",
-          "betting": "Повышение ставок",
+          "betting": "Торги",
           "deal": "Выбор стратегии",
           "locked": "Перебросы и обвинения",
-          "reveal": "Итоги"
+          "reveal": "Вскрытие"
         },
         "RoundProgress": "Раунд {current}/{total}",
         "Empty": {
-          "JoinInstructions": "Игроки отмечают «Я в игре», после этого мастер нажимает «Начать».",
-          "NoParticipants": "В партии нет участников. Вернитесь в подготовку и отметьте игроков."
+          "JoinInstructions": "Игроки отмечают «Я в игре», затем ГМ нажимает Старт.",
+          "NoParticipants": "Участников нет. Вернитесь к подготовке и отметьте игроков."
         },
         "Strategies": {
           "Fair": {
-            "Name": "ЧЕСТНО",
-            "Summary": "Общество / Дипломатия / Игра"
+            "Name": "Честно",
+            "Summary": "Общество / Дипломатия / Игровой фольклор"
           },
           "Cheat": {
-            "Name": "МУХЛЁЖ",
-            "Summary": "Воровство / Обман / Игра"
+            "Name": "Жульничать",
+            "Summary": "Воровство / Обман / Игровой фольклор"
           },
           "Observe": {
-            "Name": "ОРЁЛ",
-            "Summary": "Восприятие / Запугивание / Игра"
+            "Name": "Наблюдать",
+            "Summary": "Внимательность / Запугивание / Игровой фольклор"
           }
         },
         "Skills": {
@@ -116,95 +116,104 @@
             "Short": "Обман"
           },
           "Perception": {
-            "Short": "Восприятие"
+            "Short": "Внимательность"
           },
           "Intimidation": {
             "Short": "Запугивание"
           },
           "GamesLore": {
-            "Short": "Игра"
+            "Short": "Игровой фольклор"
           }
         },
         "Hands": {
-          "Kuboker": "КУБОКЕР",
+          "Kuboker": "Кубокер",
           "FourOfAKind": "Каре",
-          "FullHouse": "Фулл-Хаус",
+          "FullHouse": "Фулл-хаус",
           "Straight": "Стрит",
-          "ThreeOfAKind": "Сет",
+          "ThreeOfAKind": "Тройка",
           "TwoPairs": "Две пары",
           "Pair": "Пара",
           "HighDie": "Старшая кость",
-          "NoHand": "?"
+          "NoHand": "Нет руки"
         },
         "HandsSummary": {
-          "Kuboker": "5 одинаковых костей (напр. 8-8-8-8-8).",
-          "FourOfAKind": "4 одинаковые кости (напр. 5-5-5-5).",
-          "FullHouse": "Три кости одного значения плюс две другого (напр. 2-2-2 и 6-6).",
-          "Straight": "Пять костей по порядку (напр. 1-2-3-4-5 или 6-7-8-9-10).",
-          "ThreeOfAKind": "3 одинаковые кости (напр. 9-9-9).",
-          "TwoPairs": "Две разные пары костей плюс одна лишняя (напр. 4-4 и 7-7).",
-          "Pair": "Две одинаковые кости (напр. 10-10).",
+          "Kuboker": "Пять одинаковых костей.",
+          "FourOfAKind": "Четыре кости с одним значением.",
+          "FullHouse": "Три одного значения и две другого.",
+          "Straight": "Пять последовательных значений.",
+          "ThreeOfAKind": "Три одинаковые кости.",
+          "TwoPairs": "Две разные пары.",
+          "Pair": "Одна пара.",
           "HighDie": "Нет комбинации, решают старшие значения."
         },
         "Prefixes": {
-          "Observe": "ОРЁЛ",
-          "Cheat": "МУХЛЁЖ",
-          "Fair": "ЧЕСТНО"
+          "Observe": "Наблюдение",
+          "Cheat": "Жульничество",
+          "Fair": "Честно"
         },
         "Outcomes": {
           "UberCrit": {
-            "Label": "🌟 Nat 20 Uber",
+            "Label": "Чудо",
             "Color": "#ffe07a",
             "Style": "background: linear-gradient(135deg, rgba(255,223,122,0.26), rgba(56,98,34,0.20)); border: 1px solid rgba(255,223,122,0.55);"
           },
           "CriticalSuccess": {
-            "Label": "🎯 Крит.Успех",
+            "Label": "Критический успех",
             "Color": "#8dffb1",
             "Style": "background: rgba(61,135,72,0.20); border: 1px solid rgba(141,255,177,0.40);"
           },
           "Success": {
-            "Label": "✅ Успех",
+            "Label": "Успех",
             "Color": "#d6f8b2",
             "Style": "background: rgba(67,105,40,0.22); border: 1px solid rgba(214,248,178,0.32);"
           },
           "Failure": {
-            "Label": "❌ Провал",
+            "Label": "Провал",
             "Color": "#ffd2a8",
             "Style": "background: rgba(112,68,16,0.22); border: 1px solid rgba(255,210,168,0.35);"
           },
           "CriticalFailure": {
-            "Label": "⚠️ Крит.Провал",
+            "Label": "Критический провал",
             "Color": "#ff8b8b",
             "Style": "background: rgba(115,18,18,0.28); border: 1px solid rgba(255,139,139,0.40);"
           },
           "UberFailure": {
-            "Label": "💀 Nat 1 Uber",
+            "Label": "Катастрофа",
             "Color": "#ff5f5f",
             "Style": "background: rgba(135,10,10,0.34); border: 1px solid rgba(255,95,95,0.55);"
           }
         },
+        "ChronicleOutcomes": {
+          "UberCrit": "НАТ. 20 UBER",
+          "CriticalSuccess": "КРИТ. УСПЕХ",
+          "Success": "УСПЕХ",
+          "Failure": "ПРОВАЛ",
+          "CriticalFailure": "КРИТ. ПРОВАЛ",
+          "UberFailure": "НАТ. 1 UBER"
+        },
         "Log": {
-          "StrategyHeader": "<div class=\"tsu-log-entry\" style=\"text-align:center; color:#ffd700; border-top:1px solid #d4af37; border-bottom:1px solid #d4af37; background:rgba(212,175,55,0.1); padding:4px; margin: 10px 0; font-weight:bold; font-size:12px;\">🎭 ПРОВЕРКА СТРАТЕГИЙ (КС {dc}) 🎭</div>",
-          "StrategyResult": "<div class=\"tsu-log-entry\" style=\"{style}\"><b>{prefix}</b> | <b>{name}</b> | {label} [{d20}+{modifier}{penaltyText}={total} vs КС {dc}]<br>{flavor}</div>",
-          "CheatPenalty": "<div class=\"tsu-log-entry\" style=\"text-align:center;color:#ff8f8f;\"><b>Штраф мухлёжу от орлов: {penalty}</b></div>",
-          "ForcedReroll": "<div class=\"tsu-log-entry\">Дилер заставляет <b>{name}</b> перебросить кость.</div>",
-          "BlackDie": "<div class=\"tsu-log-entry\">Черная Кость для <b>{name}</b>.</div>",
-          "Empty": "Хроника стола пуста.",
-          "Reroll": "🎲 {name} заменил кость №{die}",
-          "CrownReroll": "👑 {name} заменил куб прикупа №{die}",
-          "CrownRerollDeclined": "👑 {name} отказался менять прикуп",
-          "Complaint": "🚨 {reporter} сдал шулера {target}!",
-          "BettingRoundStart": "Начинается круг ставок {round}/{total}. Анте: {ante}.",
-          "BetCall": "{name} коллирует на {amount}.",
-          "BetRaise": "{name} повышает на {amount}, всего {total}.",
-          "BetAllIn": "{name} идёт олл-ин: {total} (+{amount}).",
-          "BetFold": "{name} пасует и оставляет свои деньги в банке.",
-          "BettingPayout": "{winners} получают по {amount} из банка.",
-          "NextRound": "Начинается раунд {round}/{total}.",
-          "DealStart": "КОН НАЧАТ! В центре стола: {center}.",
-          "Winner": "🏆 ПОБЕДИТЕЛЬ: {name}. Комбинация: {hand}",
-          "Cleared": "--- Стол очищен (Игроки остались) ---",
-          "PanelTitle": "ХРОНИКА СТОЛА"
+          "StrategyHeaderText": "ПРОВЕРКА СТРАТЕГИЙ (КС {dc})",
+          "StrategyHeader": "<div class=\"tsu-log-entry\" style=\"text-align:center;\"><b>Проверки стратегий (КС {dc})</b></div>",
+          "StrategyResult": "<div class=\"tsu-log-entry\" style=\"{style}\"><div style=\"display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px;\"><span style=\"background:{color};color:black;padding:1px 8px;border-radius:999px;font-weight:700;\">{prefix}: {label}</span><span style=\"font-size:10px;opacity:0.72;\">[{d20}+{mod}{penalty}={total} против КС {dc}]</span></div><div>{flavor}</div></div>",
+          "CheatPenalty": "<div class=\"tsu-log-entry\" style=\"text-align:center;color:#ff8f8f;\"><b>Штраф шулерам от зорких глаз: {penalty}</b></div>",
+          "ForcedReroll": "<div class=\"tsu-log-entry\">Крупье заставляет <b>{name}</b> перебросить кость.</div>",
+          "BlackDie": "<div class=\"tsu-log-entry\">Черная кость для <b>{name}</b>.</div>",
+          "Empty": "Записей пока нет.",
+          "Reroll": "<div><b>{name}</b> меняет кость {die}.</div>",
+          "CrownReroll": "<div><b>{name}</b> заменяет кость прикупа {die}.</div>",
+          "CrownRerollDeclined": "<div><b>{name}</b> отказывается заменять кость прикупа.</div>",
+          "Complaint": "<div><b>{reporter}</b> жалуется на <b>{target}</b>.</div>",
+          "BettingRoundStart": "<div><b>Раунд торгов {round}/{total}.</b> Анте: <b>{ante}</b>.</div>",
+          "BetCall": "<div><b>{name}</b> уравнивает <b>{amount}</b>.</div>",
+          "BetRaise": "<div><b>{name}</b> повышает на <b>{amount}</b> до <b>{total}</b>.</div>",
+          "BetAllIn": "<div><b>{name}</b> идет ва-банк: <b>{total}</b> (+{amount}).</div>",
+          "BetFold": "<div><b>{name}</b> пасует и оставляет ставку в банке.</div>",
+          "BettingPayout": "<div><b>{winners}</b> получают из банка по <b>{amount}</b>.</div>",
+          "NextRound": "<div><b>Начинается раунд {round}/{total}.</b></div>",
+          "DealStart": "<div><b>Стол открыт.</b> Базовый КС: <b>{dc}</b>.</div>",
+          "Winner": "<div><b>Победитель:</b> {winners}<br><span>{hand}</span></div>",
+          "Cleared": "Стол очищен.",
+          "PanelTitle": "Хроника стола"
         },
         "Flavor": {
           "Fair": {
@@ -609,7 +618,8 @@
               "{n} официально признан самым «удобным» соседом за этим столом."
             ]
           }
-        }
+        },
+        "StockName": "Прикуп"
       }
     }
   }

@@ -14,12 +14,14 @@
           "RoundTitle": "Rounds",
           "CoreTitle": "Basics",
           "DopingTitle": "Doping",
+          "Doping": "Click Doping on your card, then choose a target. On yourself it lowers DC; on an opponent it raises DC.",
           "Limit": "Constitution × 2, minimum 2",
-          "Hand": "Usually 3 techniques. In rounds 1 and 3, the signature technique enters your hand.",
+          "Hand": "Usually 3 techniques. Before the run, you can choose a signature technique, and it enters your hand only in rounds 1 and 3.",
           "Win": "Be the last one standing or finish round 3 with the fewest intoxication points."
         },
         "Buttons": {
           "Start": "Start",
+          "Deal": "Deal Hand",
           "Next": "Resolve Round",
           "Clear": "Clear",
           "Reset": "Reset",
@@ -31,10 +33,12 @@
         },
         "Status": {
           "Join": "Setup",
+          "Signature": "Round {round} · Choose signature technique",
           "Round": "Round {round} · Base DC {dc}",
           "Results": "Results",
           "Confirmed": "Choice confirmed",
           "Eliminated": "Blackout",
+          "WaitingSignature": "Player is choosing a signature technique...",
           "Waiting": "Player is choosing a technique...",
           "DopingMode": "Choose a doping target: {name}"
         },

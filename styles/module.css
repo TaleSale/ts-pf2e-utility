@@ -3147,6 +3147,24 @@
   background: rgba(47, 24, 8, 0.94);
 }
 
+.tsu-beer-furious .bf-dc-input {
+  width: 52px;
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid #8a5c1d;
+  border-radius: 3px;
+  background: rgba(47, 24, 8, 0.94);
+  color: #f4cc7f;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: none;
+}
+
+.tsu-beer-furious .bf-dc-input::placeholder {
+  color: rgba(244, 204, 127, 0.72);
+}
+
 .tsu-beer-furious .tsu-player-card {
   padding: 10px 12px 9px;
   background:
@@ -3765,6 +3783,24 @@
   color: #f6d77a;
   border-color: #7a5435;
   background: rgba(25, 15, 10, 0.94);
+}
+
+.tsu-bug-race .br-dc-input {
+  width: 52px;
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid #7a5435;
+  border-radius: 3px;
+  background: rgba(25, 15, 10, 0.94);
+  color: #f6d77a;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: none;
+}
+
+.tsu-bug-race .br-dc-input::placeholder {
+  color: rgba(246, 215, 122, 0.72);
 }
 
 .tsu-bug-race .tsu-player-card {

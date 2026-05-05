@@ -27,16 +27,25 @@ body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read::after 
   position: absolute;
   top: -8px;
   right: -8px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 18px;
   height: 18px;
   border: 2px solid var(--tsu-read-border);
   border-radius: 999px;
   background: var(--tsu-read-icon-bg);
   color: var(--tsu-read-icon-color);
-  font: var(--fa-font-solid);
-  font-size: 10px;
+  font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+  font-weight: 900;
+  font-style: normal;
+  font-size: 9px;
+  line-height: 1;
+  text-align: center;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  pointer-events: none;
 }
 
 body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :first-child {

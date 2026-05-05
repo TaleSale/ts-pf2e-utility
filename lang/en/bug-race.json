@@ -14,20 +14,67 @@
         "Text": {
           "DefaultRunner": "Runner",
           "TableReady": "The table is ready. Pick the racers and build your cockroaches.",
+          "SupportDeath": "cannot handle the strain before the main dash even starts.",
+          "OutcomeObstacleCrit": "{name} blasts through the barrier at full throttle thanks to “{technique}”.",
+          "OutcomeObstacleCritFail": "{name} crashes into the obstacle and loses every bit of momentum.",
+          "OutcomeObstacleFail": "{name} stumbles at the barrier and loses the pace.",
+          "OutcomeObstacleSuccess": "{name} clears the obstacle cleanly and stays in the race.",
+          "SprintBand30": "This is no longer a cockroach. This is a legend of speed.",
+          "SprintBand25": "The shell vibrates from the sheer pace.",
+          "SprintBand20": "Its legs blur so fast the whole table hums.",
+          "SprintBand15": "A strong, compact burst with full control.",
+          "SprintBand10": "The cockroach is moving confidently, just without miracles.",
+          "SprintBand1": "There is speed here, but not enough sharpness in this burst.",
+          "SprintBand0": "The burst fizzles out and the cockroach barely advances.",
           "SupportPhase": "Support phase · DC {dc}",
-          "ObstaclePhase": "Obstacle · DC {dc}",
-          "SprintPhase": "Sprint",
           "Success": "Success",
           "Failure": "Failure",
-          "CritSuccess": "Critical success",
-          "CritFailure": "Critical failure",
           "Effect": "Effect:",
+          "AgainstDC": "1d20 + {modifier} = {total} vs DC {dc}",
           "Decision": "Decision",
           "ObstaclePending": "The obstacle was not cleared. The player decides whether to spend luck.",
+          "Roll": "Roll: {total} vs DC {dc}",
+          "CritSuccess": "Critical success",
+          "CritFailure": "Critical failure",
+          "RollDegree": "Roll: {total} vs DC {dc}{suffix}",
+          "CriticalDegreeSuffix": " · critical degree",
           "ObstacleClear": "Clean passage.",
           "ObstacleCritEffect": "The next sprint gets +5 ft.",
           "ObstacleFailEffect": "+1 fatigue.",
           "ObstacleCritFailEffect": "+1 fatigue and a -10 ft sprint penalty.",
+          "MedSave": "{name} survives on medicine and adrenaline.",
+          "ObstacleDeath": "drops out of the race after slamming into the obstacle.",
+          "ObstaclePhase": "Obstacle · DC {dc}",
+          "AcceptFailure": "{name} accepts the failed obstacle and gains +1 fatigue.",
+          "AcceptFailureDeath": "cannot withstand the strain after the failure.",
+          "SprintPhase": "Sprint",
+          "ModAth": "+5 Athletics",
+          "ModIntimidation": "+10 Intimidation",
+          "ModMedicine": "+10 Medicine",
+          "ModDeception": "-10 Deception",
+          "ModObstacle": "-5 Obstacle",
+          "ModCritObstaclePenalty": "-10 Critical obstacle",
+          "ModCritObstacleBonus": "+5 Critical obstacle",
+          "ModAcrobatics": "-5 Acrobatics",
+          "ModDiplomacy": "-5 Diplomacy",
+          "ModDeceptionOther": "-5 Deception {name}",
+          "ModCrowdBonus": "+5 Crowd",
+          "ModCrowdPenalty": "-5 Crowd",
+          "ModSurvivalMin": "min. 15 Survival",
+          "ModSurvivalMax": "max. 15 Survival",
+          "SprintBurst": "Burst",
+          "SprintHead": "{name} · {distance} ft",
+          "SprintCalc": "{formula} + {bonus} = {total}{mods}",
+          "SprintDistance": "Total distance: {distance} ft.",
+          "NotCollected": "Cockroach {name} died and was not added to the collection.",
+          "ChampionDescription": "Race champion.",
+          "PrefixCockroach": "Cockroach",
+          "SavedToActor": "Cockroach {name} was saved on actor {actor}.",
+          "NoSurvivors": "All participants dropped out. The results have been recorded.",
+          "WinnerUpgrade": "Race winner: {name}. Choose one upgrade.",
+          "UpgradeGain": "{name} gains the {stat} upgrade.",
+          "LuckReroll": "{name} spends luck and rerolls the obstacle.",
+          "ResetDone": "Reset complete.",
           "RulesTitle": "Rules",
           "NameChampion": "Champion name",
           "LuckQuestion": "The obstacle failed. What do we do?",
@@ -38,6 +85,9 @@
           "FooterRound": "Round",
           "FooterClear": "Clear",
           "FooterReset": "Reset",
+          "StatusSupport": "Round {round} · Support DC {dc}",
+          "StatusObstacle": "Round {round} · Obstacle DC {dc}",
+          "StatusSprint": "Round {round} · Sprint complete",
           "EmptyState": "No players found. Assign characters to users or drag actors into the game window.",
           "NoActor": "No actor",
           "JoinLabel": "I'm racing",
@@ -81,7 +131,728 @@
           "DescMob": "MOB: {value}",
           "DescInt": "INT: {value}",
           "DescLuck": "LCK: {value} / {max}"
-        }
+        },
+        "Techniques": {
+          "ath": {
+            "name": "Athletics",
+            "successText": "+5 ft in sprint.",
+            "failureText": "+1 fatigue.",
+            "supportSuccess": [
+              "{trainer} gives {bug} a powerful starting burst."
+            ],
+            "supportFailure": [
+              "{trainer} throws off the rhythm and almost clips {bug}."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Athletics trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Athletics."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Athletics setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "acr": {
+            "name": "Acrobatics",
+            "successText": "Auto-success on the obstacle.",
+            "failureText": "-5 ft in sprint.",
+            "supportSuccess": [
+              "{bug} strings feints together like a circus performer."
+            ],
+            "supportFailure": [
+              "{bug} tangles the line with one flourish too many."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Acrobatics trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Acrobatics."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Acrobatics setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "thi": {
+            "name": "Thievery",
+            "successText": "Enemies get +3 obstacle DC.",
+            "failureText": "Your obstacle DC gets +5.",
+            "supportSuccess": [
+              "{trainer} quietly makes the track nastier for rival roaches."
+            ],
+            "supportFailure": [
+              "{trainer} mixes up the markers and sabotages their own champion."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Thievery trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Thievery."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Thievery setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "ste": {
+            "name": "Stealth",
+            "successText": "Immune to enemy sprint penalties.",
+            "failureText": "Sprint uses d12 instead of d20.",
+            "supportSuccess": [
+              "{bug} vanishes on the track and slips out of sight."
+            ],
+            "supportFailure": [
+              "{trainer} hides {bug} so well that the pace is lost."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Stealth trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Stealth."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Stealth setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "arc": {
+            "name": "Arcana",
+            "successText": "Sprint with Fortune.",
+            "failureText": "+1 fatigue.",
+            "supportSuccess": [
+              "{trainer} wraps {bug} in a spell of speed."
+            ],
+            "supportFailure": [
+              "The magical surge slams into {bug} too hard."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Arcana trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Arcana."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Arcana setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "occ": {
+            "name": "Occultism",
+            "successText": "A random enemy runs with Misfortune.",
+            "failureText": "Your sprint has Misfortune.",
+            "supportSuccess": [
+              "{trainer} tugs at the hidden threads of someone else's luck."
+            ],
+            "supportFailure": [
+              "A forbidden whisper rattles {bug} before the run."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Occultism trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Occultism."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Occultism setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "rel": {
+            "name": "Religion",
+            "successText": "-1 fatigue.",
+            "failureText": "No effect.",
+            "supportSuccess": [
+              "{trainer} blesses {bug} right before the race."
+            ],
+            "supportFailure": [
+              "The prayer does not reach the heavens in time."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Religion trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Religion."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Religion setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "nat": {
+            "name": "Nature",
+            "successText": "+5 to obstacle.",
+            "failureText": "-5 to obstacle.",
+            "supportSuccess": [
+              "{trainer} awakens a wild sense of the track in {bug}."
+            ],
+            "supportFailure": [
+              "{bug}'s instincts fail at the worst part of the course."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Nature trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Nature."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Nature setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "soc": {
+            "name": "Society",
+            "successText": "The leader gets +5 ft before sprint.",
+            "failureText": "The leader gets -5 ft before sprint.",
+            "supportSuccess": [
+              "{trainer} whips up the crowd and pushes the arena leader forward."
+            ],
+            "supportFailure": [
+              "{trainer} turns the audience against whoever is ahead."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Society trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Society."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Society setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "dec": {
+            "name": "Deception",
+            "successText": "All enemies get -5 ft in sprint.",
+            "failureText": "Your roach gets -10 ft in sprint.",
+            "supportSuccess": [
+              "{trainer} plants the perfect fake tell about the slipper."
+            ],
+            "supportFailure": [
+              "The bluff falls apart too early."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Deception trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Deception."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Deception setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "dip": {
+            "name": "Diplomacy",
+            "successText": "+1 luck permanently.",
+            "failureText": "-5 ft in sprint.",
+            "supportSuccess": [
+              "{trainer} finds the words that make {bug} believe in victory."
+            ],
+            "supportFailure": [
+              "The speech is so gentle it lulls {bug}'s competitive edge."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Diplomacy trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Diplomacy."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Diplomacy setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "itm": {
+            "name": "Intimidation",
+            "successText": "+10 ft, +1 fatigue.",
+            "failureText": "+2 fatigue.",
+            "supportSuccess": [
+              "{trainer} scares {bug} so badly it is ready to bolt in terror."
+            ],
+            "supportFailure": [
+              "Too much pressure tires {bug} out before the dash."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Intimidation trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Intimidation."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Intimidation setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "per": {
+            "name": "Performance",
+            "successText": "+2 Mob for the race.",
+            "failureText": "Enemies get +1 Mob for the race.",
+            "supportSuccess": [
+              "{trainer} sets the arena on fire with a winning rhythm."
+            ],
+            "supportFailure": [
+              "The show goes sideways and inspires everyone except {bug}."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Performance trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Performance."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Performance setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "med": {
+            "name": "Medicine",
+            "successText": "+10 ft and +1 fatigue.",
+            "failureText": "+1 fatigue.",
+            "supportSuccess": [
+              "{trainer} doses {bug} with a precise shot of adrenaline."
+            ],
+            "supportFailure": [
+              "The procedure is rougher than intended."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Medicine trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Medicine."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Medicine setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "sur": {
+            "name": "Survival",
+            "successText": "Minimum 15 ft in sprint.",
+            "failureText": "Maximum 15 ft in sprint.",
+            "supportSuccess": [
+              "{trainer} shows {bug} the toughest line through the course."
+            ],
+            "supportFailure": [
+              "{bug} slips into an overly cautious mode."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Survival trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Survival."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Survival setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "crf": {
+            "name": "Crafting",
+            "successText": "+1 Int for the race.",
+            "failureText": "-1 Int for the race.",
+            "supportSuccess": [
+              "{trainer} tunes {bug}'s antennae and shell into racing geometry."
+            ],
+            "supportFailure": [
+              "The tune-up turns questionable and ruins the line."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Crafting trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Crafting."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Crafting setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          },
+          "prc": {
+            "name": "Perception",
+            "successText": "+1 luck permanently.",
+            "failureText": "Auto-fail on the obstacle.",
+            "supportSuccess": [
+              "{trainer} reads the track before anyone else."
+            ],
+            "supportFailure": [
+              "{trainer} gets distracted by the stands and misses the real danger."
+            ],
+            "obstacleCriticalSuccess": [
+              "{bug} clears the obstacle with a spectacular Perception trick!"
+            ],
+            "obstacleSuccess": [
+              "{bug} gets through the obstacle with Perception."
+            ],
+            "obstacleFailure": [
+              "{bug} stumbles at the obstacle after the Perception setup."
+            ],
+            "obstacleCriticalFailure": [
+              "{bug} crashes hard at the obstacle!"
+            ],
+            "sprintBand1": [
+              "{bug} barely crawls forward."
+            ],
+            "sprintBand2": [
+              "{bug} keeps a cautious pace."
+            ],
+            "sprintBand3": [
+              "{bug} holds a steady racing line."
+            ],
+            "sprintBand4": [
+              "{bug} bursts forward with real speed!"
+            ],
+            "sprintBand5": [
+              "{bug} tears down the track!"
+            ],
+            "sprintBand6": [
+              "{bug} becomes a legend of speed!"
+            ]
+          }
+        },
+        "Names": [
+          "Boris",
+          "Schumacher",
+          "Crunch",
+          "Turbo-Whisker",
+          "Shadow",
+          "Ruckus",
+          "General Antenna",
+          "Rocket",
+          "Zenith",
+          "Stasik",
+          "Ferrari",
+          "Buzz",
+          "Meteor",
+          "Titan",
+          "Flash",
+          "Bolt",
+          "Tank",
+          "Samurai",
+          "Ninja",
+          "Admiral"
+        ]
       }
     }
   }
