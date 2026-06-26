@@ -1,0 +1,100 @@
+body.tsu-journal-read-enabled .journal-sheet {
+  --tsu-read-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.32));
+  --tsu-read-bg-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+  --tsu-read-border: rgba(94, 1, 10, 0.45);
+  --tsu-read-icon-bg: #fff;
+  --tsu-read-icon-color: #7d161a;
+  --tsu-read-shadow: 0 10px 22px rgba(33, 20, 12, 0.12);
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read {
+  position: relative;
+  margin: 0.75em 0;
+  padding: 0.65em 0.85em;
+  border: 1px solid var(--tsu-read-border);
+  border-radius: 10px;
+  background: var(--tsu-read-bg);
+  box-shadow: var(--tsu-read-shadow);
+  cursor: pointer;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read:hover {
+  background: var(--tsu-read-bg-hover);
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read::after {
+  content: "\e146";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--tsu-read-border);
+  border-radius: 999px;
+  background: var(--tsu-read-icon-bg);
+  color: var(--tsu-read-icon-color);
+  font-family: var(--font-awesome);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :first-child {
+  margin-top: 0;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :last-child {
+  margin-bottom: 0;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text {
+  --tsu-editor-block-bg: #f8f8eb;
+  --tsu-editor-block-text: #1f1a17;
+  --tsu-editor-block-border: rgba(31, 26, 23, 0.38);
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read {
+  background: var(--tsu-read-bg) !important;
+  border: 1px solid var(--tsu-read-border) !important;
+  box-shadow: var(--tsu-read-shadow) !important;
+  color: var(--tsu-editor-block-text) !important;
+  cursor: text !important;
+  padding: 0 !important;
+  position: static !important;
+  z-index: auto !important;
+  isolation: auto !important;
+  pointer-events: auto !important;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read *,
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read p {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  cursor: text !important;
+  pointer-events: none !important;
+  user-select: text !important;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read > * {
+  margin: 0 !important;
+  padding-left: 0.85em;
+  padding-right: 0.85em;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read > :first-child {
+  padding-top: 0.65em;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read > :last-child {
+  padding-bottom: 0.65em;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read::after {
+  content: none !important;
+}

@@ -1,0 +1,73 @@
+{
+  "TS_PF2E_UTILITY": {
+    "ActionPlus": {
+      "Labels": {
+        "ExtraFunctions": "Extra features",
+        "AddFeature": "Add feature",
+        "RemoveFeature": "Remove feature"
+      },
+      "Options": {
+        "Empty": "Empty"
+      },
+      "BloodMagic": {
+        "FeatureLabel": "Bloodline",
+        "RuleLabel": "Blood Magic",
+        "SpellsLabel": "Bloodline spells:",
+        "DropHint": "Drop spells from this character sheet here",
+        "DeleteTooltip": "Delete",
+        "OnlySpellsWarning": "Only spells can be dropped into this zone!",
+        "SameActorWarning": "The spell must be from this same character sheet!"
+      },
+      "Regeneration": {
+        "FeatureLabel": "Regeneration",
+        "HintTitle": "Regeneration automation",
+        "Messages": {
+          "Ready": "The action will watch this regeneration rule's \"Deactivated by\" list and apply a temporary no-regeneration effect when matching damage is received.",
+          "MissingRule": "No regeneration rule element was found on this action. Add a regeneration rule first.",
+          "MissingTriggers": "Regeneration automation is enabled, but the regeneration rule has no \"Deactivated by\" entries yet."
+        },
+        "BlockEffect": {
+          "Name": "Regeneration Disabled",
+          "Description": "This creature's regeneration is disabled until the end of its next turn."
+        }
+      },
+      "DamageAdjustments": {
+        "FeatureLabel": "Weak., Res., and Imm.",
+        "Hint": "Choose the adjustment type, add the needed damage types from the list below, and set either a flat value or a level-based formula.",
+        "AdjustmentLabel": "Adjustment",
+        "TypesLabel": "Types",
+        "AddTypePlaceholder": "Add damage type",
+        "EmptyTypesHint": "Selected types will appear here.",
+        "ValueLabel": "Value",
+        "FlatValueLabel": "Value",
+        "ModifierLabel": "Modifier",
+        "AdjustmentTypes": {
+          "Weakness": "Weakness",
+          "Resistance": "Resistance",
+          "Immunity": "Immunity"
+        },
+        "ValueModes": {
+          "Flat": "Flat value",
+          "LevelDiv": "Level /",
+          "Level": "Level",
+          "LevelTimes": "Level *",
+          "LevelPlus": "Level +",
+          "LevelMinus": "Level -"
+        }
+      },
+      "Enhancement": {
+        "FeatureLabel": "Enhancement",
+        "LevelRequirementLabel": "Level",
+        "ActionSlugLabel": "Action (slug)",
+        "TextLabel": "Enhancement text",
+        "TextPlaceholder": "Extra text",
+        "EmptyPlaceholder": "Doesn't matter",
+        "HeaderLevel": "Enhancement ({level})",
+        "HeaderLevelAction": "Enhancement ({level}, {action})",
+        "HeaderDefault": "Enhancement",
+        "LabelLevel": "(Lvl.{level})",
+        "FallbackLabel": "Enhancement"
+      }
+    }
+  }
+}

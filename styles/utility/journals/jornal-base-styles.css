@@ -1,0 +1,113 @@
+@font-face {
+  font-family: "Manuskript";
+  src: url("./fonts/Manuskript.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Marck Script";
+  src: url("./fonts/MarckScript.woff2") format("woff2");
+}
+
+.А {
+  text-indent: 10px;
+  text-align: justify;
+  text-align-last: left;
+  margin: 8px;
+}
+
+.Б {
+  font-family: Georgia;
+}
+
+.БлокСтат {
+  clear: both;
+  margin: 5px;
+  padding: 5px;
+  border: 3px solid black;
+  border-radius: 10px;
+  background: #f8f8eb;
+}
+
+.ЛЕВ {
+  float: left;
+  width: 20%;
+  margin: 2px 0 1em 2px;
+}
+
+.ЛЕВ img {
+  height: auto !important;
+  border: none;
+}
+
+.ЛЕВ figcaption {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  padding: 5px;
+  text-align: center;
+  align-items: center;
+}
+
+.ПРАВ {
+  float: right;
+  width: 20%;
+  margin: 2px 0 1em 2px;
+  position: relative;
+  z-index: 10;
+}
+
+.ПРАВ img {
+  height: auto !important;
+  border: none;
+}
+
+.ПРАВ figcaption {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  padding: 5px;
+  text-align: center;
+  align-items: center;
+}
+
+.ЦЕНТР {
+  display: flex;
+  justify-content: center;
+  margin-top: 5px;
+}
+
+.ЦЕНТР img {
+  border: 5px solid lightblue;
+  border-radius: 10px;
+  height: auto !important;
+}
+
+.read {
+  cursor: pointer;
+  position: relative;
+  width: auto;
+  z-index: 1;
+}
+
+.read::after {
+  background-color: #ffffff;
+  border-left: 2px solid #470000;
+  border-radius: 5px;
+  border-right: 2px solid #470000;
+  color: #ff2424;
+  content: "₪";
+  display: block;
+  font-family: "Font Awesome 6 Pro";
+  font-size: 10px;
+  font-weight: 900;
+  height: 16px;
+  line-height: 16px;
+  position: absolute;
+  right: -8px;
+  text-align: center;
+  top: -8px;
+  transition: background-color 1s ease-in-out;
+  width: 16px;
+  text-indent: 2px;
+  pointer-events: none;
+}

@@ -1,0 +1,96 @@
+{
+  "TS_PF2E_UTILITY": {
+    "Common": {
+      "Empty": {
+        "NoPlayers": "No players found. Assign characters to users or drag actors into the game window."
+      }
+    },
+    "Settings": {
+      "SupportMessage": "Support the author and the module on Boosty:",
+      "Sections": {
+        "Scene": "Scene",
+        "ActionPlus": "Action Extra Features",
+        "Spells": "Spells",
+        "Journals": "Journals"
+      },
+      "ActionPlus": {
+        "Regeneration": {
+          "Name": "Regeneration",
+          "Hint": "Automates disabling regeneration when matching damage is received."
+        },
+        "BloodMagic": {
+          "Name": "Bloodline",
+          "Hint": "Shows a Blood Magic block on the action and lets you link the needed spells to it."
+        },
+        "DamageAdjustments": {
+          "Name": "Weak., Res., and Imm.",
+          "Hint": "Builds weakness, resistance, and immunity rules from selected types and level-based formulas."
+        },
+        "Enhancement": {
+          "Name": "Enhancement",
+          "Hint": "Adds conditional extra text to action descriptions through ItemAlteration based on creature level and/or an action slug."
+        }
+      },
+      "SceneEye": {
+        "Name": "Enable Scene Eye",
+        "Hint": "Adds a quick-view eye button next to scene links in chat and journal entries (GM only).",
+        "ButtonTitle": "View scene as GM",
+        "MissingScene": "Scene was not found."
+      },
+      "Thumb": {
+        "Name": "Enable Scene Thumb",
+        "Hint": "Adds a custom thumbnail field to the scene configuration form.",
+        "Label": "Thumb Image",
+        "FieldHint": "Custom thumbnail used for this scene in the navigation and directory."
+      },
+      "SpellAtWill": {
+        "Name": "Enable spell tags",
+        "Hint": "Adds At Will, Constant, and Self toggles to the PF2E spell sheet."
+      },
+      "Journals": {
+        "DefaultStyle": {
+          "Name": "Default journal style",
+          "Hint": "Sets which of this module's journal sheets is used as the default sheet for PF2E journal entries.",
+          "Choices": {
+            "Default": "Default",
+            "AoA": "Эпоха Пепла",
+            "CC": "Зов Занавеса",
+            "HR": "Адские Мятежники",
+            "SoG": "Сезон Призраков",
+            "SDoS": "Семь Бедствий Сэндпойнта"
+          }
+        },
+        "Read": {
+          "Name": "Enable read sections",
+          "Hint": "Activates .read sections in journals so the marked block can be posted to chat from the sheet."
+        },
+        "TSFormatMenu": {
+          "Name": "Enable TS Format menu",
+          "Hint": "Shows the TS submenu in the journal editor Format menu and adds the TS Journal Autoformat action."
+        },
+        "ImageSections": {
+          "Name": "Enable image sections",
+          "Hint": "Adds a Style field to the journal image insert dialog. If filled, the image is inserted as a section with that CSS class.",
+          "StyleLabel": "Style",
+          "StylePlaceholder": "section class"
+        }
+      }
+    },
+    "Notifications": {
+      "SceneRequired": "An active scene is required.",
+      "OnlyGM": "Only the GM can open this game.",
+      "DevilsPinChoiceRequired": "Choose a skill and a legal target first.",
+      "DevilsPinNoPlayers": "Add at least one participant before starting.",
+      "DevilsPinNoConfirmedChoices": "There are no confirmed throws to resolve.",
+      "DevilsPinAllChoicesRequired": "All participants must choose and confirm before the round can resolve.",
+      "DevilsPinRepeatResolvedTarget": "One of the throws repeats the previous round's resolved target.",
+      "KubokerNoPlayers": "Add at least one participant before the deal."
+    },
+    "Utility": {
+      "ActorSync": {
+        "ItemsLabel": "Items",
+        "SpellsLabel": "Spells"
+      }
+    }
+  }
+}

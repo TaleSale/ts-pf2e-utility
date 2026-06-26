@@ -1,0 +1,10 @@
+.HR {
+  --content-link-background: rgb(236 232 216 / 92%);
+  --content-link-border-color: rgb(137 27 38 / 60%);
+  --content-link-icon-color: rgb(181 24 39);
+  --content-link-text-color: rgb(94 1 10);
+  --tsj-header-image: url("/modules/ts-pf2e-utility/layout/HR/back2.jpg");
+  --tsj-title-image: url("/modules/ts-pf2e-utility/layout/HR/back2.jpg");
+  --tsj-insite-image: url("/modules/ts-pf2e-utility/layout/HR/back2.webp");
+  --tsj-sidebar-image: url("/modules/ts-pf2e-utility/layout/HR/back1.png");
+}

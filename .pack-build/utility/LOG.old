@@ -1,0 +1,8 @@
+2026/06/25-01:45:58.814 3508 Recovering log #8
+2026/06/25-01:45:58.825 3508 Delete type=0 #8
+2026/06/25-01:45:58.825 3508 Delete type=3 #6
+2026/06/25-01:45:58.830 2d48 Level-0 table #13: started
+2026/06/25-01:45:58.830 2d48 Level-0 table #13: 0 bytes OK
+2026/06/25-01:45:58.837 2d48 Delete type=0 #11
+2026/06/25-01:45:58.837 2d48 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/06/25-01:45:58.837 2d48 Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)

@@ -1,0 +1,72 @@
+{
+  "TS_PF2E_UTILITY": {
+    "ActionPlus": {
+      "Labels": {
+        "ExtraFunctions": "Доп. функции",
+        "AddFeature": "Добавить функцию",
+        "RemoveFeature": "Удалить функцию"
+      },
+      "Options": {
+        "Empty": "Пусто"
+      },
+      "BloodMagic": {
+        "FeatureLabel": "Наследие крови",
+        "RuleLabel": "Магия Крови",
+        "SpellsLabel": "Заклинания наследия:",
+        "DropHint": "Перетащите сюда заклинания из листа персонажа",
+        "DeleteTooltip": "Удалить",
+        "OnlySpellsWarning": "В эту зону можно перетаскивать только заклинания!",
+        "SameActorWarning": "Заклинание должно быть из листа этого же персонажа!"
+      },
+      "Regeneration": {
+        "FeatureLabel": "Регенерация",
+        "HintTitle": "Автоматизация регенерации",
+        "Messages": {
+          "Ready": "Модуль будет следить за полем «Отключается от» у правила регенерации и накладывать временный эффект отключения регенерации при подходящем уроне.",
+          "MissingRule": "На этом действии не найден элемент правила регенерации. Сначала добавьте правило регенерации.",
+          "MissingTriggers": "Автоматизация регенерации включена, но у правила регенерации пока не заполнено поле «Отключается от»."
+        },
+        "BlockEffect": {
+          "Name": "Регенерация отключена",
+          "Description": "Регенерация этого существа отключена до конца его следующего хода."
+        }
+      },
+      "DamageAdjustments": {
+        "FeatureLabel": "Слаб., Сопр. и Иммун.",
+        "Hint": "Выберите тип корректировки, добавьте нужные типы урона из списка ниже и задайте значение или формулу от уровня.",
+        "AdjustmentLabel": "Корректировка",
+        "TypesLabel": "Типы",
+        "AddTypePlaceholder": "Добавить тип урона",
+        "EmptyTypesHint": "Выбранные типы появятся здесь.",
+        "ValueLabel": "Значение",
+        "FlatValueLabel": "Число",
+        "ModifierLabel": "Модификатор",
+        "AdjustmentTypes": {
+          "Weakness": "Слабость",
+          "Resistance": "Сопротивление",
+          "Immunity": "Иммунитет"
+        },
+        "ValueModes": {
+          "Flat": "Просто значение",
+          "LevelDiv": "Уровень /",
+          "Level": "Уровень",
+          "LevelTimes": "Уровень *",
+          "LevelPlus": "Уровень +",
+          "LevelMinus": "Уровень -"
+        }
+      },
+      "Enhancement": {
+        "FeatureLabel": "Усиление",
+        "LevelRequirementLabel": "Уровень",
+        "ActionSlugLabel": "Действие (метка)",
+        "TextLabel": "Текст усиления",
+        "TextPlaceholder": "Дополнительный текст",
+        "EmptyPlaceholder": "Не важно",
+        "HeaderLevel": "Усиление (ур. {level})",
+        "HeaderLevelAction": "Усиление ({level}, {action})",
+        "HeaderDefault": "Усиление",
+        "FallbackLabel": "Усиление"
+      }
+    }
+  }
+}

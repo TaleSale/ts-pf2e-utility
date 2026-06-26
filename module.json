@@ -1,0 +1,119 @@
+{
+  "id": "ts-pf2e-utility",
+  "title": "TS-PF2E-UTILITY",
+  "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
+  "version": "1.5.1",
+  "compatibility": {
+    "minimum": "13.348",
+    "verified": "13.351"
+  },
+  "authors": [
+    {
+      "name": "Tale Sale",
+      "flags": {}
+    }
+  ],
+  "socket": true,
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/module.css"
+    },
+    {
+      "src": "styles/utility/read.css"
+    },
+    {
+      "src": "styles/utility/journals/jornal-base-styles.css"
+    },
+    {
+      "src": "styles/utility/journals/journal-theme.css"
+    },
+    {
+      "src": "styles/utility/journals/AoA/AoA.css"
+    },
+    {
+      "src": "styles/utility/journals/CC/CC.css"
+    },
+    {
+      "src": "styles/utility/journals/HR/HR.css"
+    },
+    {
+      "src": "styles/utility/journals/SoG/SoG.css"
+    },
+    {
+      "src": "styles/utility/journals/SDoS/sheet-shell.css"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "ru",
+      "name": "Russian",
+      "path": "lang/ru.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "games",
+      "label": "Games",
+      "path": "packs/games",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mechanics",
+      "label": "Mechanics",
+      "path": "packs/mechanics",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "utility",
+      "label": "Полезности",
+      "path": "packs/utility",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "99.TS-PF2E-UTILITY",
+      "sorting": "m",
+      "color": null,
+      "packs": [
+        "games",
+        "mechanics",
+        "utility"
+      ],
+      "folders": []
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "url": "https://github.com/TaleSale/ts-pf2e-utility",
+  "manifest": "https://raw.githubusercontent.com/TaleSale/ts-pf2e-utility/main/module.json",
+  "download": "https://github.com/TaleSale/ts-pf2e-utility/archive/refs/heads/main.zip",
+  "flags": {}
+}

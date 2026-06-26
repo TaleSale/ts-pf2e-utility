@@ -1,0 +1,247 @@
+{
+  "TS_PF2E_UTILITY": {
+    "Games": {
+      "BeerFurious": {
+        "Title": "Tipsy Dash",
+        "Spectator": "Watching",
+        "JoinLabel": "I'M IN",
+        "DebugMode": "GM Mode",
+        "Signature": "Signature Technique",
+        "SignatureEmpty": "No signature",
+        "Rules": {
+          "PanelTitle": "Rules",
+          "HelpTitle": "Tipsy Dash",
+          "RoundTitle": "Rounds",
+          "CoreTitle": "Basics",
+          "DopingTitle": "Doping",
+          "Doping": "Click Doping on your card, then choose a target. On yourself it lowers DC; on an opponent it raises DC.",
+          "Limit": "Constitution × 2, minimum 2",
+          "Hand": "Usually 3 techniques. Before the run, you can choose a signature technique, and it enters your hand only in rounds 1 and 3.",
+          "Win": "Be the last one standing or finish round 3 with the fewest intoxication points."
+        },
+        "Buttons": {
+          "Start": "Start",
+          "Deal": "Deal Hand",
+          "Next": "Round",
+          "Clear": "Clear",
+          "Reset": "Reset",
+          "Confirm": "Confirm",
+          "Confirmed": "Confirmed",
+          "Doping": "Doping ×{count}",
+          "CancelDoping": "Cancel Doping",
+          "CloseRules": "Close"
+        },
+        "Status": {
+          "Join": "Setup",
+          "Signature": "Round {round} · Choose signature technique",
+          "Round": "Round {round} · Base DC {dc}",
+          "Results": "Results",
+          "Confirmed": "Choice confirmed",
+          "Eliminated": "Blackout",
+          "WaitingSignature": "Player is choosing a signature technique...",
+          "Waiting": "Player is choosing a technique...",
+          "DopingMode": "Choose a doping target: {name}"
+        },
+        "Rolls": {
+          "Normal": "Roll",
+          "Fortune": "Fortune",
+          "Misfortune": "Misfortune"
+        },
+        "Warnings": {
+          "NoPlayers": "Add at least one participant before starting.",
+          "NotReady": "All participants must choose and confirm a technique first."
+        },
+        "Results": {
+          "Winner": "Winner: {names}.",
+          "Tie": "Tie: {names}.",
+          "AllOut": "Everyone blacked out. Tie."
+        },
+        "Log": {
+          "Title": "Chronicle",
+          "Cleared": "<div class='tsu-log-entry'>The table is cleared.</div>"
+        },
+        "Empty": {
+          "Join": "Drag actors in or mark them as participating before starting."
+        },
+        "Techniques": {
+          "ath": {
+            "name": "Athletics",
+            "successText": "Next round: DC -2.",
+            "failureText": "Next round: DC +2.",
+            "flavorSuccess": "{n} flips the mug in one powerful pull.",
+            "flavorFailure": "{n} underestimated the weight of the foamy projectile."
+          },
+          "acr": {
+            "name": "Acrobatics",
+            "successText": "A random opponent draws only 2 cards.",
+            "failureText": "You draw only 2 cards.",
+            "flavorSuccess": "{n} drinks so deftly it looks like a circus act.",
+            "flavorFailure": "{n} loses the rhythm and gives up the pace."
+          },
+          "thi": {
+            "name": "Thievery",
+            "successText": "A random opponent gains +1 IP.",
+            "failureText": "You gain +1 IP.",
+            "flavorSuccess": "{n} quietly swaps mugs in the middle of the commotion.",
+            "flavorFailure": "{n} becomes the victim of their own scam."
+          },
+          "ste": {
+            "name": "Stealth",
+            "successText": "Immune to hostile doping until the round ends.",
+            "failureText": "Enemy doping affects you twice as much.",
+            "flavorSuccess": "{n} hides the buzz behind icy calm.",
+            "flavorFailure": "{n} reaches for the mug far too obviously."
+          },
+          "arc": {
+            "name": "Arcana",
+            "successText": "Next round: Fortune.",
+            "failureText": "A random opponent gains Fortune.",
+            "flavorSuccess": "{n} whispers a spell for a lucky gulp.",
+            "flavorFailure": "{n} sends the magic straight into someone else's mug."
+          },
+          "occ": {
+            "name": "Occultism",
+            "successText": "Your next result gives 1 less IP.",
+            "failureText": "Next round: only 1 card.",
+            "flavorSuccess": "{n} drinks like they made a pact with the shadow of the bar.",
+            "flavorFailure": "{n} stares into the foam for too long and loses the thread."
+          },
+          "rel": {
+            "name": "Religion",
+            "successText": "Permanent DC -1.",
+            "failureText": "Permanent DC +1.",
+            "flavorSuccess": "{n} earns the blessing of the patrons of hops.",
+            "flavorFailure": "{n} hears an angry whisper from the gods in the mug."
+          },
+          "nat": {
+            "name": "Nature",
+            "successText": "Immediate -1 IP.",
+            "failureText": "Immediate +1 IP.",
+            "flavorSuccess": "{n} absorbs the malt hit with raw natural grit.",
+            "flavorFailure": "{n} cannot handle the wild nature of the drink."
+          },
+          "soc": {
+            "name": "Society",
+            "successText": "All opponents gain DC +1.",
+            "failureText": "Your next DC is +2.",
+            "flavorSuccess": "{n} delivers a toast so convincingly that the rivals hesitate.",
+            "flavorFailure": "{n} drags the speech out and loses focus."
+          },
+          "dec": {
+            "name": "Deception",
+            "successText": "A random opponent loses 1 doping.",
+            "failureText": "You lose 1 doping.",
+            "flavorSuccess": "{n} pretends to drink while ruining everyone else's plans.",
+            "flavorFailure": "{n} overacts and gives the trick away."
+          },
+          "dip": {
+            "name": "Diplomacy",
+            "successText": "You and a random opponent lose 1 IP.",
+            "failureText": "The last target of your doping gains +1 doping.",
+            "flavorSuccess": "{n} smooths things over even at the loudest table.",
+            "flavorFailure": "{n} makes peace too late and feeds someone else's confidence."
+          },
+          "itm": {
+            "name": "Intimidation",
+            "successText": "Transfer 1 IP to a random opponent.",
+            "failureText": "Take 1 IP from a random opponent.",
+            "flavorSuccess": "{n} presses so hard with a stare that the rival pales before the beer does.",
+            "flavorFailure": "{n} pushes too hard and becomes the target instead."
+          },
+          "per": {
+            "name": "Performance",
+            "successText": "+2 doping.",
+            "failureText": "You lose all doping.",
+            "flavorSuccess": "{n} turns a single gulp into a roaring tavern performance.",
+            "flavorFailure": "{n} ruins the show and spills all the bravado."
+          },
+          "med": {
+            "name": "Medicine",
+            "successText": "Immediate -1 IP.",
+            "failureText": "Immediate +1 IP.",
+            "flavorSuccess": "{n} knows exactly how to survive one more mug.",
+            "flavorFailure": "{n} confuses treatment with an extra dose."
+          },
+          "sur": {
+            "name": "Survival",
+            "successText": "IP limit +1.",
+            "failureText": "IP limit -1.",
+            "flavorSuccess": "{n} endures as if this were swamp water instead of ale.",
+            "flavorFailure": "{n} realizes the body is no longer what it used to be."
+          },
+          "crf": {
+            "name": "Crafting",
+            "successText": "Your next doping is boosted to 3.",
+            "failureText": "Your next doping is twisted by 3.",
+            "flavorSuccess": "{n} fine-tunes the chemical balance of the mug.",
+            "flavorFailure": "{n} mixes up the formula and gets a very strange cocktail."
+          },
+          "prc": {
+            "name": "Perception",
+            "successText": "A random opponent gains Misfortune.",
+            "failureText": "You gain Misfortune.",
+            "flavorSuccess": "{n} notices every extra bubble in a rival's glass.",
+            "flavorFailure": "{n} blinks at the wrong moment and the whole room smears."
+          },
+          "lor": {
+            "name": "Alcohol Lore",
+            "successText": "-1 IP and +1 doping.",
+            "failureText": "Your next failure gives +2 IP.",
+            "flavorSuccess": "{n} identifies the brew by smell alone and catches the rush.",
+            "flavorFailure": "{n} solemnly calls a masterpiece cheap swill."
+          }
+        },
+        "Text": {
+          "OutcomeCriticalSuccess": "Critical success",
+          "OutcomeSuccess": "Success",
+          "OutcomeFailure": "Failure",
+          "OutcomeCriticalFailure": "Critical failure",
+          "RoundDivider": "🍺 Round {round} · Base DC {dc}",
+          "EliminationLog": "💀 <b>{name}</b> blacks out. Limit: <b>{limit} IP</b>.",
+          "DopingLog": "🧪 <b>{source}</b> pumps doping into <b>{target}</b>: {modifier} DC.",
+          "DopingImmuneLog": "🛡️ <b>{name}</b> ignores foreign doping.",
+          "RollLine": "<b>{rollType}</b>: [{dice}] → <b>{d20}</b> {modifier} = <b>{total}</b> vs <b>DC {dc}</b>",
+          "GainLine": "<b>{result}</b> · +{gain} IP · IP: {oldOo} → <b>{newOo}</b> / {limit}",
+          "DopingLine": "Doping: {oldDoping} → <b>{newDoping}</b>{extra}",
+          "DcBase": "Base {value}",
+          "DcReligion": "{value} religion",
+          "DcDoping": "{value} doping",
+          "DcEffect": "{value} effect",
+          "EffectOpponentHand": "{name}: -1 card",
+          "EffectOpponentOoPlus": "{name}: +1 IP",
+          "EffectOpponentFortune": "{name}: Fortune",
+          "EffectAllOpponentsDc": "all opponents gain +1 DC",
+          "EffectOpponentDopingMinus": "{name}: -1 doping",
+          "EffectOpponentOoMinus": "{name}: -1 IP",
+          "EffectOpponentDopingPlus": "{name}: +1 doping",
+          "EffectOpponentGetsOo": "{name}: gains 1 IP",
+          "EffectOpponentLosesOo": "{name}: loses 1 IP",
+          "EffectOpponentMisfortune": "{name}: Misfortune",
+          "HelpIntro": "{title} is a three-round endurance race. Each round, a player chooses one technique, rolls a check, and gains intoxication points.",
+          "HelpGoal": "<b>Goal:</b> stay under your IP limit and finish the game with the fewest IP.",
+          "HelpCrits": "<b>Critical success</b> reduces IP gain and grants 1 doping. <b>Critical failure</b> increases IP gain and removes 1 doping.",
+          "HelpTechniques": "Techniques",
+          "HelpSuccess": "Success",
+          "HelpFailure": "Failure",
+          "UiSuccess": "Success:",
+          "UiFailure": "Failure:",
+          "FooterMain": "Round",
+          "FooterClear": "Clear",
+          "FooterReset": "Reset",
+          "BadgeFortune": "Fortune",
+          "BadgeMisfortune": "Misfortune",
+          "BadgeImmune": "Immune",
+          "BadgeDopingX2": "×2 doping",
+          "OoBadge": "{current} / {limit} IP",
+          "DopingBadge": "{count} doping",
+          "RuleRound1": "Success 0 IP / Failure 1 IP",
+          "RuleRound2": "Success 1 IP / Failure 2 IP",
+          "RuleRound3": "Success 2 IP / Failure 3 IP",
+          "RuleLimitLabel": "Limit",
+          "RuleHandLabel": "Hand",
+          "RuleWinLabel": "Victory"
+        }
+      }
+    }
+  }
+}

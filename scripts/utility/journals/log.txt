@@ -1,0 +1,241 @@
+{
+    "messageId": "oqrM5mXdlAEwTo9T",
+    "flavor": "<h4 class=\"action\">\n    <strong>Бросок урона: Torch</strong>\n    \n        <span class=\"subtitle degree-of-success\">\n            (<span class=\"success\">Попадание</span>)\n        </span>\n</h4>\n<div class=\"tags\" data-tooltip-class=\"pf2e\"><span class=\"tag\" data-tooltip=\"PF2E.TraitDescriptionAttack\" data-trait=\"attack\">Атака</span></div>\n<hr><div class=\"tags modifiers\"><span class=\"tag tag_transparent\" data-visibility=\"gm\">1d4 Дробящий</span><span class=\"tag tag_transparent\" data-visibility=\"gm\">Torch +1 Огонь</span></div>",
+    "origin": {
+        "actor": "Scene.lJ7uLwUPbWsEIgQH.Token.KLPcqW9FMXSdjriw.Actor.EEclr5IOnUNwFqaa",
+        "uuid": "Scene.lJ7uLwUPbWsEIgQH.Token.KLPcqW9FMXSdjriw.Actor.EEclr5IOnUNwFqaa.Item.QtFwdsixI3MjuE0k",
+        "type": "melee",
+        "rollOptions": [
+            "origin:type:npc",
+            "origin:signature:b22284d5-055e-50e9-8b25-f998802121cb",
+            "origin:creature",
+            "origin:level:1",
+            "origin:caster",
+            "origin:caster:tradition:arcane",
+            "origin:mode:living",
+            "origin:trait:goblin",
+            "origin:trait:humanoid",
+            "origin:size:1",
+            "origin:size:small",
+            "origin:item:category:simple",
+            "origin:item:damage:category:physical",
+            "origin:item:damage:type:bludgeoning",
+            "origin:item:equipped",
+            "origin:item:id:QtFwdsixI3MjuE0k",
+            "origin:item:melee",
+            "origin:item:slug:torch",
+            "origin:item:torch",
+            "origin:item:trait:modular",
+            "origin:item:type:melee"
+        ]
+    },
+    "context": {
+        "type": "damage-roll",
+        "sourceType": "attack",
+        "actor": "EEclr5IOnUNwFqaa",
+        "token": "KLPcqW9FMXSdjriw",
+        "target": null,
+        "domains": [
+            "QtFwdsixI3MjuE0k-damage",
+            "torch-damage",
+            "melee-strike-damage",
+            "melee-damage",
+            "weapon-damage",
+            "attack-damage",
+            "strike-damage",
+            "damage",
+            "trained-damage",
+            "str-damage"
+        ],
+        "options": [
+            "attack",
+            "check:outcome:success",
+            "hp-percent:100",
+            "hp-remaining:15",
+            "item:category:simple",
+            "item:damage:category:physical",
+            "item:damage:type:bludgeoning",
+            "item:equipped",
+            "item:id:QtFwdsixI3MjuE0k",
+            "item:melee",
+            "item:slug:torch",
+            "item:torch",
+            "item:trait:modular",
+            "item:type:melee",
+            "lit-torch",
+            "melee",
+            "self:action:slug:strike",
+            "self:action:trait:attack",
+            "self:caster",
+            "self:caster:tradition:arcane",
+            "self:creature",
+            "self:level:1",
+            "self:mode:living",
+            "self:signature:b22284d5-055e-50e9-8b25-f998802121cb",
+            "self:size:1",
+            "self:size:small",
+            "self:trait:goblin",
+            "self:trait:humanoid",
+            "self:type:npc",
+            "speed:land"
+        ],
+        "contextualOptions": {},
+        "notes": [],
+        "secret": false,
+        "messageMode": "public",
+        "traits": [
+            "attack"
+        ],
+        "skipDialog": false,
+        "outcome": "success",
+        "unadjustedOutcome": null
+    },
+    "instances": [
+        {
+            "type": "bludgeoning",
+            "persistent": false,
+            "materials": [],
+            "kinds": [
+                "damage"
+            ],
+            "formalDescription": [
+                "damage",
+                "damage:type:bludgeoning",
+                "damage:category:physical"
+            ]
+        },
+        {
+            "type": "fire",
+            "persistent": false,
+            "materials": [],
+            "kinds": [
+                "damage"
+            ],
+            "formalDescription": [
+                "damage",
+                "damage:type:fire",
+                "damage:category:energy"
+            ]
+        }
+    ]
+}
+
+
+
+
+
+
+{
+    "actor": "Mobogo",
+    "messageId": "jzAUQ0YVxtrhiGzr",
+    "contextOptions": [
+        "attack",
+        "check:outcome:success",
+        "hp-percent:100",
+        "hp-remaining:15",
+        "item:category:simple",
+        "item:damage:category:physical",
+        "item:damage:type:bludgeoning",
+        "item:equipped",
+        "item:id:QtFwdsixI3MjuE0k",
+        "item:melee",
+        "item:slug:torch",
+        "item:torch",
+        "item:trait:modular",
+        "item:type:melee",
+        "lit-torch",
+        "melee",
+        "speed:land",
+        "origin:ally",
+        "origin:action:slug:strike",
+        "origin:action:trait:attack",
+        "origin:caster",
+        "origin:caster:tradition:arcane",
+        "origin:creature",
+        "origin:level:1",
+        "origin:mode:living",
+        "origin:signature:b22284d5-055e-50e9-8b25-f998802121cb",
+        "origin:size:1",
+        "origin:size:small",
+        "origin:trait:goblin",
+        "origin:trait:humanoid",
+        "origin:type:npc",
+        "self:type:npc",
+        "self:signature:1acc7f7e-4129-582a-9aa0-9908c69e16b0",
+        "self:creature",
+        "self:level:10",
+        "self:caster",
+        "self:caster:tradition:primal",
+        "self:mode:living",
+        "self:trait:amphibious",
+        "self:trait:beast",
+        "self:size:4",
+        "self:size:huge"
+    ],
+    "applicationOptions": [],
+    "normalizedRollOptions": [
+        "attack",
+        "check:outcome:success",
+        "hp-percent:100",
+        "hp-remaining:15",
+        "item:category:simple",
+        "item:damage:category:physical",
+        "category:physical",
+        "item:damage:type:bludgeoning",
+        "bludgeoning",
+        "item:equipped",
+        "item:id:qtfwdsixi3mjue0k",
+        "item:melee",
+        "item:slug:torch",
+        "item:torch",
+        "item:trait:modular",
+        "modular",
+        "item:type:melee",
+        "lit-torch",
+        "melee",
+        "speed:land",
+        "origin:ally",
+        "origin:action:slug:strike",
+        "origin:action:trait:attack",
+        "origin:caster",
+        "origin:caster:tradition:arcane",
+        "origin:creature",
+        "origin:level:1",
+        "origin:mode:living",
+        "origin:signature:b22284d5-055e-50e9-8b25-f998802121cb",
+        "origin:size:1",
+        "origin:size:small",
+        "origin:trait:goblin",
+        "origin:trait:humanoid",
+        "origin:type:npc",
+        "self:type:npc",
+        "self:signature:1acc7f7e-4129-582a-9aa0-9908c69e16b0",
+        "self:creature",
+        "self:level:10",
+        "self:caster",
+        "self:caster:tradition:primal",
+        "self:mode:living",
+        "self:trait:amphibious",
+        "self:trait:beast",
+        "self:size:4",
+        "self:size:huge"
+    ],
+    "debugMatches": [
+        {
+            "item": "Regeneration 30 (Deactivated by Acid, Cold, or Fire)",
+            "entry": "acid",
+            "matched": false
+        },
+        {
+            "item": "Regeneration 30 (Deactivated by Acid, Cold, or Fire)",
+            "entry": "cold",
+            "matched": false
+        },
+        {
+            "item": "Regeneration 30 (Deactivated by Acid, Cold, or Fire)",
+            "entry": "fire",
+            "matched": false
+        }
+    ],
+    "shouldBlockRegeneration": false
+}
