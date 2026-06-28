@@ -132,6 +132,25 @@ function unwrapReadSections(root) {
   }
 }
 
+function ensureReadActionTarget(section) {
+  if (!(section instanceof HTMLElement)) return;
+  let action = section.querySelector(":scope > .tsu-read-send");
+  if (!(action instanceof HTMLElement)) {
+    action = section.ownerDocument.createElement("span");
+    action.className = "tsu-read-send";
+    action.setAttribute("aria-hidden", "true");
+    action.setAttribute("contenteditable", "false");
+    section.append(action);
+  }
+
+  if (action.dataset.tsuReadBound === "true") return;
+
+  action.dataset.tsuReadBound = "true";
+  action.addEventListener("pointerdown", (event) => {
+    void onReadActionTargetClick(event, section);
+  });
+}
+
 function hydrateReadMarkup(root) {
   if (!(root instanceof HTMLElement)) return;
   if (root.matches?.(".ProseMirror, [contenteditable='true']")) return;
@@ -158,39 +177,48 @@ function hydrateReadMarkup(root) {
       replaceReadTextNode(textNode, enabled);
     }
   }
-}
 
-function isReadActionClick(section, event) {
-  const bounds = section.getBoundingClientRect();
-  const hotspotSize = 28;
-  const hitRight = event.clientX >= (bounds.right - hotspotSize);
-  const hitTop = event.clientY <= (bounds.top + hotspotSize);
-  return hitRight && hitTop;
+  if (!enabled) return;
+
+  for (const section of root.querySelectorAll(".journal-page-content .read")) {
+    ensureReadActionTarget(section);
+  }
 }
 
 function isEditableReadContext(target, section) {
   const editableRoot = target.closest?.(
-    ".ProseMirror, [contenteditable='true'], .editor-content, .journal-entry-page.text",
+    ".ProseMirror, [contenteditable='true'], .editor-content",
   );
-  if (editableRoot) return true;
-
-  return Boolean(section.closest(".application.sheet.journal-sheet.journal-entry-page.text"));
+  return Boolean(editableRoot);
 }
 
-async function onReadSectionClick(event) {
-  if (!game.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE_READ)) return;
-  if (!(event.target instanceof Element)) return;
+function getReadActionSectionFromPoint(event) {
+  const elements = document.elementsFromPoint(event.clientX, event.clientY);
 
-  const section = event.target.closest(".read");
-  if (!(section instanceof HTMLElement)) return;
-  if (!section.closest(".journal-sheet")) return;
-  if (isEditableReadContext(event.target, section)) return;
-  if (!isReadActionClick(section, event)) return;
+  for (const element of elements) {
+    if (!(element instanceof Element)) continue;
+    const section = element.closest(".read");
+    if (!(section instanceof HTMLElement)) continue;
+    if (!section.closest(".journal-sheet")) continue;
 
-  event.preventDefault();
-  event.stopPropagation();
+    const bounds = section.getBoundingClientRect();
+    const left = bounds.right - 8;
+    const top = bounds.top - 8;
+    const right = left + 18;
+    const bottom = top + 18;
 
-  const content = section.innerHTML.trim();
+    if (event.clientX >= left && event.clientX <= right && event.clientY >= top && event.clientY <= bottom) {
+      return section;
+    }
+  }
+
+  return null;
+}
+
+async function sendReadSectionToChat(section) {
+  const clone = section.cloneNode(true);
+  clone.querySelector(".tsu-read-send")?.remove();
+  const content = clone.innerHTML.trim();
   if (!content) return;
 
   await ChatMessage.create({
@@ -198,6 +226,19 @@ async function onReadSectionClick(event) {
     speaker: ChatMessage.getSpeaker(),
     content,
   });
+}
+
+async function onReadActionTargetClick(event, section) {
+  if (!game.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE_READ)) return;
+  if (!(section instanceof HTMLElement)) return;
+  if (!section.closest(".journal-sheet")) return;
+  const target = event.target instanceof Element ? event.target : section;
+  if (isEditableReadContext(target, section)) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+  await sendReadSectionToChat(section);
 }
 
 Hooks.once("init", () => {
@@ -218,9 +259,11 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   updateReadBodyClass();
 
-  document.addEventListener("click", (event) => {
-    void onReadSectionClick(event);
-  });
+  document.addEventListener("pointerdown", (event) => {
+    const section = getReadActionSectionFromPoint(event);
+    if (!section) return;
+    void onReadActionTargetClick(event, section);
+  }, true);
 
   const hydrateRenderedJournal = (_app, element) => {
     const root = element instanceof HTMLElement ? element : element?.[0];

@@ -15,7 +15,7 @@ body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read {
   border-radius: 10px;
   background: var(--tsu-read-bg);
   box-shadow: var(--tsu-read-shadow);
-  cursor: pointer;
+  cursor: auto;
 }
 
 body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read:hover {
@@ -43,6 +43,27 @@ body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read::after 
   pointer-events: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read .tsu-read-send {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  font-size: 0;
+  line-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  z-index: 1;
 }
 
 body.tsu-journal-read-enabled .journal-sheet .journal-page-content .read > :first-child {
@@ -97,4 +118,8 @@ body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-pag
 
 body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read::after {
   content: none !important;
+}
+
+body.tsu-journal-read-enabled .application.sheet.journal-sheet.journal-entry-page.text .journal-page-content .read .tsu-read-send {
+  display: none !important;
 }
