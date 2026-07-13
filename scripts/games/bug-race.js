@@ -619,6 +619,7 @@ function createInitialState() {
     ],
     winnerId: "",
     debugMode: false,
+    obstacleProcessed: false,
     supportDcOverrides: {},
     suppressDefaultPlayers: false,
     openSignal: null,
@@ -958,6 +959,7 @@ function pickThreeTechniques() {
 
 function setupRound(state) {
   state.log.unshift(buildRoundDivider(state));
+  state.obstacleProcessed = false;
   for (const [, playerData] of getActiveAliveEntries(state)) {
     playerData.isConfirmed = false;
     playerData.selectedTech = "";
@@ -1187,6 +1189,7 @@ async function processObstacle(state) {
   }
 
   state.log.unshift(lines.join(""));
+  state.obstacleProcessed = true;
 }
 
 async function resolveObstacleFailure(state, actorId) {
@@ -1400,6 +1403,7 @@ function resetStateForNewTable(state) {
   state.log = fresh.log;
   state.winnerId = "";
   state.debugMode = false;
+  state.obstacleProcessed = fresh.obstacleProcessed;
   state.supportDcOverrides = fresh.supportDcOverrides;
   state.suppressDefaultPlayers = false;
   state.openSignal = fresh.openSignal;
@@ -1969,6 +1973,9 @@ const definition = {
     for (const [actorId, playerData] of Object.entries(state.players)) {
       normalizePlayerState(playerData, game.actors?.get(actorId));
     }
+    if (typeof state.obstacleProcessed !== "boolean") {
+      state.obstacleProcessed = state.phase === "obstacle";
+    }
 
     switch (action) {
       case "toggle-debug":
@@ -2088,10 +2095,14 @@ const definition = {
           if (!allActivePlayersConfirmed(state)) return false;
           await processSupport(state);
           state.phase = "obstacle";
-          await processObstacle(state);
+          state.obstacleProcessed = false;
           return true;
         }
         if (state.phase === "obstacle") {
+          if (!state.obstacleProcessed) {
+            await processObstacle(state);
+            return true;
+          }
           if (getActiveEntries(state).some(([, playerData]) => playerData.needsLuck)) return false;
           state.phase = "sprint";
           await processSprint(state);

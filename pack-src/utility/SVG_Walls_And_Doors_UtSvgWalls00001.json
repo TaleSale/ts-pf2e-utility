@@ -1,0 +1,27 @@
+{
+  "name": "SVG \u0441\u0442\u0435\u043d\u044b \u0438 \u0434\u0432\u0435\u0440\u0438",
+  "type": "script",
+  "author": "TSPF2EUTIL000001",
+  "img": "icons/svg/wall-direction.svg",
+  "scope": "global",
+  "command": "if (!game.user?.isGM) { ui.notifications?.warn(game.i18n.localize('TS_PF2E_UTILITY.Notifications.OnlyGM')); return; }\nconst tool = await import(`/modules/ts-pf2e-utility/scripts/utility/svg-wall-importer.js?v=${Date.now()}`);\nawait tool.openSvgWallImporterDialog();",
+  "folder": null,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "pf2e",
+    "systemVersion": "7.11.3",
+    "createdTime": 0,
+    "modifiedTime": 0,
+    "lastModifiedBy": "TSPF2EUTIL000001",
+    "exportSource": null
+  },
+  "_id": "UtSvgWalls00001",
+  "sort": 70000,
+  "_key": "!macros!UtSvgWalls00001"
+}

@@ -11,6 +11,34 @@ const SOURCE_ID = "enhancement";
 const FLAG_KEY = "enhancements";
 const RULE_PRIORITY = 121;
 const DISABLED_PREDICATE = "tsu:enhancement:disabled";
+const BLOCKED_HTML_TAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "LINK", "META"]);
+const HTML_SYNTAX_PATTERN = /<[^>]+>|&(?:#\d+|#x[\da-f]+|[a-z][a-z0-9]+);/i;
+const ENHANCEMENT_EDITOR_TOOLS = [
+  {
+    id: "strong",
+    label: "B",
+    titleKey: "ActionPlus.Enhancement.EditorStrong",
+    prefix: "**",
+    suffix: "**",
+    placeholderKey: "ActionPlus.Enhancement.EditorPlaceholderText",
+  },
+  {
+    id: "em",
+    label: "I",
+    titleKey: "ActionPlus.Enhancement.EditorEmphasis",
+    prefix: "*",
+    suffix: "*",
+    placeholderKey: "ActionPlus.Enhancement.EditorPlaceholderText",
+  },
+  {
+    id: "list",
+    label: "UL",
+    titleKey: "ActionPlus.Enhancement.EditorList",
+    prefix: "- ",
+    suffix: "",
+    placeholderKey: "ActionPlus.Enhancement.EditorPlaceholderItem",
+  },
+];
 
 function localize(key) {
   return game.i18n.localize(`${I18N_PREFIX}.${key}`);
@@ -156,9 +184,109 @@ function buildEnhancementPredicate(item, enhancement) {
   return predicate;
 }
 
-function buildEnhancementText(item, enhancement) {
-  const body = escapeHtml(enhancement.text).replaceAll("\n", "<br>");
-  return `<p>${body}</p>`;
+function buildEnhancementLines(item, enhancement) {
+  const body = formatEnhancementText(enhancement.text);
+  const lines = splitEnhancementLines(body);
+  return lines.some((line) => line !== "<br>") ? lines : [buildEnhancementHeader(item, enhancement)];
+}
+
+function formatEnhancementText(value) {
+  const normalized = String(value ?? "").replaceAll("\r\n", "\n");
+  if (!normalized.trim()) return "";
+
+  if (!HTML_SYNTAX_PATTERN.test(normalized)) {
+    return normalized;
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = normalized.replaceAll("\n", "<br>");
+
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT);
+  const elements = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    elements.push(node);
+  }
+
+  for (const element of elements) {
+    if (BLOCKED_HTML_TAGS.has(element.tagName)) {
+      element.remove();
+      continue;
+    }
+
+    for (const attribute of Array.from(element.attributes)) {
+      const attributeName = attribute.name.toLowerCase();
+      const attributeValue = String(attribute.value ?? "").trim().toLowerCase();
+      if (attributeName === "style" || attributeName.startsWith("on")) {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+      if ((attributeName === "href" || attributeName === "src") && attributeValue.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  }
+
+  return htmlFragmentToMarkdown(template.content)
+    .replaceAll("\u00A0", " ")
+    .trim();
+}
+
+function splitEnhancementLines(text) {
+  return String(text ?? "")
+    .replaceAll("\r\n", "\n")
+    .split("\n")
+    .map((line) => normalizeEnhancementLine(line))
+    .filter((line) => line !== null);
+}
+
+function normalizeEnhancementLine(line) {
+  const source = String(line ?? "");
+  const trimmed = source.trim();
+  if (!trimmed) return "&nbsp;";
+  if (/^- /.test(trimmed)) {
+    return `• ${trimmed.slice(2).trim()}`;
+  }
+  return trimmed;
+}
+
+function htmlFragmentToMarkdown(fragment) {
+  return Array.from(fragment.childNodes).map((node) => htmlNodeToMarkdown(node)).join("");
+}
+
+function htmlNodeToMarkdown(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return String(node.textContent ?? "");
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+
+  const tagName = node.tagName.toUpperCase();
+  const inner = htmlFragmentToMarkdown(node);
+
+  switch (tagName) {
+    case "STRONG":
+    case "B":
+      return `**${inner.trim()}**`;
+    case "EM":
+    case "I":
+      return `*${inner.trim()}*`;
+    case "BR":
+      return "\n";
+    case "P":
+    case "DIV":
+    case "SECTION":
+    case "ARTICLE":
+      return `${inner}\n\n`;
+    case "UL":
+    case "OL":
+      return `${Array.from(node.children).map((child) => htmlNodeToMarkdown(child)).join("")}\n`;
+    case "LI":
+      return `- ${inner.trim()}\n`;
+    default:
+      return inner;
+  }
 }
 
 function isEnhancementConfigured(enhancement) {
@@ -168,17 +296,20 @@ function isEnhancementConfigured(enhancement) {
 function buildRulesFromEnhancements(item, enhancements) {
   return normalizeEnhancementCollection(enhancements)
     .filter((enhancement) => isEnhancementConfigured(enhancement))
-    .map((enhancement) => ({
-      key: "ItemAlteration",
-      itemId: "{item|id}",
-      mode: "add",
-      label: buildEnhancementLabel(item, enhancement),
-      predicate: buildEnhancementPredicate(item, enhancement),
-      property: "description",
-      value: [{ text: buildEnhancementText(item, enhancement) }],
-      priority: RULE_PRIORITY,
-      tsUtilitySource: SOURCE_ID,
-    }));
+    .map((enhancement) => {
+      const value = buildEnhancementLines(item, enhancement).map((text) => ({ text }));
+      return {
+        key: "ItemAlteration",
+        itemId: "{item|id}",
+        mode: "add",
+        label: buildEnhancementLabel(item, enhancement),
+        predicate: buildEnhancementPredicate(item, enhancement),
+        property: "description",
+        value,
+        priority: RULE_PRIORITY,
+        tsUtilitySource: SOURCE_ID,
+      };
+    });
 }
 
 function createRuleSignature(rule) {
@@ -250,6 +381,25 @@ function buildUpdatedEnhancementRules(item, existingRules, previousEnhancements,
 function renderEnhancementControls({ item, flags, occurrenceIndex = 0 }) {
   const enhancements = normalizeEnhancementCollection(flags?.[FLAG_KEY]);
   const enhancement = normalizeEnhancement(enhancements[occurrenceIndex] ?? null);
+  const toolbarButtonsHtml = ENHANCEMENT_EDITOR_TOOLS.map((tool) => `
+    <button
+      type="button"
+      class="ts-enhancement-tool"
+      data-prefix="${escapeHtml(tool.prefix)}"
+      data-suffix="${escapeHtml(tool.suffix)}"
+      data-placeholder="${escapeHtml(tool.placeholderKey ? localize(tool.placeholderKey) : "")}"
+      data-tooltip="${escapeHtml(localize(tool.titleKey))}"
+      style="flex: 0 0 auto; width: auto; min-width: 38px; padding: 2px 8px; line-height: 1.4;"
+    >${escapeHtml(tool.label)}</button>
+  `).join("");
+  const saveButtonHtml = `
+    <button
+      type="button"
+      class="ts-enhancement-save-text"
+      data-tooltip="${escapeHtml(localize("ActionPlus.Enhancement.SaveTextButton"))}"
+      style="flex: 0 0 auto; width: 32px; min-width: 32px; padding: 2px 0; line-height: 1.4;"
+    ><i class="fas fa-save"></i></button>
+  `;
 
   return `
     <div style="margin-top: 10px;">
@@ -267,7 +417,11 @@ function renderEnhancementControls({ item, flags, occurrenceIndex = 0 }) {
       </div>
       <div class="form-group">
         <label>${localize("ActionPlus.Enhancement.TextLabel")}</label>
-        <div class="form-fields">
+        <div class="form-fields" style="display: block;">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 4px; margin-bottom: 6px;">
+            ${toolbarButtonsHtml}
+            ${saveButtonHtml}
+          </div>
           <textarea class="ts-enhancement-input" data-field="text" rows="4" placeholder="${escapeHtml(localize("ActionPlus.Enhancement.TextPlaceholder"))}">${escapeHtml(enhancement.text)}</textarea>
         </div>
       </div>
@@ -288,20 +442,107 @@ function activateEnhancementListeners({ html, item, optionIndex, occurrenceIndex
   const panel = root.querySelector(`.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"]`);
   if (!panel) return;
 
-  const currentEnhancements = normalizeEnhancementCollection(item.getFlag(MODULE_ID, FLAG_KEY) ?? []);
-  const currentEnhancement = normalizeEnhancement(currentEnhancements[occurrenceIndex] ?? null);
+  const readEnhancementFromPanel = () => {
+    const nextEnhancement = getDefaultEnhancement();
+    for (const control of panel.querySelectorAll(".ts-enhancement-input")) {
+      const field = String(control.dataset.field ?? "");
+      if (!field) continue;
+      nextEnhancement[field] = String(control.value ?? "");
+    }
+    return normalizeEnhancement(nextEnhancement);
+  };
+
+  const savePanelState = async () => {
+    await persistEnhancement(item, readEnhancementFromPanel(), occurrenceIndex);
+  };
 
   for (const control of panel.querySelectorAll(".ts-enhancement-input")) {
     control.addEventListener("change", async (event) => {
       const target = event.currentTarget;
       const field = String(target.dataset.field ?? "");
-      if (!field) return;
-
-      const nextEnhancement = normalizeEnhancement(currentEnhancement);
-      nextEnhancement[field] = String(target.value ?? "");
-      await persistEnhancement(item, nextEnhancement, occurrenceIndex);
+      if (!field || field === "text") return;
+      await savePanelState();
     });
   }
+
+  const textArea = panel.querySelector('.ts-enhancement-input[data-field="text"]');
+  for (const button of panel.querySelectorAll(".ts-enhancement-tool")) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!(textArea instanceof HTMLTextAreaElement)) return;
+
+      insertIntoTextarea(textArea, {
+        prefix: String(button.dataset.prefix ?? ""),
+        suffix: String(button.dataset.suffix ?? ""),
+        placeholder: String(button.dataset.placeholder ?? ""),
+      });
+    });
+  }
+
+  const saveTextButton = panel.querySelector(".ts-enhancement-save-text");
+  saveTextButton?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await savePanelState();
+  });
+}
+
+function insertIntoTextarea(textarea, { prefix = "", suffix = "", placeholder = "" } = {}) {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const selectedText = textarea.value.slice(start, end);
+  const middle = selectedText || placeholder;
+  const insertion = buildMarkdownInsertion({ prefix, suffix, middle });
+
+  textarea.setRangeText(insertion, start, end, "end");
+
+  const selectionStart = start;
+  const selectionEnd = start + insertion.length;
+  textarea.focus();
+  textarea.setSelectionRange(selectionStart, selectionEnd);
+}
+
+function buildMarkdownInsertion({ prefix = "", suffix = "", middle = "" } = {}) {
+  const text = String(middle ?? "");
+
+  if (prefix === "- " && suffix === "") {
+    return applyListMarkdown(text);
+  }
+
+  if ((prefix === "**" && suffix === "**") || (prefix === "*" && suffix === "*")) {
+    return applyInlineMarkdownToLines(text, prefix, suffix);
+  }
+
+  return `${prefix}${text}${suffix}`;
+}
+
+function applyListMarkdown(text) {
+  const source = String(text ?? "").replaceAll("\r\n", "\n");
+  const lines = source.split("\n");
+  return lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return "";
+    return trimmed.startsWith("- ") ? trimmed : `- ${trimmed}`;
+  }).join("\n");
+}
+
+function applyInlineMarkdownToLines(text, prefix, suffix) {
+  const source = String(text ?? "").replaceAll("\r\n", "\n");
+  const lines = source.split("\n");
+  return lines.map((line) => wrapMarkdownLine(line, prefix, suffix)).join("\n");
+}
+
+function wrapMarkdownLine(line, prefix, suffix) {
+  const source = String(line ?? "");
+  const trimmed = source.trim();
+  if (!trimmed) return source;
+
+  const listMatch = trimmed.match(/^(-\s+)(.*)$/);
+  if (listMatch) {
+    const [, marker, content] = listMatch;
+    return `${marker}${prefix}${content}${suffix}`;
+  }
+
+  return `${prefix}${trimmed}${suffix}`;
 }
 
 async function cleanupEnhancement({ item, occurrenceIndex = 0 }) {

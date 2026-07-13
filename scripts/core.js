@@ -8,10 +8,15 @@ export function moduleLog(..._args) {}
 const SOCKET_ACTIONS = Object.freeze({
   playerAction: "player-action",
 });
+const MODULE_COMPENDIUM_ROOT_FOLDER = "99.TS-PF2E-UTILITY";
+const LEGACY_MODULE_COMPENDIUM_CHILD_FOLDERS = Object.freeze([
+  "Конструктор Существ",
+  "Эффекты Функции Успехов",
+]);
 const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
   {
     packId: `${MODULE_ID}.games`,
-    rootFolder: "99.TS-PF2E-UTILITY",
+    rootFolder: MODULE_COMPENDIUM_ROOT_FOLDER,
     sourceFiles: Object.freeze([
       "pack-src/games/Open_Beer_Furious_BrF0rsh1P1v00001.json",
       "pack-src/games/Open_Bug_Race_BrUgR4cE2026pF2.json",
@@ -27,7 +32,7 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
   },
   {
     packId: `${MODULE_ID}.mechanics`,
-    rootFolder: "99.TS-PF2E-UTILITY",
+    rootFolder: MODULE_COMPENDIUM_ROOT_FOLDER,
     legacyRootFolders: Object.freeze([
       "99.TS-PF2E-UTILITY Mechanics",
     ]),
@@ -40,15 +45,31 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
   },
   {
     packId: `${MODULE_ID}.utility`,
-    rootFolder: "99.TS-PF2E-UTILITY",
+    rootFolder: MODULE_COMPENDIUM_ROOT_FOLDER,
     sourceFiles: Object.freeze([
       "pack-src/utility/Refresh_Actor_Keep_ID_UtActSync0000001.json",
       "pack-src/utility/Refresh_Actor_Items_And_Spells_UtItemSync000001.json",
+      "pack-src/utility/Creature_Statblock_UtCrStBlk000001.json",
+      "pack-src/utility/Token_Adjectives_UtTokAdj000001.json",
+      "pack-src/utility/Quick_Effects_UtQuickFx00001.json",
+      "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
     ]),
     iconUpdates: Object.freeze({
       UtActSync0000001: "icons/svg/upgrade.svg",
       UtItemSync000001: "icons/svg/book.svg",
+      UtCrStBlk000001: "icons/svg/book.svg",
+      UtTokAdj000001: "icons/svg/aura.svg",
+      UtQuickFx00001: "systems/pf2e/icons/default-icons/effect.svg",
+      UtSvgWalls00001: "icons/svg/wall-direction.svg",
     }),
+  },
+  {
+    packId: `${MODULE_ID}.creature-builder`,
+    rootFolder: MODULE_COMPENDIUM_ROOT_FOLDER,
+  },
+  {
+    packId: `${MODULE_ID}.success-effects`,
+    rootFolder: MODULE_COMPENDIUM_ROOT_FOLDER,
   },
 ]);
 
@@ -679,11 +700,84 @@ function registerSocket() {
 }
 
 function getCompendiumFolderParentId(folder) {
-  return folder?.parent?.id ?? folder?.folder ?? null;
+  const parent = folder?.parent ?? folder?.folder ?? null;
+  if (!parent) return null;
+  if (typeof parent === "string") return parent;
+  return parent.id ?? null;
 }
 
 function isCompendiumFolder(folder) {
   return folder?.type === "Compendium";
+}
+
+function compendiumFolderIsEmpty(folder) {
+  return !folder.contents?.length && !folder.getSubfolders?.(false)?.length;
+}
+
+async function deleteEmptyDuplicateCompendiumFolders(folders) {
+  for (const folder of folders.slice(1)) {
+    if (compendiumFolderIsEmpty(folder)) {
+      await folder.delete();
+    }
+  }
+}
+
+async function ensureCompendiumFolder(name, parentFolder = null) {
+  const parentId = parentFolder?.id ?? null;
+  const matches = game.packs?.folders?.filter((candidate) => (
+    isCompendiumFolder(candidate)
+    && candidate.name === name
+    && getCompendiumFolderParentId(candidate) === parentId
+  )) ?? [];
+
+  if (matches.length) {
+    await deleteEmptyDuplicateCompendiumFolders(matches);
+    return matches[0];
+  }
+
+  return Folder.create({
+    name,
+    type: "Compendium",
+    folder: parentId,
+    sorting: "m",
+    color: null,
+  });
+}
+
+async function cleanupEmptyLegacyModuleCompendiumFolders(rootFolder) {
+  const rootId = rootFolder?.id ?? null;
+
+  for (const childFolderName of LEGACY_MODULE_COMPENDIUM_CHILD_FOLDERS) {
+    const misplacedMatches = game.packs?.folders?.filter((candidate) => (
+      isCompendiumFolder(candidate)
+      && candidate.name === childFolderName
+      && compendiumFolderIsEmpty(candidate)
+    )) ?? [];
+
+    for (const folder of misplacedMatches) {
+      await folder.delete();
+    }
+  }
+
+  const duplicateRootFolders = game.packs?.folders?.filter((folder) => (
+    isCompendiumFolder(folder)
+    && folder.name === MODULE_COMPENDIUM_ROOT_FOLDER
+    && !getCompendiumFolderParentId(folder)
+    && folder.id !== rootId
+  )) ?? [];
+
+  for (const duplicateRootFolder of duplicateRootFolders) {
+    if (compendiumFolderIsEmpty(duplicateRootFolder)) {
+      await duplicateRootFolder.delete();
+    }
+  }
+}
+
+async function createModuleCompendiumFolderStructure() {
+  const rootFolder = await ensureCompendiumFolder(MODULE_COMPENDIUM_ROOT_FOLDER);
+
+  await cleanupEmptyLegacyModuleCompendiumFolders(rootFolder);
+  return rootFolder;
 }
 
 async function ensureModuleCompendiumFolderStructure() {
@@ -693,25 +787,11 @@ async function ensureModuleCompendiumFolderStructure() {
     const folders = game.packs?.folders;
     if (!folders) return;
 
+    const rootFolder = await createModuleCompendiumFolderStructure();
+
     for (const config of MODULE_COMPENDIUM_CONFIGS) {
       const pack = game.packs?.get(config.packId);
       if (!pack) continue;
-
-      let rootFolder = folders.find((folder) => (
-        isCompendiumFolder(folder)
-        && folder.name === config.rootFolder
-        && !getCompendiumFolderParentId(folder)
-      ));
-
-      if (!rootFolder) {
-        rootFolder = await Folder.create({
-          name: config.rootFolder,
-          type: "Compendium",
-          folder: null,
-          sorting: "m",
-          color: null,
-        });
-      }
 
       const previousFolder = pack.folder;
       if (pack.folder?.id !== rootFolder.id) {
@@ -937,7 +1017,7 @@ export function initializeModuleRuntime() {
       header.textContent = text;
     }
 
-    localizeSectionHeader("enableSceneEye", `===${t("Settings.Sections.Scene", "Scene")}===`);
+    localizeSectionHeader("enableWallTextures", `===${t("Settings.Sections.Scene", "Scene")}===`);
     localizeSectionHeader("actionPlusShowRegeneration", `===${t("Settings.Sections.ActionPlus", "Action Extra Features")}===`);
     localizeSectionHeader("enableSpellAtWill", `===${t("Settings.Sections.Spells", "Spells")}===`);
     localizeSectionHeader("defaultJournalStyle", `===${t("Settings.Sections.Journals", "Journals")}===`);
@@ -966,6 +1046,7 @@ export function initializeModuleRuntime() {
   Hooks.once("ready", () => {
     installModuleApi();
     registerSocket();
+    void ensureModuleCompendiumFolderStructure();
     Hooks.on("updateScene", handleSceneUpdate);
     for (const definition of getRegisteredGames()) {
       seenOpenSignals.set(definition.id, getGameState(definition.id)?.openSignal ?? null);

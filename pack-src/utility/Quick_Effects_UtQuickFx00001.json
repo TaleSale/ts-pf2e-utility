@@ -1,0 +1,27 @@
+{
+  "name": "Быстрые эффекты",
+  "type": "script",
+  "author": "TSPF2EUTIL000001",
+  "img": "systems/pf2e/icons/default-icons/effect.svg",
+  "scope": "global",
+  "command": "if (!game.user?.isGM) { ui.notifications?.warn(game.i18n.localize('TS_PF2E_UTILITY.Notifications.OnlyGM')); return; }\nconst tool = await import(`/modules/ts-pf2e-utility/scripts/utility/quick-effects.js?v=${Date.now()}`);\nawait tool.openQuickEffectsDialog();",
+  "folder": null,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "pf2e",
+    "systemVersion": "7.11.3",
+    "createdTime": 0,
+    "modifiedTime": 0,
+    "lastModifiedBy": "TSPF2EUTIL000001",
+    "exportSource": null
+  },
+  "_id": "UtQuickFx00001",
+  "sort": 60000,
+  "_key": "!macros!UtQuickFx00001"
+}

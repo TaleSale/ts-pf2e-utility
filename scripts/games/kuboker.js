@@ -84,6 +84,9 @@ function createInitialState() {
     currentDC: 15,
     dcOverride: null,
     debugMode: false,
+    rules: {
+      noWatchingOwn: false,
+    },
     openSignal: null,
     betting: {
       enabled: false,
@@ -106,6 +109,11 @@ function replaceStateContents(target, source) {
 
 function normalizeBettingCurrency(currency) {
   return BETTING_CURRENCIES[currency] ? currency : "gp";
+}
+
+function ensureKubokerRulesState(state) {
+  if (!state.rules || typeof state.rules !== "object") state.rules = {};
+  state.rules.noWatchingOwn = Boolean(state.rules.noWatchingOwn);
 }
 
 function toPositiveInteger(value, fallback = 1) {
@@ -1096,7 +1104,24 @@ function logResult(definition, state, playerData, d20, modifier, penalty, total,
   state.log.unshift(buildChronicleResultEntry(definition, playerData, d20, modifier, penalty, total, dc, degree, prefixKey));
 }
 
+function isNpcKubokerPlayer(playerData) {
+  const actor = game.actors?.get(playerData?.id);
+  return actor?.type === "npc";
+}
+
+function getEagleSuccessCountForCheater(state, cheaterData, successfulObservers) {
+  ensureKubokerRulesState(state);
+  if (!state.rules.noWatchingOwn) return successfulObservers.length;
+  const cheaterIsNpc = isNpcKubokerPlayer(cheaterData);
+  return successfulObservers.filter((observerData) => isNpcKubokerPlayer(observerData) !== cheaterIsNpc).length;
+}
+
+function getCheatPenaltyFromEagleCount(eagleSuccesses) {
+  return eagleSuccesses === 1 ? -2 : eagleSuccesses > 1 ? -(2 + (eagleSuccesses - 1)) : 0;
+}
+
 async function executeMasterLogic(definition, state, { round = 1, preserveComplaints = false } = {}) {
+  ensureKubokerRulesState(state);
   state.phase = "locked";
   state.lockedRound = round;
   const participants = Object.values(state.players).filter((entry) => entry.isParticipating && !isPlayerFolded(entry));
@@ -1114,7 +1139,7 @@ async function executeMasterLogic(definition, state, { round = 1, preserveCompla
     }
   }
 
-  let eagleSuccesses = 0;
+  const successfulObservers = [];
   for (const playerData of activePlayers.filter((entry) => entry.strategy === "observe")) {
     const actor = game.actors.get(playerData.id);
     const modifiers = getActorModifiers(actor);
@@ -1127,7 +1152,7 @@ async function executeMasterLogic(definition, state, { round = 1, preserveCompla
     playerData.degree = degree;
     applyRerollResources(playerData);
     playerData.blackDiceIdx = -1;
-    if (degree >= 3) eagleSuccesses += 1;
+    if (degree >= 3) successfulObservers.push(playerData);
     if (degree === 0) {
       const dieIndex = Math.floor(Math.random() * 3);
       playerData.dice[dieIndex] = 0;
@@ -1136,10 +1161,31 @@ async function executeMasterLogic(definition, state, { round = 1, preserveCompla
     logResult(definition, state, playerData, roll.total, modifier, 0, total, dc, degree, "Observe");
   }
 
-  const cheatPenalty = eagleSuccesses === 1 ? -2 : eagleSuccesses > 1 ? -(2 + (eagleSuccesses - 1)) : 0;
+  const globalCheatPenalty = getCheatPenaltyFromEagleCount(successfulObservers.length);
+  const useIndividualCheatPenalties = Boolean(state.rules.noWatchingOwn);
+  const cheatPenaltyNotes = new Map();
+  if (useIndividualCheatPenalties) {
+    for (const playerData of activePlayers.filter((entry) => entry.strategy === "cheat")) {
+      const eagleSuccesses = getEagleSuccessCountForCheater(state, playerData, successfulObservers);
+      const penalty = getCheatPenaltyFromEagleCount(eagleSuccesses);
+      if (penalty < 0) cheatPenaltyNotes.set(penalty, [...(cheatPenaltyNotes.get(penalty) || []), playerData.name]);
+    }
+  }
+  const cheatPenalty = useIndividualCheatPenalties ? 0 : globalCheatPenalty;
   if (cheatPenalty < 0) {
     const content = unwrapChronicleEntry(gtf(definition, "Log.CheatPenalty", { penalty: cheatPenalty }, ({ penalty }) => `<b>Cheater penalty from eagle eyes: ${penalty}</b>`));
     state.log.unshift(buildChronicleNote(content, { color: "#ff8f8f", centered: true }));
+  }
+  if (useIndividualCheatPenalties) {
+    for (const [penalty, names] of cheatPenaltyNotes.entries()) {
+      const content = unwrapChronicleEntry(gtf(
+        definition,
+        "Log.CheatPenaltyTargets",
+        { penalty, names: names.join(", ") },
+        ({ penalty: value, names: targetNames }) => `<b>Cheater penalty from eagle eyes: ${escapeHtml(value)} for ${escapeHtml(targetNames)}</b>`
+      ));
+      state.log.unshift(buildChronicleNote(content, { color: "#ff8f8f", centered: true }));
+    }
   }
 
   for (const playerData of activePlayers.filter((entry) => entry.strategy === "cheat")) {
@@ -1147,14 +1193,17 @@ async function executeMasterLogic(definition, state, { round = 1, preserveCompla
     const modifiers = getActorModifiers(actor);
     const modifier = modifiers[playerData.skill] || 0;
     const roll = await new Roll("1d20").evaluate({ async: true });
-    const total = roll.total + modifier + cheatPenalty;
+    const individualCheatPenalty = useIndividualCheatPenalties
+      ? getCheatPenaltyFromEagleCount(getEagleSuccessCountForCheater(state, playerData, successfulObservers))
+      : cheatPenalty;
+    const total = roll.total + modifier + individualCheatPenalty;
     let degree = (total >= dc + 10) ? 4 : (total >= dc ? 3 : (total <= dc - 10 ? 1 : 2));
     if (roll.total === 20) degree = 5;
     if (roll.total === 1) degree = 0;
     playerData.degree = degree;
     applyRerollResources(playerData);
     playerData.blackDiceIdx = -1;
-    logResult(definition, state, playerData, roll.total, modifier, cheatPenalty, total, dc, degree, "Cheat");
+    logResult(definition, state, playerData, roll.total, modifier, individualCheatPenalty, total, dc, degree, "Cheat");
   }
 
   for (const playerData of activePlayers.filter((entry) => entry.strategy === "fair")) {
@@ -1434,6 +1483,10 @@ const template = `
           <span>{{ui.debugLabel}}</span>
         </label>
         <label class="tsu-checkbox kb-debug-label">
+          <input id="kb-no-watching-own" class="kb-no-watching-own" type="checkbox" {{#if state.rules.noWatchingOwn}}checked{{/if}} {{#unless rulesConfigEditable}}disabled{{/unless}}>
+          <span>{{noWatchingOwnLabel}}</span>
+        </label>
+        <label class="tsu-checkbox kb-debug-label">
           <input id="kb-betting-enabled" class="kb-betting-enabled" type="checkbox" {{#if bettingEnabled}}checked{{/if}} {{#unless bettingConfigEditable}}disabled{{/unless}}>
           <span>{{bettingToggleLabel}}</span>
         </label>
@@ -1523,6 +1576,7 @@ class KubokerApplication extends Application {
   getData() {
     const state = this.getState();
     ensureBettingState(state);
+    ensureKubokerRulesState(state);
     const visibleCheatersMap = getVisibleCheatersMap(state);
     const suggestedDc = getSuggestedDc(state);
     const ui = {
@@ -1600,6 +1654,8 @@ class KubokerApplication extends Application {
       players,
       showEmptyState: players.length === 0 || participatingCount === 0,
       emptyState: buildEmptyState(definition, state, visibleEntries),
+      rulesConfigEditable: state.phase === "join",
+      noWatchingOwnLabel: gt(definition, "Rules.NoWatchingOwn", "Do not watch your own side cheat"),
       bettingEnabled: state.betting.enabled,
       bettingConfigEditable: state.phase === "join",
       bettingToggleLabel: gt(definition, "Betting.Toggle", "Raise the stakes"),
@@ -1663,6 +1719,10 @@ class KubokerApplication extends Application {
     html.on("change", "#kb-betting-enabled", (event) => {
       if (!game.user?.isGM) return;
       void requestGameAction(GAME_ID, "set-betting-config", { enabled: event.currentTarget.checked });
+    });
+    html.on("change", "#kb-no-watching-own", (event) => {
+      if (!game.user?.isGM) return;
+      void requestGameAction(GAME_ID, "set-rule-config", { noWatchingOwn: event.currentTarget.checked });
     });
     html.on("change", ".kb-betting-input", (event) => {
       if (!game.user?.isGM) return;
@@ -1843,6 +1903,7 @@ const definition = {
   createApplication: () => new KubokerApplication(),
   async handleAction({ action, data, state, senderId, canUserControlActor }) {
     ensureBettingState(state);
+    ensureKubokerRulesState(state);
     const senderIsGM = game.users?.get(senderId)?.isGM ?? false;
     switch (action) {
       case "toggle-join": {
@@ -1872,6 +1933,14 @@ const definition = {
         if (Object.prototype.hasOwnProperty.call(data, "step")) state.betting.step = toPositiveInteger(data.step, state.betting.step);
         if (Object.prototype.hasOwnProperty.call(data, "roundLimit")) state.betting.roundLimit = toPositiveInteger(data.roundLimit, state.betting.roundLimit);
         ensureBettingState(state);
+        return true;
+      }
+      case "set-rule-config": {
+        if (!senderIsGM || state.phase !== "join") return false;
+        if (Object.prototype.hasOwnProperty.call(data, "noWatchingOwn")) {
+          state.rules.noWatchingOwn = Boolean(data.noWatchingOwn);
+        }
+        ensureKubokerRulesState(state);
         return true;
       }
       case "set-raise-steps": {

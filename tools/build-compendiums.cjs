@@ -31,7 +31,23 @@ const PACK_CONFIGS = Object.freeze([
     sourceFiles: Object.freeze([
       "pack-src/utility/Refresh_Actor_Keep_ID_UtActSync0000001.json",
       "pack-src/utility/Refresh_Actor_Items_And_Spells_UtItemSync000001.json",
+      "pack-src/utility/Creature_Statblock_UtCrStBlk000001.json",
+      "pack-src/utility/Token_Adjectives_UtTokAdj000001.json",
+      "pack-src/utility/Quick_Effects_UtQuickFx00001.json",
+      "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
     ]),
+  },
+  {
+    label: "creature-builder",
+    dbPath: path.join(MODULE_ROOT, ".pack-build", "creature-builder"),
+    publishPath: path.join(MODULE_ROOT, "packs", "creature-builder"),
+    sourceFiles: Object.freeze([]),
+  },
+  {
+    label: "success-effects",
+    dbPath: path.join(MODULE_ROOT, ".pack-build", "success-effects"),
+    publishPath: path.join(MODULE_ROOT, "packs", "success-effects"),
+    sourceFiles: Object.freeze([]),
   },
 ]);
 

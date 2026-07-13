@@ -171,6 +171,18 @@ Hooks.once("init", () => {
     },
   });
 
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("creatureAttack"), {
+    name: i18nKey(`${SETTINGS_ROOT}.CreatureAttack.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.CreatureAttack.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => {
+      rerenderOpenActionSheets();
+    },
+  });
+
   game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("damageAdjustments"), {
     name: i18nKey(`${SETTINGS_ROOT}.DamageAdjustments.Name`),
     hint: i18nKey(`${SETTINGS_ROOT}.DamageAdjustments.Hint`),
@@ -194,6 +206,24 @@ Hooks.once("init", () => {
       rerenderOpenActionSheets();
     },
   });
+
+  for (const [featureId, i18nRoot] of [
+    ["actorLanguages", "ActorLanguages"],
+    ["actorSenses", "ActorSenses"],
+    ["actorTraits", "ActorTraits"],
+  ]) {
+    game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey(featureId), {
+      name: i18nKey(`${SETTINGS_ROOT}.${i18nRoot}.Name`),
+      hint: i18nKey(`${SETTINGS_ROOT}.${i18nRoot}.Hint`),
+      scope: "world",
+      config: true,
+      default: true,
+      type: Boolean,
+      onChange: () => {
+        rerenderOpenActionSheets();
+      },
+    });
+  }
 });
 
 Hooks.on("renderItemSheet", (app, html) => {
@@ -235,13 +265,56 @@ Hooks.on("renderItemSheet", (app, html) => {
       .join("");
   };
 
-  const selectRowsHtml = selectableOptions.map((selectedValue, index) => `
-    <div class="ts-utility-select-row" data-index="${index}" style="display: flex; gap: 6px; align-items: center; margin-top: ${index === 0 ? "0" : "6px"};">
-      <select class="ts-utility-select" data-index="${index}" style="flex: 1 1 auto;">
-        ${buildOptionsHtml(selectedValue, index)}
-      </select>
-    </div>
-  `).join("");
+  const featureBlocksHtml = selectableOptions.map((selectedValue, index) => {
+    const feature = selectedValue ? config.actionPlusFeatures.get(selectedValue) : null;
+    const occurrenceIndex = selectedValue ? getOccurrenceIndex(selectableOptions, index) : -1;
+    const featureLabel = selectedValue
+      ? localizeConfigLabel(config.actionOptions[selectedValue] ?? selectedValue)
+      : localize("ActionPlus.Labels.ExtraFunctions");
+    const panelHtml = selectedValue && feature?.render instanceof Function
+      ? `
+        <div
+          class="ts-utility-feature-panel"
+          data-feature-id="${foundry.utils.escapeHTML(selectedValue)}"
+          data-option-index="${index}"
+          data-occurrence-index="${occurrenceIndex}"
+          style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border-light-primary);"
+        >
+          <div style="font-weight: 600; margin-bottom: 6px;">${foundry.utils.escapeHTML(featureLabel)}</div>
+          ${feature.render({ app, html: root, item, flags, optionIndex: index, occurrenceIndex }) ?? ""}
+        </div>
+      `
+      : "";
+
+    return `
+      <div
+        class="ts-utility-feature-block"
+        data-index="${index}"
+        style="margin-top: ${index === 0 ? "0" : "10px"}; padding: 8px; border: 1px solid var(--color-border-light-primary); border-radius: 3px;"
+      >
+        <div class="form-group" style="margin: 0;">
+          <label>${localize("ActionPlus.Labels.ExtraFunctions")}</label>
+          <div class="form-fields" style="gap: 6px; align-items: center;">
+            <select class="ts-utility-select" data-index="${index}" style="flex: 1 1 auto;">
+              ${buildOptionsHtml(selectedValue, index)}
+            </select>
+            ${selectedValue ? `
+              <button
+                type="button"
+                class="ts-utility-remove-feature"
+                data-index="${index}"
+                data-tooltip="${foundry.utils.escapeHTML(localize("ActionPlus.Labels.RemoveFeature"))}"
+                style="flex: 0 0 24px; width: 24px; min-width: 24px; max-width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center;"
+              >
+                <i class="fas fa-minus"></i>
+              </button>
+            ` : ""}
+          </div>
+        </div>
+        ${panelHtml}
+      </div>
+    `;
+  }).join("");
 
   let injectHtml = `
     <fieldset class="ts-utility-fieldset" style="margin-top: 10px; border: 1px solid var(--color-border-light-primary); padding: 5px; border-radius: 3px;">
@@ -257,38 +330,10 @@ Hooks.on("renderItemSheet", (app, html) => {
           <i class="fas fa-plus"></i>
         </button>
       </div>
-      <div class="form-group">
-        <label>${localize("ActionPlus.Labels.ExtraFunctions")}</label>
-        <div class="form-fields" style="display: block;">
-          ${selectRowsHtml}
-        </div>
+      <div class="ts-utility-feature-blocks">
+        ${featureBlocksHtml}
       </div>
   `;
-
-  for (let optionIndex = 0; optionIndex < currentOptions.length; optionIndex += 1) {
-    const option = currentOptions[optionIndex];
-    const feature = config.actionPlusFeatures.get(option);
-    if (!(feature?.render instanceof Function)) continue;
-    const occurrenceIndex = getOccurrenceIndex(currentOptions, optionIndex);
-
-    injectHtml += `
-      <div class="ts-utility-feature-panel" data-feature-id="${foundry.utils.escapeHTML(option)}" data-option-index="${optionIndex}" data-occurrence-index="${occurrenceIndex}" style="margin-top: 10px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-          <div style="flex: 1 1 auto; font-weight: 600;">${foundry.utils.escapeHTML(localizeConfigLabel(config.actionOptions[option] ?? option))}</div>
-          <button
-            type="button"
-            class="ts-utility-remove-feature"
-            data-index="${optionIndex}"
-            data-tooltip="${foundry.utils.escapeHTML(localize("ActionPlus.Labels.RemoveFeature"))}"
-            style="flex: 0 0 24px; width: 24px; min-width: 24px; max-width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center;"
-          >
-            <i class="fas fa-minus"></i>
-          </button>
-        </div>
-        ${feature.render({ app, html: root, item, flags, optionIndex, occurrenceIndex }) ?? ""}
-      </div>
-    `;
-  }
 
   injectHtml += "</fieldset>";
 

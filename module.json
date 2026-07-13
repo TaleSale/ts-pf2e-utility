@@ -2,10 +2,10 @@
   "id": "ts-pf2e-utility",
   "title": "TS-PF2E-UTILITY",
   "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
-  "version": "1.5.4",
+  "version": "1.6.0",
   "compatibility": {
-    "minimum": "13.348",
-    "verified": "13.351"
+    "minimum": "14",
+    "verified": "14"
   },
   "authors": [
     {
@@ -88,6 +88,26 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       }
+    },
+    {
+      "name": "creature-builder",
+      "label": "Конструктор Существ",
+      "path": "packs/creature-builder",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "success-effects",
+      "label": "Эффекты Функции Успехов",
+      "path": "packs/success-effects",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -98,7 +118,9 @@
       "packs": [
         "games",
         "mechanics",
-        "utility"
+        "utility",
+        "creature-builder",
+        "success-effects"
       ],
       "folders": []
     }

@@ -2936,6 +2936,12 @@
   background: var(--color-bg-btn-minor);
 }
 
+.tsu-scene-eye.tsu-scene-eye-has-thumbnail {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .tsu-scene-eye-link.content-link {
   margin: 0;
   border: 0;
@@ -2946,11 +2952,18 @@
   -webkit-text-fill-color: var(--tsj-scene-eye-text-color, var(--content-link-text-color));
 }
 
+.tsu-scene-eye-has-thumbnail .tsu-scene-eye-link.content-link {
+  display: none;
+}
+
 .tsu-scene-eye-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0;
+  min-width: 1.75rem;
+  min-height: 1.5rem;
   border: 0;
   border-left: 1px dashed var(--color-border-dark);
   background: rgba(0, 0, 0, 0.15);
@@ -2958,9 +2971,71 @@
   cursor: pointer;
 }
 
+.tsu-scene-eye-has-thumbnail .tsu-scene-eye-button {
+  width: 15rem;
+  height: 5rem;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid #2a2118;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1f1a17;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.tsu-scene-eye-button > i {
+  padding: 0 6px;
+}
+
+.tsu-scene-eye-thumbnail {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.tsu-scene-eye-caption {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 1rem);
+  padding: 0.1rem 0.4rem 0.1rem 0.25rem;
+  border-radius: 3px;
+  background: rgba(255, 246, 220, 0.84);
+  color: #2a2118;
+  font: 700 0.75rem/1.2 var(--font-primary);
+  text-shadow: none;
+}
+
+.tsu-scene-eye-caption i {
+  flex: 0 0 auto;
+  margin-right: 0.25rem;
+  color: #3f5f75;
+  font-size: 1rem;
+}
+
+.tsu-scene-eye-caption-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tsu-scene-eye-button:hover {
   background: rgba(0, 0, 0, 0.3);
   color: #fff;
+}
+
+.tsu-scene-eye-button:hover .tsu-scene-eye-thumbnail {
+  filter: brightness(1.08) contrast(1.05);
 }
 
 .pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-table {
@@ -3033,6 +3108,190 @@
 
 .pf2e.item.sheet.spell form .tab.details.active .tsu-spell-mod-row--counteraction .tsu-spell-mod-input:not(.tsu-spell-mod-input--native):last-of-type {
   grid-column: 5;
+}
+
+.tsu-correction-editor {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px;
+}
+
+.tsu-correction-editor > section {
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  padding-top: 6px;
+}
+
+.tsu-correction-editor h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tsu-correction-title-row {
+  display: grid;
+  grid-template-columns: max-content minmax(120px, 260px);
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+.tsu-correction-title-row span {
+  font-weight: 600;
+}
+
+.tsu-correction-rank-row {
+  display: grid;
+  grid-template-columns: 86px 24px 1fr;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+}
+
+.tsu-correction-rank-row label {
+  font-weight: 600;
+}
+
+.tsu-correction-edit-rank,
+.tsu-correction-remove-feature,
+.tsu-correction-remove-kit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+}
+
+.tsu-correction-chip-list,
+.tsu-correction-equipment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tsu-correction-chip,
+.tsu-correction-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--color-border-light-tertiary);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.45);
+  line-height: 1.2;
+}
+
+.tsu-correction-empty {
+  color: var(--color-text-dark-5);
+}
+
+.tsu-correction-kit {
+  display: inline-grid;
+  grid-template-columns: minmax(120px, 1fr) 22px;
+  align-items: center;
+  gap: 2px;
+}
+
+.tsu-correction-feature-list {
+  display: grid;
+  gap: 3px;
+}
+
+.tsu-correction-feature-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto auto minmax(90px, 0.7fr) 22px;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.tsu-correction-feature-row input[type=number] {
+  width: 48px;
+}
+
+.tsu-correction-feature-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tsu-correction-feature-actions,
+.tsu-correction-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tsu-correction-feature-actions input {
+  flex: 1 1 auto;
+}
+
+.tsu-correction-drop-note {
+  color: var(--color-text-dark-5);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.tsu-correction-choice-dialog {
+  display: grid;
+  gap: 8px;
+}
+
+.tsu-correction-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
+.tsu-correction-choice-grid label,
+.tsu-correction-custom-skills {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tsu-correction-choice-disabled {
+  opacity: 0.45;
+}
+
+.tsu-correction-custom-skills {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.tsu-actor-corrections {
+  margin-top: 4px;
+}
+
+.tsu-actor-corrections-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  padding: 3px 6px;
+  background: #690000;
+  color: #fff;
+}
+
+.tsu-actor-corrections-header h4 {
+  margin: 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tsu-actor-corrections-header a {
+  color: inherit;
+}
+
+.tsu-correction-fallback-row {
+  min-height: 24px;
+  padding: 2px 4px;
 }
 
 .tsu-spell-mod-text,

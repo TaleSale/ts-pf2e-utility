@@ -1,0 +1,170 @@
+/* =========================================
+   1. КНОПКА В САЙДБАРЕ
+   ========================================= */
+.constructed-creature-btn {
+    width: 95%;
+    margin: 5px auto;
+    display: block;
+    background: #4b4a44;
+    color: #f0f0e0;
+    border: 1px solid #000;
+    border-radius: 3px;
+    padding: 6px 0;
+    cursor: pointer;
+    text-align: center;
+    font-size: 1.1em;
+}
+.constructed-creature-btn:hover { background: #222; color: #fff; text-shadow: 0 0 5px #fff; }
+
+/* =========================================
+   2. ОКНО КОНСТРУКТОРА (#constructed-creature-app)
+   ========================================= */
+
+#constructed-creature-app .window-content {
+    background: url('../../../ui/parchment.jpg') repeat;
+    padding: 0 !important;
+    overflow: hidden;
+    color: #191813;
+    font-family: var(--font-primary);
+}
+
+#constructed-creature-app .constructed-creature-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+/* --- НАВИГАЦИЯ --- */
+#constructed-creature-app nav.sheet-tabs {
+    flex: 0 0 40px;
+    border-bottom: 2px solid var(--color-border-dark);
+    margin-bottom: 5px;
+    font-size: 1.1em;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-evenly;
+}
+#constructed-creature-app nav.sheet-tabs .item { padding: 5px 10px; border-bottom: 3px solid transparent; cursor: pointer; }
+#constructed-creature-app nav.sheet-tabs .item.active { text-shadow: 0 0 2px #000; border-bottom-color: var(--color-shadow-primary); }
+
+/* Цвета табов */
+#constructed-creature-app .tab-link-template.active { color: #2c5aa0 !important; border-bottom-color: #2c5aa0 !important; }
+#constructed-creature-app .tab-link-class.active { color: #a02c2c !important; border-bottom-color: #a02c2c !important; }
+#constructed-creature-app .tab-link-ancestry.active { color: #6f42c1 !important; border-bottom-color: #6f42c1 !important; }
+
+/* --- ТЕЛО --- */
+#constructed-creature-app section.sheet-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
+#constructed-creature-app .tab { height: auto; display: none; flex-direction: column; }
+#constructed-creature-app .tab.active { display: flex; }
+
+/* Фоны вкладок */
+#constructed-creature-app .tab-content-template { background-color: rgba(44, 90, 160, 0.05); padding: 10px; border-radius: 5px; }
+#constructed-creature-app .tab-content-class { background-color: rgba(160, 44, 44, 0.05); padding: 10px; border-radius: 5px; }
+#constructed-creature-app .tab-content-ancestry { background-color: rgba(111, 66, 193, 0.05); padding: 10px; border-radius: 5px; }
+
+/* --- КОНТРОЛЫ --- */
+#constructed-creature-app .global-controls { flex: 0 0 auto; padding: 8px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 10px; }
+#constructed-creature-app .form-group-row { display: flex; gap: 10px; align-items: flex-end; }
+#constructed-creature-app .form-group { flex: 1; margin-bottom: 5px; clear: none; }
+#constructed-creature-app label { font-weight: bold; display: block; font-size: 0.9em; margin-bottom: 2px; }
+#constructed-creature-app input[type="text"], #constructed-creature-app select { width: 100%; height: 26px; box-sizing: border-box; }
+#constructed-creature-app .reset-btn-small { width: 26px; height: 26px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #777; border-radius: 3px; cursor: pointer; background: #eee; color: #555; }
+#constructed-creature-app .reset-btn-small:hover { background: #d00; color: white; border-color: #a00; }
+
+/* --- БЛОКИ ХАРАКТЕРИСТИК (ВЕРХНИЕ) --- */
+#constructed-creature-app .stats-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+#constructed-creature-app .stat-block { flex: 1; min-width: 200px; border: 1px solid #7a7971; padding: 5px; border-radius: 2px; background: rgba(255,255,255,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+#constructed-creature-app .stat-block h4 { text-align: center; margin: 0 0 5px 0; border-bottom: 2px groove #fff; font-size: 1.1em; background: rgba(0,0,0,0.1); border-radius: 2px; }
+#constructed-creature-app .stat-block label { display: flex; justify-content: space-between; font-size: 0.9em; align-items: center; margin-bottom: 3px; padding: 0 5px; }
+/* Важно: ширина селекта верхних блоков - 55% */
+#constructed-creature-app .stat-select { width: 55% !important; height: 22px; font-size: 0.85em; }
+
+/* --- НАВЫКИ (ВЫРАВНИВАНИЕ) --- */
+#constructed-creature-app .skills-block-wrapper { width: 100%; margin-top: 10px; border: 1px solid #7a7971; padding: 5px; border-radius: 2px; background: rgba(255,255,255,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.2); box-sizing: border-box; }
+#constructed-creature-app .skills-block-wrapper h4 { text-align: center; margin: 0 0 8px 0; border-bottom: 2px groove #fff; font-size: 1.1em; background: rgba(0,0,0,0.1); border-radius: 2px; }
+#constructed-creature-app .skills-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 15px; }
+
+#constructed-creature-app .skill-cell {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between; /* Текст слева, меню справа */
+    align-items: center;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding: 2px 5px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 3px;
+}
+
+#constructed-creature-app .skill-cell span {
+    font-weight: bold;
+    font-size: 0.85em;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1; 
+}
+
+/* ИЗМЕНЕНО: Ширина селекта 55% (как у верхних блоков) + flex-basis */
+#constructed-creature-app .skill-cell select {
+    width: 55% !important; 
+    flex: 0 0 55%;
+    height: 22px;
+    font-size: 0.8em;
+}
+
+/* --- LORE (ЗНАНИЯ) --- */
+#constructed-creature-app .lore-row { 
+    grid-column: 1 / -1; 
+    margin-top: 8px; 
+    padding-top: 5px; 
+    border-top: 1px dashed #aaa; 
+    /* ИЗМЕНЕНО: Используем Grid как у навыков */
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px 15px;
+}
+
+#constructed-creature-app .lore-item {
+    /* Ширина теперь регулируется гридом */
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8em;
+    background: rgba(111, 66, 193, 0.05);
+    border: 1px solid rgba(111, 66, 193, 0.2);
+    border-radius: 3px;
+    padding: 3px 5px;
+}
+#constructed-creature-app .lore-item span { font-weight: bold; margin-right: 5px; text-align: left; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+/* ИЗМЕНЕНО: Ширина селекта 55% для выравнивания */
+#constructed-creature-app .lore-item select { width: 55% !important; flex: 0 0 55%; height: 22px; }
+
+/* --- ОПИСАНИЯ --- */
+#constructed-creature-app .enriched-desc {
+    flex: 1; 
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #191813; /* Принудительный темный цвет */
+    overflow-y: auto;
+    border: 1px solid #bbb;
+    padding: 10px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 4px;
+}
+#constructed-creature-app .enriched-desc .content-link { display: inline-flex; align-items: center; background: #e0e0e0; padding: 2px 6px; border-radius: 4px; border: 1px solid #999; text-decoration: none; color: #333; font-weight: bold; margin: 0 2px; }
+
+/* --- ФУТЕР --- */
+#constructed-creature-app .form-footer { flex: 0 0 auto; padding: 10px 15px; border-top: 1px solid #ccc; text-align: center; background: #dcdcd0; margin-top: auto; }
+#constructed-creature-app #mm-create-btn { width: 100%; height: 45px; background: #2e7d32; color: white; border: 1px solid #1b5e20; font-size: 1.3em; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-transform: uppercase; transition: all 0.2s ease; }
+#constructed-creature-app #mm-create-btn:hover { background: #388e3c; }
+#constructed-creature-app .flavor-text { font-style: italic; opacity: 0.9; margin-bottom: 10px; font-size: 0.9em; border-left: 3px solid #666; padding-left: 8px; background: rgba(255,255,255,0.3); padding: 5px; }
+
+/* --- ПОДСВЕТКА --- */
+#constructed-creature-app .select-highlight-tpl { border: 2px solid #2c5aa0 !important; background-color: #e8f0ff !important; }
+#constructed-creature-app .select-highlight-cls { border: 2px solid #a02c2c !important; background-color: #ffe8e8 !important; }
+#constructed-creature-app .select-highlight-anc { border: 2px solid #6f42c1 !important; background-color: #f0ebf8 !important; }
+#constructed-creature-app .select-highlight-sub { border: 2px solid #e05297 !important; background-color: #fcebf3 !important; }
+#constructed-creature-app .select-highlight-oth { border: 2px solid #2ea043 !important; background-color: #e6f8ea !important; }

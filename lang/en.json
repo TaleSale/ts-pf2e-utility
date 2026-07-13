@@ -22,6 +22,10 @@
           "Name": "Bloodline",
           "Hint": "Shows a Blood Magic block on the action and lets you link the needed spells to it."
         },
+        "CreatureAttack": {
+          "Name": "Creature Attack",
+          "Hint": "Adds creature strike controls with level-based attack and damage quality values."
+        },
         "DamageAdjustments": {
           "Name": "Weak., Res., and Imm.",
           "Hint": "Builds weakness, resistance, and immunity rules from selected types and level-based formulas."
@@ -29,6 +33,18 @@
         "Enhancement": {
           "Name": "Enhancement",
           "Hint": "Adds conditional extra text to action descriptions through ItemAlteration based on creature level and/or an action slug."
+        },
+        "ActorLanguages": {
+          "Name": "Languages",
+          "Hint": "Adds an Action extra feature for showing selected languages on the character sheet."
+        },
+        "ActorSenses": {
+          "Name": "Senses",
+          "Hint": "Adds an Action extra feature for showing selected senses on the character sheet."
+        },
+        "ActorTraits": {
+          "Name": "Traits",
+          "Hint": "Adds an Action extra feature that grants selected actor traits."
         }
       },
       "SceneEye": {
@@ -42,6 +58,17 @@
         "Hint": "Adds a custom thumbnail field to the scene configuration form.",
         "Label": "Thumb Image",
         "FieldHint": "Custom thumbnail used for this scene in the navigation and directory."
+      },
+      "WallTextures": {
+        "Name": "Enable wall textures",
+        "Hint": "Adds wall texture controls to ordinary wall settings.",
+        "Fieldset": "Wall texture",
+        "EnableLabel": "Wall texture",
+        "StyleLabel": "Wall style",
+        "FieldHint": "Draws the selected texture along this wall segment.",
+        "Choices": {
+          "GreyBrick": "Grey brick"
+        }
       },
       "SpellAtWill": {
         "Name": "Enable spell tags",

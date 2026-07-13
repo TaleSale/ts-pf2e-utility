@@ -219,7 +219,7 @@ form.ts-journal-sheet {
   position: relative;
   isolation: isolate;
   padding-top: 10px;
-  padding-right: var(--tsj-page-content-pad-right);
+  padding-right: var(--tsj-frame-outset-right);
   padding-bottom: 10px;
   padding-left: var(--tsj-page-content-pad-left);
   margin-left: calc(var(--tsj-page-content-pad-left) * -1);
@@ -686,6 +686,14 @@ form.ts-journal-sheet .journal-entry-content .journal-page-content {
   vertical-align: middle !important;
 }
 
+.ts-journal-sheet .journal-page-content .tsu-scene-eye.tsu-scene-eye-has-thumbnail,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye.tsu-scene-eye-has-thumbnail {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .ts-journal-sheet .journal-page-content .tsu-scene-eye-link.content-link,
 .ts-journal-sheet .journal-entry-page .tsu-scene-eye-link.content-link {
   display: inline-flex !important;
@@ -700,6 +708,11 @@ form.ts-journal-sheet .journal-entry-content .journal-page-content {
   color: var(--tsj-scene-eye-text-color, var(--content-link-text-color)) !important;
   -webkit-text-fill-color: var(--tsj-scene-eye-text-color, var(--content-link-text-color)) !important;
   line-height: 1.5em !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-has-thumbnail .tsu-scene-eye-link.content-link,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-has-thumbnail .tsu-scene-eye-link.content-link {
+  display: none !important;
 }
 
 .ts-journal-sheet .journal-page-content .tsu-scene-eye-link.content-link i,
@@ -728,6 +741,75 @@ form.ts-journal-sheet .journal-entry-content .journal-page-content {
   font-size: inherit !important;
   line-height: 1.5em !important;
   vertical-align: baseline !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-has-thumbnail .tsu-scene-eye-button,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-has-thumbnail .tsu-scene-eye-button {
+  position: relative !important;
+  width: 15rem !important;
+  height: 5rem !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: 2px solid #2a2118 !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  background: #1f1a17 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7) !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-button > i,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-button > i {
+  padding: 0 !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-thumbnail,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-thumbnail {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  pointer-events: none !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-caption,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-caption {
+  position: absolute !important;
+  top: 0.45rem !important;
+  left: 0.45rem !important;
+  z-index: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: calc(100% - 1rem) !important;
+  padding: 0.1rem 0.4rem 0.1rem 0.25rem !important;
+  border-radius: 3px !important;
+  background: rgba(255, 246, 220, 0.84) !important;
+  color: #2a2118 !important;
+  -webkit-text-fill-color: #2a2118 !important;
+  font: 700 0.75rem/1.2 var(--font-primary) !important;
+  text-shadow: none !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-caption i,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-caption i {
+  flex: 0 0 auto !important;
+  margin-right: 0.25rem !important;
+  color: #3f5f75 !important;
+  -webkit-text-fill-color: #3f5f75 !important;
+  font-size: 1rem !important;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-scene-eye-caption-text,
+.ts-journal-sheet .journal-entry-page .tsu-scene-eye-caption-text {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .ts-journal-sheet .journal-page-content .tsu-scene-eye-button:hover,

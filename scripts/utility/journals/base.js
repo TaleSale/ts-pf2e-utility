@@ -267,6 +267,7 @@ export class TaleSaleJournalSheet extends BaseJournalEntrySheet {
             `0 calc(${varRef("frame-outset-right")} * -1) 0 calc(${varRef("page-content-pad-left")} * -1)`;
           insetSection.style.width =
             `calc(100% + ${varRef("page-content-pad-left")} + ${varRef("frame-outset-right")})`;
+          insetSection.style.paddingRight = varRef("frame-outset-right");
           if (insiteImage) {
             insetSection.style.setProperty("--tsj-insite-image", insiteImage);
             insetSection.style.background = `${insiteImage} no-repeat center center`;

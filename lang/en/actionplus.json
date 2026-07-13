@@ -4,7 +4,8 @@
       "Labels": {
         "ExtraFunctions": "Extra features",
         "AddFeature": "Add feature",
-        "RemoveFeature": "Remove feature"
+        "RemoveFeature": "Remove feature",
+        "Update": "Update"
       },
       "Options": {
         "Empty": "Empty"
@@ -29,6 +30,39 @@
         "BlockEffect": {
           "Name": "Regeneration Disabled",
           "Description": "This creature's regeneration is disabled until the end of its next turn."
+        }
+      },
+      "CreatureAttack": {
+        "FeatureLabel": "Creature Attack",
+        "Hint": "Configure one creature strike from this action. Quality values are recalculated from the creature level table.",
+        "TargetLabel": "Attack",
+        "AutoTarget": "Auto / first attack",
+        "CreateOption": "Create",
+        "CreateButton": "Create attack",
+        "NameLabel": "Name",
+        "WeaponTypeLabel": "Attack type",
+        "WeaponTypes": {
+          "Melee": "Melee",
+          "Ranged": "Ranged"
+        },
+        "AttackLabel": "Attack bonus",
+        "DamageLabel": "Damage",
+        "AddDamageButton": "Add damage",
+        "DamageTypeLabel": "Damage type",
+        "TraitsLabel": "Traits",
+        "AddTraitPlaceholder": "Add trait",
+        "EmptyTraitsHint": "Selected traits will appear here.",
+        "AttackEffectsLabel": "Attack effects",
+        "AddEffectPlaceholder": "Add attack effect",
+        "EmptyEffectsHint": "Selected attack effects will appear here.",
+        "DropEffectHint": "Drop a custom attack effect here.",
+        "QualityLabel": "Quality",
+        "ApplyButton": "Apply",
+        "Qualities": {
+          "Extreme": "Extreme",
+          "High": "High",
+          "Moderate": "Moderate",
+          "Low": "Low"
         }
       },
       "DamageAdjustments": {
@@ -61,12 +95,44 @@
         "ActionSlugLabel": "Action (slug)",
         "TextLabel": "Enhancement text",
         "TextPlaceholder": "Extra text",
+        "EditorHint": "HTML tags and entities are supported. The buttons insert common snippets.",
+        "EditorStrong": "Insert bold tag",
+        "EditorEmphasis": "Insert italic tag",
+        "EditorParagraph": "Insert paragraph tag",
+        "EditorLineBreak": "Insert line break",
+        "EditorList": "Insert bulleted list",
+        "SaveTextButton": "Save text",
+        "EditorPlaceholderText": "text",
+        "EditorPlaceholderParagraph": "paragraph",
+        "EditorPlaceholderItem": "item",
         "EmptyPlaceholder": "Doesn't matter",
         "HeaderLevel": "Enhancement ({level})",
         "HeaderLevelAction": "Enhancement ({level}, {action})",
         "HeaderDefault": "Enhancement",
         "LabelLevel": "(Lvl.{level})",
         "FallbackLabel": "Enhancement"
+      },
+      "ActorLanguages": {
+        "FeatureLabel": "Languages",
+        "Hint": "Selected languages are shown on this actor sheet while the action is on the actor.",
+        "Label": "Languages",
+        "AddPlaceholder": "Add language",
+        "EmptyHint": "Selected languages will appear here."
+      },
+      "ActorSenses": {
+        "FeatureLabel": "Senses",
+        "Hint": "Selected senses are shown on this actor sheet while the action is on the actor.",
+        "Label": "Senses",
+        "AddPlaceholder": "Add sense",
+        "RangeLabel": "Range",
+        "EmptyHint": "Selected senses will appear here."
+      },
+      "ActorTraits": {
+        "FeatureLabel": "Traits",
+        "Hint": "Selected traits are granted through PF2E ActorTraits while the action is on the actor.",
+        "Label": "Traits",
+        "AddPlaceholder": "Add trait",
+        "EmptyHint": "Selected traits will appear here."
       }
     }
   }

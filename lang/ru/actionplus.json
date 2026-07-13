@@ -4,7 +4,8 @@
       "Labels": {
         "ExtraFunctions": "Доп. функции",
         "AddFeature": "Добавить функцию",
-        "RemoveFeature": "Удалить функцию"
+        "RemoveFeature": "Удалить функцию",
+        "Update": "Обновить"
       },
       "Options": {
         "Empty": "Пусто"
@@ -29,6 +30,39 @@
         "BlockEffect": {
           "Name": "Регенерация отключена",
           "Description": "Регенерация этого существа отключена до конца его следующего хода."
+        }
+      },
+      "CreatureAttack": {
+        "FeatureLabel": "Атака Существа",
+        "Hint": "Настраивает одну атаку существа. Значения качества пересчитываются по уровню существа.",
+        "TargetLabel": "Атака",
+        "AutoTarget": "Авто / первая атака",
+        "CreateOption": "Создать",
+        "CreateButton": "Создать атаку",
+        "NameLabel": "Название",
+        "WeaponTypeLabel": "Тип атаки",
+        "WeaponTypes": {
+          "Melee": "Ближняя",
+          "Ranged": "Дальняя"
+        },
+        "AttackLabel": "Бонус атаки",
+        "DamageLabel": "Урон",
+        "AddDamageButton": "Добавить урон",
+        "DamageTypeLabel": "Тип урона",
+        "TraitsLabel": "Трейты",
+        "AddTraitPlaceholder": "Добавить трейт",
+        "EmptyTraitsHint": "Выбранные трейты появятся здесь.",
+        "AttackEffectsLabel": "Доп. действия",
+        "AddEffectPlaceholder": "Добавить доп. действие",
+        "EmptyEffectsHint": "Выбранные доп. действия появятся здесь.",
+        "DropEffectHint": "Перетащите кастомное доп. действие сюда.",
+        "QualityLabel": "Качество",
+        "ApplyButton": "Применить",
+        "Qualities": {
+          "Extreme": "Экстремальное",
+          "High": "Высокое",
+          "Moderate": "Среднее",
+          "Low": "Низкое"
         }
       },
       "DamageAdjustments": {
@@ -61,11 +95,43 @@
         "ActionSlugLabel": "Действие (метка)",
         "TextLabel": "Текст усиления",
         "TextPlaceholder": "Дополнительный текст",
+        "EditorHint": "Поддерживаются HTML-теги и сущности. Кнопки ниже вставляют частые шаблоны.",
+        "EditorStrong": "Вставить тег жирного текста",
+        "EditorEmphasis": "Вставить тег курсива",
+        "EditorParagraph": "Вставить тег абзаца",
+        "EditorLineBreak": "Вставить перенос строки",
+        "EditorList": "Вставить маркированный список",
+        "SaveTextButton": "Сохранить текст",
+        "EditorPlaceholderText": "текст",
+        "EditorPlaceholderParagraph": "абзац",
+        "EditorPlaceholderItem": "пункт",
         "EmptyPlaceholder": "Не важно",
         "HeaderLevel": "Усиление (ур. {level})",
         "HeaderLevelAction": "Усиление ({level}, {action})",
         "HeaderDefault": "Усиление",
         "FallbackLabel": "Усиление"
+      },
+      "ActorLanguages": {
+        "FeatureLabel": "Языки",
+        "Hint": "Выбранные языки показываются в листе актёра, пока это действие есть на актёре.",
+        "Label": "Языки",
+        "AddPlaceholder": "Добавить язык",
+        "EmptyHint": "Выбранные языки появятся здесь."
+      },
+      "ActorSenses": {
+        "FeatureLabel": "Чувства",
+        "Hint": "Выбранные чувства показываются в листе актёра, пока это действие есть на актёре.",
+        "Label": "Чувства",
+        "AddPlaceholder": "Добавить чувство",
+        "RangeLabel": "Дистанция",
+        "EmptyHint": "Выбранные чувства появятся здесь."
+      },
+      "ActorTraits": {
+        "FeatureLabel": "Признаки",
+        "Hint": "Выбранные признаки выдаются через штатный PF2E ActorTraits, пока это действие есть на актёре.",
+        "Label": "Признаки",
+        "AddPlaceholder": "Добавить признак",
+        "EmptyHint": "Выбранные признаки появятся здесь."
       }
     }
   }

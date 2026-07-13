@@ -34,13 +34,55 @@ function getSceneIdFromLink(link) {
   return parts[1] || null;
 }
 
-function createEyeButton(sceneId) {
+function getSceneThumbnail(scene) {
+  const candidates = [
+    scene?.thumb,
+    scene?.thumbnail,
+    scene?.background?.src,
+    scene?.foreground,
+    scene?.foreground?.src,
+    scene?.img,
+  ];
+
+  return candidates.find((candidate) => typeof candidate === "string" && candidate.trim()) ?? "";
+}
+
+function getSceneLabel(scene, link) {
+  return scene?.name || link?.textContent?.trim() || "";
+}
+
+function createEyeButton(sceneId, thumbnail = "", label = "") {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "tsu-scene-eye-button";
   button.title = t(`${I18N_ROOT}.ButtonTitle`, "View scene as GM");
   button.setAttribute("aria-label", button.title);
-  button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
+
+  if (thumbnail) {
+    const image = document.createElement("img");
+    image.className = "tsu-scene-eye-thumbnail";
+    image.src = thumbnail;
+    image.alt = "";
+    image.loading = "lazy";
+    image.decoding = "async";
+
+    const caption = document.createElement("span");
+    caption.className = "tsu-scene-eye-caption";
+
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-map";
+    icon.setAttribute("aria-hidden", "true");
+
+    const text = document.createElement("span");
+    text.className = "tsu-scene-eye-caption-text";
+    text.textContent = label;
+
+    caption.append(icon, text);
+    button.append(image, caption);
+  } else {
+    button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
+  }
+
   button.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -68,12 +110,17 @@ function processSceneLinks(root) {
     const sceneId = getSceneIdFromLink(link);
     if (!sceneId) continue;
 
+    const scene = game.scenes?.get(sceneId);
+    const thumbnail = getSceneThumbnail(scene);
+    const label = getSceneLabel(scene, link);
+
     const wrapper = document.createElement("span");
     wrapper.className = "tsu-scene-eye";
+    if (thumbnail) wrapper.classList.add("tsu-scene-eye-has-thumbnail");
 
     link.classList.add("tsu-scene-eye-link");
     link.replaceWith(wrapper);
-    wrapper.append(link, createEyeButton(sceneId));
+    wrapper.append(link, createEyeButton(sceneId, thumbnail, label));
   }
 }
 

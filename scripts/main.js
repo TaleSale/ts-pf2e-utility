@@ -7,14 +7,18 @@ import { createKubokerGameDefinition } from "./games/kuboker.js";
 import { registerModularLocalization } from "./localization.js";
 import "./actionplus/actionplus.js";
 import "./actionplus/bloodmagic.js";
+import "./actionplus/creature-attack.js";
 import "./actionplus/damage-adjustments.js";
 import "./actionplus/enhancement.js";
 import "./actionplus/regeneration.js";
+import "./actionplus/actor-extras.js";
 import "./utility/journals/index.js";
 import "./utility/read.js";
+import "./utility/wall-textures.js";
 import "./utility/scene-eye.js";
 import "./utility/thumb.js";
 import "./utility/spell-at-will.js";
+import "./utility/creature-corrections.js";
 
 registerModularLocalization();
 registerGame(createBeerFuriousGameDefinition());
