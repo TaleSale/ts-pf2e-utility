@@ -1,14 +1,17 @@
-2026/07/15-08:23:35.589 34f8 Recovering log #47
-2026/07/15-08:23:35.799 34f8 Delete type=0 #47
-2026/07/15-08:23:35.800 34f8 Delete type=3 #45
-2026/07/15-18:01:23.386 248c Level-0 table #53: started
-2026/07/15-18:01:23.549 248c Level-0 table #53: 136792 bytes OK
-2026/07/15-18:01:23.771 248c Delete type=0 #51
-2026/07/15-18:01:23.970 248c Manual compaction at level-0 from '!folders!2GABDuLWxISqsx8Z' @ 72057594037927935 : 1 .. '!items!xghNYuXOHEOShkne' @ 0 : 0; will stop at '!items!xJ9FEhryM4chg92q' @ 252 : 1
-2026/07/15-18:01:23.970 248c Compacting 1@0 + 1@1 files
-2026/07/15-18:01:24.106 248c Generated table #54@0: 98 keys, 130686 bytes
-2026/07/15-18:01:24.106 248c Compacted 1@0 + 1@1 files => 130686 bytes
-2026/07/15-18:01:24.170 248c compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/15-18:01:24.170 248c Delete type=2 #49
-2026/07/15-18:01:24.171 248c Delete type=2 #53
-2026/07/15-18:01:24.171 248c Manual compaction at level-0 from '!items!xJ9FEhryM4chg92q' @ 252 : 1 .. '!items!xghNYuXOHEOShkne' @ 0 : 0; will stop at (end)
+2026/07/17-11:59:23.876 3430 Recovering log #65
+2026/07/17-11:59:23.876 3430 Level-0 table #67: started
+2026/07/17-11:59:23.895 3430 Level-0 table #67: 5685 bytes OK
+2026/07/17-11:59:24.061 3430 Delete type=0 #65
+2026/07/17-11:59:24.062 3430 Delete type=3 #64
+2026/07/17-12:42:10.996 190c Level-0 table #70: started
+2026/07/17-12:42:11.031 190c Level-0 table #70: 39919 bytes OK
+2026/07/17-12:42:11.079 190c Delete type=0 #68
+2026/07/17-12:42:11.080 190c Manual compaction at level-0 from '!folders!1Kxyex5XsfmVx4tY' @ 72057594037927935 : 1 .. '!items!yMu7pgZqgpHdqq13' @ 0 : 0; will stop at '!items!JlZX7u2PI3QWpibq' @ 463 : 1
+2026/07/17-12:42:11.080 190c Compacting 2@0 + 1@1 files
+2026/07/17-12:42:11.356 190c Generated table #71@0: 144 keys, 204211 bytes
+2026/07/17-12:42:11.366 190c Compacted 2@0 + 1@1 files => 204211 bytes
+2026/07/17-12:42:11.446 190c compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/07/17-12:42:11.447 190c Delete type=2 #63
+2026/07/17-12:42:11.447 190c Delete type=2 #67
+2026/07/17-12:42:11.448 190c Delete type=2 #70
+2026/07/17-12:42:11.488 190c Manual compaction at level-0 from '!items!JlZX7u2PI3QWpibq' @ 463 : 1 .. '!items!yMu7pgZqgpHdqq13' @ 0 : 0; will stop at (end)
