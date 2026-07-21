@@ -38,7 +38,10 @@ function normalizeSlugList(value) {
 }
 
 function normalizeConfig(value) {
-  return { values: normalizeSlugList(value?.values ?? value) };
+  return {
+    values: normalizeSlugList(value?.values ?? value),
+    removeValues: normalizeSlugList(value?.removeValues),
+  };
 }
 
 function normalizeConfigCollection(value) {
@@ -243,6 +246,20 @@ function renderListControls({ flags, occurrenceIndex = 0, flagKey, choices, labe
           </div>
         </div>
       </div>
+      ${labels.removeLabel ? `
+        <div class="form-group">
+          <label>${escapeHtml(localize(labels.removeLabel))}</label>
+          <div class="form-fields" style="display: block;">
+            <input type="hidden" class="${labels.inputClass}" data-field="removeValues" value="${escapeHtml(config.removeValues.join(","))}">
+            <button type="button" class="${labels.removeOpenClass}" style="width: auto; min-width: 32px; padding: 2px 8px;">
+              <i class="fas fa-list-check"></i> ${escapeHtml(localize(labels.removePlaceholder))}
+            </button>
+            <div class="${labels.removeSummaryClass}">
+              ${renderSelectedSummary(config.removeValues, choices, labels.removeEmpty)}
+            </div>
+          </div>
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -290,6 +307,11 @@ function renderTraitControls(context) {
       checkboxClass: "ts-actor-traits-checkbox",
       openClass: "ts-actor-traits-open",
       summaryClass: "ts-actor-traits-summary",
+      removeOpenClass: "ts-actor-traits-remove-open",
+      removeSummaryClass: "ts-actor-traits-remove-summary",
+      removeLabel: "ActionPlus.ActorTraits.RemoveLabel",
+      removePlaceholder: "ActionPlus.ActorTraits.RemovePlaceholder",
+      removeEmpty: "ActionPlus.ActorTraits.RemoveEmptyHint",
       withRarity: false,
     },
   });
@@ -356,6 +378,13 @@ function renderSenseControls({ flags, occurrenceIndex = 0 }) {
 function readListValues(panel, inputClass) {
   const input = panel.querySelector(`.${inputClass}[data-field="values"]`);
   return normalizeSlugList(input instanceof HTMLInputElement ? input.value : "");
+}
+
+function readListConfig(panel, inputClass) {
+  return normalizeConfig({
+    values: readListValues(panel, inputClass),
+    removeValues: panel.querySelector(`.${inputClass}[data-field="removeValues"]`)?.value ?? "",
+  });
 }
 
 function writeListValues(panel, inputClass, values) {
@@ -431,49 +460,63 @@ function activateListListeners({
   if (!panel) return;
 
   const persist = async () => {
-    await persistConfigCollection(item, flagKey, { values: readListValues(panel, inputClass) }, occurrenceIndex);
+    await persistConfigCollection(item, flagKey, readListConfig(panel, inputClass), occurrenceIndex);
   };
 
-  panel.querySelector(`.${openClass}`)?.addEventListener("click", () => {
-    const content = buildCheckboxDialogContent({ values: readListValues(panel, inputClass), choices, labels });
-    const title = localize(labels.label);
-    const dialog = new Dialog({
-      title,
-      content,
-      buttons: {
-        update: {
-          icon: '<i class="fas fa-save"></i>',
-          label: localizeWithFallback("TS_PF2E_UTILITY.ActionPlus.Labels.Update", "Update"),
-          callback: async (dialogHtml) => {
-            const dialogRoot = getHtmlElement(dialogHtml);
-            const values = normalizeSlugList(
-              Array.from(dialogRoot?.querySelectorAll(`.${checkboxClass}:checked`) ?? []).map((checkbox) => checkbox.value),
-            );
-            writeListValues(panel, inputClass, values);
-            updateSummary(panel, summaryClass, values, choices, labels.empty);
-            await persist();
+  const activatePicker = ({ field = "values", buttonClass, summary, label, empty }) => {
+    panel.querySelector(`.${buttonClass}`)?.addEventListener("click", () => {
+      const input = panel.querySelector(`.${inputClass}[data-field="${field}"]`);
+      const content = buildCheckboxDialogContent({ values: normalizeSlugList(input?.value), choices, labels });
+      const title = localize(label);
+      const dialog = new Dialog({
+        title,
+        content,
+        buttons: {
+          update: {
+            icon: '<i class="fas fa-save"></i>',
+            label: localizeWithFallback("TS_PF2E_UTILITY.ActionPlus.Labels.Update", "Update"),
+            callback: async (dialogHtml) => {
+              const dialogRoot = getHtmlElement(dialogHtml);
+              const values = normalizeSlugList(
+                Array.from(dialogRoot?.querySelectorAll(`.${checkboxClass}:checked`) ?? []).map((checkbox) => checkbox.value),
+              );
+              if (input instanceof HTMLInputElement) input.value = values.join(",");
+              updateSummary(panel, summary, values, choices, empty);
+              await persist();
+            },
+          },
+          cancel: {
+            icon: '<i class="fas fa-times"></i>',
+            label: localizeWithFallback("Cancel", "Cancel"),
           },
         },
-        cancel: {
-          icon: '<i class="fas fa-times"></i>',
-          label: localizeWithFallback("Cancel", "Cancel"),
+        default: "update",
+        render: (dialogHtml) => {
+          const dialogRoot = getHtmlElement(dialogHtml);
+          dialogRoot?.querySelector(`.${searchClass}`)?.addEventListener("input", (event) => {
+            const term = String(event.currentTarget.value ?? "").trim().toLocaleLowerCase(game.i18n.lang || undefined);
+            for (const row of dialogRoot.querySelectorAll(`.${rowClass}`)) {
+              const haystack = String(row.dataset.search ?? "");
+              row.hidden = Boolean(term) && !haystack.includes(term);
+            }
+          });
         },
-      },
-      default: "update",
-      render: (dialogHtml) => {
-        const dialogRoot = getHtmlElement(dialogHtml);
-        dialogRoot?.querySelector(`.${searchClass}`)?.addEventListener("input", (event) => {
-          const term = String(event.currentTarget.value ?? "").trim().toLocaleLowerCase(game.i18n.lang || undefined);
-          for (const row of dialogRoot.querySelectorAll(`.${rowClass}`)) {
-            const haystack = String(row.dataset.search ?? "");
-            row.hidden = Boolean(term) && !haystack.includes(term);
-          }
-        });
-      },
-    });
+      });
 
-    dialog.render(true);
-  });
+      dialog.render(true);
+    });
+  };
+
+  activatePicker({ buttonClass: openClass, summary: summaryClass, label: labels.label, empty: labels.empty });
+  if (labels.removeOpenClass) {
+    activatePicker({
+      field: "removeValues",
+      buttonClass: labels.removeOpenClass,
+      summary: labels.removeSummaryClass,
+      label: labels.removeLabel,
+      empty: labels.removeEmpty,
+    });
+  }
 }
 
 function readSenseConfig(panel) {
@@ -562,7 +605,9 @@ async function cleanupTraitConfig({ item, occurrenceIndex = 0 }) {
   const rules = [
     ...existingRules.filter((rule) => !(rule?.key === "ActorTraits" && String(rule?.slug ?? "").startsWith(`${RULE_SLUG_PREFIX}-`))),
     ...configs.flatMap((config, index) => (
-      config.values.length ? [{ key: "ActorTraits", add: config.values, slug: `${RULE_SLUG_PREFIX}-${index}` }] : []
+      config.values.length || config.removeValues.length
+        ? [{ key: "ActorTraits", add: config.values, remove: config.removeValues, slug: `${RULE_SLUG_PREFIX}-${index}` }]
+        : []
     )),
   ];
   if (JSON.stringify(existingRules) !== JSON.stringify(rules)) {
@@ -576,7 +621,9 @@ function applyTraitRuleSyncToPendingUpdate(item, changed) {
 
   const existingRules = foundry.utils.deepClone(foundry.utils.getProperty(changed, "system.rules") ?? item._source?.system?.rules ?? []);
   const generatedRules = getTraitConfigs(item, changed).flatMap((config, index) => (
-    config.values.length ? [{ key: "ActorTraits", add: config.values, slug: `${RULE_SLUG_PREFIX}-${index}` }] : []
+    config.values.length || config.removeValues.length
+      ? [{ key: "ActorTraits", add: config.values, remove: config.removeValues, slug: `${RULE_SLUG_PREFIX}-${index}` }]
+      : []
   ));
   const rules = [
     ...existingRules.filter((rule) => !(rule?.key === "ActorTraits" && String(rule?.slug ?? "").startsWith(`${RULE_SLUG_PREFIX}-`))),
@@ -768,6 +815,10 @@ registerActionPlusFeature({
     labels: {
       label: "ActionPlus.ActorTraits.Label",
       empty: "ActionPlus.ActorTraits.EmptyHint",
+      removeLabel: "ActionPlus.ActorTraits.RemoveLabel",
+      removeEmpty: "ActionPlus.ActorTraits.RemoveEmptyHint",
+      removeOpenClass: "ts-actor-traits-remove-open",
+      removeSummaryClass: "ts-actor-traits-remove-summary",
       searchClass: "ts-actor-traits-search",
       listClass: "ts-actor-traits-list",
       rowClass: "ts-actor-traits-row",

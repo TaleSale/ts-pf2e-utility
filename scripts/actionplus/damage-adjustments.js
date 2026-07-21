@@ -55,6 +55,8 @@ function getDefaultAdjustment() {
     instanceId: "",
     adjustmentType: "",
     types: [],
+    exceptions: [],
+    doubleVs: [],
     valueMode: VALUE_MODES.flat,
     flatValue: 0,
     modifier: 0,
@@ -86,6 +88,8 @@ function normalizeAdjustment(value) {
       .map((entry) => String(entry ?? "").trim())
       .filter(Boolean),
   ));
+  normalized.exceptions = normalizeTypeList(normalized.exceptions);
+  normalized.doubleVs = normalizeTypeList(normalized.doubleVs);
   const originalValueMode = String(normalized.valueMode ?? "").trim();
   normalized.valueMode = normalizeValueMode(originalValueMode);
   normalized.flatValue = normalizeInteger(normalized.flatValue, 0);
@@ -95,6 +99,14 @@ function normalizeAdjustment(value) {
   );
 
   return normalized;
+}
+
+function normalizeTypeList(value) {
+  return Array.from(new Set(
+    (Array.isArray(value) ? value : [value])
+      .map((entry) => String(entry ?? "").trim())
+      .filter(Boolean),
+  ));
 }
 
 function getLegacyAwareModifier(originalValueMode, modifier) {
@@ -221,6 +233,17 @@ function buildRulesFromAdjustment(adjustment) {
       rule.value = value;
     }
 
+    if (
+      [ADJUSTMENT_TYPES.weakness, ADJUSTMENT_TYPES.resistance].includes(adjustment.adjustmentType)
+      && adjustment.exceptions.length > 0
+    ) {
+      rule.exceptions = [...adjustment.exceptions];
+    }
+
+    if (adjustment.adjustmentType === ADJUSTMENT_TYPES.resistance && adjustment.doubleVs.length > 0) {
+      rule.doubleVs = [...adjustment.doubleVs];
+    }
+
     return rule;
   });
 }
@@ -266,22 +289,23 @@ function buildUpdatedDamageAdjustmentRules(existingRules, previousAdjustments, n
   };
 }
 
-function renderSelectedTypes(adjustment, typeChoices) {
-  if (!adjustment.types.length) {
-    return `<p class="notes" style="margin: 6px 0 0 0;">${localize("ActionPlus.DamageAdjustments.EmptyTypesHint")}</p>`;
+function renderSelectedTypes(values, typeChoices, field, emptyHintKey) {
+  if (!values.length) {
+    return `<p class="notes" style="margin: 6px 0 0 0;">${localize(emptyHintKey)}</p>`;
   }
 
   const labels = new Map(typeChoices);
   return `
     <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-      ${adjustment.types.map((type) => `
+      ${values.map((type) => `
         <div style="display: flex; align-items: center; gap: 6px;">
           <div style="flex: 1 1 auto; padding: 4px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.08);">
             ${foundry.utils.escapeHTML(labels.get(type) ?? type)}
           </div>
           <button
             type="button"
-            class="ts-damage-adjustment-remove-type"
+            class="ts-damage-adjustment-remove-list-value"
+            data-field="${field}"
             data-type="${foundry.utils.escapeHTML(type)}"
             style="flex: 0 0 24px; width: 24px; min-width: 24px; max-width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center;"
           >
@@ -324,6 +348,10 @@ function renderDamageAdjustmentControls({ flags, occurrenceIndex = 0 }) {
     VALUE_MODES.levelMinus,
   ].includes(adjustment.valueMode);
   const addableTypeChoices = typeChoices.filter(([value]) => !adjustment.types.includes(value));
+  const addableExceptionChoices = typeChoices.filter(([value]) => !adjustment.exceptions.includes(value));
+  const addableDoubleVsChoices = typeChoices.filter(([value]) => !adjustment.doubleVs.includes(value));
+  const supportsExceptions = [ADJUSTMENT_TYPES.weakness, ADJUSTMENT_TYPES.resistance].includes(adjustment.adjustmentType);
+  const supportsDoubleVs = adjustment.adjustmentType === ADJUSTMENT_TYPES.resistance;
 
   return `
     <div style="margin-top: 10px;">
@@ -339,13 +367,37 @@ function renderDamageAdjustmentControls({ flags, occurrenceIndex = 0 }) {
       <div class="form-group">
         <label>${localize("ActionPlus.DamageAdjustments.TypesLabel")}</label>
         <div class="form-fields" style="display: block;">
-          <select class="ts-damage-adjustment-add-type" style="width: 100%;">
+          <select class="ts-damage-adjustment-add-list-value" data-field="types" style="width: 100%;">
             <option value="">${foundry.utils.escapeHTML(localize("ActionPlus.DamageAdjustments.AddTypePlaceholder"))}</option>
             ${addableTypeChoices.map(([value, label]) => `<option value="${foundry.utils.escapeHTML(value)}">${foundry.utils.escapeHTML(label)}</option>`).join("")}
           </select>
-          ${renderSelectedTypes(adjustment, typeChoices)}
+          ${renderSelectedTypes(adjustment.types, typeChoices, "types", "ActionPlus.DamageAdjustments.EmptyTypesHint")}
         </div>
       </div>
+      ${supportsExceptions ? `
+        <div class="form-group">
+          <label>${localize("ActionPlus.DamageAdjustments.ExceptionsLabel")}</label>
+          <div class="form-fields" style="display: block;">
+            <select class="ts-damage-adjustment-add-list-value" data-field="exceptions" style="width: 100%;">
+              <option value="">${foundry.utils.escapeHTML(localize("ActionPlus.DamageAdjustments.AddExceptionPlaceholder"))}</option>
+              ${addableExceptionChoices.map(([value, label]) => `<option value="${foundry.utils.escapeHTML(value)}">${foundry.utils.escapeHTML(label)}</option>`).join("")}
+            </select>
+            ${renderSelectedTypes(adjustment.exceptions, typeChoices, "exceptions", "ActionPlus.DamageAdjustments.EmptyExceptionsHint")}
+          </div>
+        </div>
+      ` : ""}
+      ${supportsDoubleVs ? `
+        <div class="form-group">
+          <label>${localize("ActionPlus.DamageAdjustments.DoubleVsLabel")}</label>
+          <div class="form-fields" style="display: block;">
+            <select class="ts-damage-adjustment-add-list-value" data-field="doubleVs" style="width: 100%;">
+              <option value="">${foundry.utils.escapeHTML(localize("ActionPlus.DamageAdjustments.AddDoubleVsPlaceholder"))}</option>
+              ${addableDoubleVsChoices.map(([value, label]) => `<option value="${foundry.utils.escapeHTML(value)}">${foundry.utils.escapeHTML(label)}</option>`).join("")}
+            </select>
+            ${renderSelectedTypes(adjustment.doubleVs, typeChoices, "doubleVs", "ActionPlus.DamageAdjustments.EmptyDoubleVsHint")}
+          </div>
+        </div>
+      ` : ""}
       <div class="form-group">
         <label>${localize("ActionPlus.DamageAdjustments.ValueLabel")}</label>
         <div class="form-fields" style="gap: 6px; align-items: center;">
@@ -399,28 +451,31 @@ function activateDamageAdjustmentListeners({ app, html, item, optionIndex, occur
     });
   }
 
-  const addTypeSelect = panel.querySelector(".ts-damage-adjustment-add-type");
-  addTypeSelect?.addEventListener("change", async (event) => {
-    const target = event.currentTarget;
-    const nextType = String(target.value ?? "").trim();
-    if (!nextType) return;
-
-    const nextAdjustment = normalizeAdjustment(currentAdjustment);
-    if (!nextAdjustment.types.includes(nextType)) {
-      nextAdjustment.types = [...nextAdjustment.types, nextType];
-    }
-
-    await persistDamageAdjustment(item, nextAdjustment, occurrenceIndex);
-  });
-
-  for (const button of panel.querySelectorAll(".ts-damage-adjustment-remove-type")) {
-    button.addEventListener("click", async (event) => {
+  for (const addTypeSelect of panel.querySelectorAll(".ts-damage-adjustment-add-list-value")) {
+    addTypeSelect.addEventListener("change", async (event) => {
       const target = event.currentTarget;
-      const type = String(target.dataset.type ?? "").trim();
-      if (!type) return;
+      const field = String(target.dataset.field ?? "");
+      const nextType = String(target.value ?? "").trim();
+      if (!nextType || !["types", "exceptions", "doubleVs"].includes(field)) return;
 
       const nextAdjustment = normalizeAdjustment(currentAdjustment);
-      nextAdjustment.types = nextAdjustment.types.filter((entry) => entry !== type);
+      if (!nextAdjustment[field].includes(nextType)) {
+        nextAdjustment[field] = [...nextAdjustment[field], nextType];
+      }
+
+      await persistDamageAdjustment(item, nextAdjustment, occurrenceIndex);
+    });
+  }
+
+  for (const button of panel.querySelectorAll(".ts-damage-adjustment-remove-list-value")) {
+    button.addEventListener("click", async (event) => {
+      const target = event.currentTarget;
+      const field = String(target.dataset.field ?? "");
+      const type = String(target.dataset.type ?? "").trim();
+      if (!type || !["types", "exceptions", "doubleVs"].includes(field)) return;
+
+      const nextAdjustment = normalizeAdjustment(currentAdjustment);
+      nextAdjustment[field] = nextAdjustment[field].filter((entry) => entry !== type);
       await persistDamageAdjustment(item, nextAdjustment, occurrenceIndex);
     });
   }

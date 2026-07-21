@@ -87,6 +87,7 @@ function getHtmlElement(html) {
 
 function getDefaultEnhancement() {
   return {
+    name: "",
     levelRequirement: "",
     actionSlug: "",
     text: "",
@@ -103,6 +104,7 @@ function normalizeLevelRequirement(value) {
 function normalizeEnhancement(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
+    name: String(source.name ?? "").trim(),
     levelRequirement: normalizeLevelRequirement(source.levelRequirement),
     actionSlug: String(source.actionSlug ?? "").trim().toLowerCase(),
     text: String(source.text ?? "").trim(),
@@ -151,6 +153,7 @@ function meetsActionRequirement(item, enhancement) {
 }
 
 function buildEnhancementLabel(item, enhancement) {
+  if (enhancement.name) return buildEnhancementHeader(item, enhancement);
   const action = getOtherActorActionBySlug(item, enhancement.actionSlug);
   if (action?.name) return action.name;
   if (enhancement.levelRequirement) return localize("ActionPlus.Enhancement.HeaderLevel").replace("{level}", enhancement.levelRequirement);
@@ -160,6 +163,18 @@ function buildEnhancementLabel(item, enhancement) {
 
 function buildEnhancementHeader(item, enhancement) {
   const action = getOtherActorActionBySlug(item, enhancement.actionSlug);
+  if (enhancement.name && enhancement.levelRequirement && action?.name) {
+    return localize("ActionPlus.Enhancement.HeaderNamedLevelAction")
+      .replace("{name}", enhancement.name)
+      .replace("{level}", enhancement.levelRequirement)
+      .replace("{action}", action.name);
+  }
+  if (enhancement.name && enhancement.levelRequirement) {
+    return localize("ActionPlus.Enhancement.HeaderNamedLevel")
+      .replace("{name}", enhancement.name)
+      .replace("{level}", enhancement.levelRequirement);
+  }
+  if (enhancement.name) return enhancement.name;
   if (enhancement.levelRequirement && action?.name) {
     return localize("ActionPlus.Enhancement.HeaderLevelAction")
       .replace("{level}", enhancement.levelRequirement)
@@ -403,6 +418,12 @@ function renderEnhancementControls({ item, flags, occurrenceIndex = 0 }) {
 
   return `
     <div style="margin-top: 10px;">
+      <div class="form-group">
+        <label>${localize("ActionPlus.Enhancement.NameLabel")}</label>
+        <div class="form-fields">
+          <input type="text" class="ts-enhancement-input" data-field="name" value="${escapeHtml(enhancement.name)}" placeholder="${escapeHtml(localize("ActionPlus.Enhancement.NamePlaceholder"))}">
+        </div>
+      </div>
       <div class="form-group">
         <label>${localize("ActionPlus.Enhancement.LevelRequirementLabel")}</label>
         <div class="form-fields">

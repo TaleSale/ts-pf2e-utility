@@ -40,17 +40,26 @@
         "CreateOption": "Создать",
         "CreateButton": "Создать атаку",
         "NameLabel": "Название",
+        "DescriptionLabel": "Описание",
         "WeaponTypeLabel": "Тип атаки",
         "WeaponTypes": {
           "Melee": "Ближняя",
           "Ranged": "Дальняя"
+        },
+        "RangeModeLabel": "Тип дистанции",
+        "RangeIncrementLabel": "Шаг дистанции",
+        "MaxRangeLabel": "Максимальная дистанция",
+        "RangeModes": {
+          "Increment": "Шаг дистанции",
+          "Maximum": "Максимальная дистанция"
         },
         "AttackLabel": "Бонус атаки",
         "DamageLabel": "Урон",
         "AddDamageButton": "Добавить урон",
         "DamageTypeLabel": "Тип урона",
         "TraitsLabel": "Трейты",
-        "AddTraitPlaceholder": "Добавить трейт",
+        "TraitsButton": "Выбрать трейты",
+        "TraitsDialogTitle": "Трейты атаки",
         "EmptyTraitsHint": "Выбранные трейты появятся здесь.",
         "AttackEffectsLabel": "Доп. действия",
         "AddEffectPlaceholder": "Добавить доп. действие",
@@ -58,6 +67,7 @@
         "DropEffectHint": "Перетащите кастомное доп. действие сюда.",
         "QualityLabel": "Качество",
         "ApplyButton": "Применить",
+        "UpdateItemButton": "Обновить предмет",
         "Qualities": {
           "Extreme": "Экстремальное",
           "High": "Высокое",
@@ -72,6 +82,12 @@
         "TypesLabel": "Типы",
         "AddTypePlaceholder": "Добавить тип урона",
         "EmptyTypesHint": "Выбранные типы появятся здесь.",
+        "ExceptionsLabel": "Исключения",
+        "AddExceptionPlaceholder": "Добавить исключение",
+        "EmptyExceptionsHint": "Выбранные исключения появятся здесь.",
+        "DoubleVsLabel": "Двойное сопротивление против",
+        "AddDoubleVsPlaceholder": "Добавить тип урона",
+        "EmptyDoubleVsHint": "Типы с двойным сопротивлением появятся здесь.",
         "ValueLabel": "Значение",
         "FlatValueLabel": "Число",
         "ModifierLabel": "Модификатор",
@@ -89,8 +105,23 @@
           "LevelMinus": "Уровень -"
         }
       },
+      "CriticalSpecialization": {
+        "FeatureLabel": "Крит. специализация",
+        "Hint": "Выбранные фильтры оружия работают как альтернативы; требование уровня добавляется к ним. Без фильтров правило действует на любое оружие.",
+        "LevelLabel": "Минимальный уровень существа",
+        "AnyLevel": "Любой уровень",
+        "CategoriesLabel": "Категории оружия",
+        "GroupsLabel": "Группы оружия",
+        "TraitsLabel": "Признаки оружия",
+        "DropHint": "Перетащите сюда оружие, чтобы добавить его модель (item:base)",
+        "EmptyBases": "Модели оружия не выбраны.",
+        "WeaponOnly": "Сюда можно перетаскивать только оружие.",
+        "MissingBase": "У этого оружия не указана модель (base item)."
+      },
       "Enhancement": {
         "FeatureLabel": "Усиление",
+        "NameLabel": "Название",
+        "NamePlaceholder": "Например, Общая Удача",
         "LevelRequirementLabel": "Уровень",
         "ActionSlugLabel": "Действие (метка)",
         "TextLabel": "Текст усиления",
@@ -108,8 +139,35 @@
         "EmptyPlaceholder": "Не важно",
         "HeaderLevel": "Усиление (ур. {level})",
         "HeaderLevelAction": "Усиление ({level}, {action})",
+        "HeaderNamedLevel": "{name} (ур. {level})",
+        "HeaderNamedLevelAction": "{name} ({level}, {action})",
         "HeaderDefault": "Усиление",
         "FallbackLabel": "Усиление"
+      },
+      "DegreeOfSuccess": {
+        "FeatureLabel": "Степень успеха",
+        "Hint": "Реагирует на спасбросок цели или на проверку источника против цели. Последствия для цели и источника включаются независимо.",
+        "Target": "Цель",
+        "Source": "Источник",
+        "Damage": "Урон:",
+        "Value": "Значение:",
+        "Time": "Время:",
+        "DropHint": "Перетащите сюда состояние/эффект",
+        "OnlyEffectsWarning": "Сюда можно перетаскивать только состояния и эффекты.",
+        "InvalidDamage": "Некорректная формула урона: {formula}",
+        "DurationUnits": {
+          "unlimited": "Постоянно",
+          "rounds": "Раунды",
+          "minutes": "Минуты",
+          "hours": "Часы",
+          "days": "Дни"
+        },
+        "Degrees": {
+          "criticalSuccess": "Критический успех",
+          "success": "Успех",
+          "failure": "Провал",
+          "criticalFailure": "Критический провал"
+        }
       },
       "ActorLanguages": {
         "FeatureLabel": "Языки",
@@ -126,12 +184,36 @@
         "RangeLabel": "Дистанция",
         "EmptyHint": "Выбранные чувства появятся здесь."
       },
+      "SpellSet": {
+        "FeatureLabel": "Набор заклинаний"
+      },
+      "Alchemy": {
+        "FeatureLabel": "Алхимия"
+      },
+      "Appearances": {
+        "FeatureLabel": "Облики",
+        "AppearanceName": "Название облика",
+        "ActorName": "Имя листа и токена",
+        "ActorImage": "Изображение листа",
+        "TokenImage": "Изображение токена",
+        "DynamicTokenImage": "Изображение динамического токена",
+        "SelectorLabel": "Облики",
+        "Original": "Оригинал"
+      },
       "ActorTraits": {
         "FeatureLabel": "Признаки",
         "Hint": "Выбранные признаки выдаются через штатный PF2E ActorTraits, пока это действие есть на актёре.",
         "Label": "Признаки",
         "AddPlaceholder": "Добавить признак",
-        "EmptyHint": "Выбранные признаки появятся здесь."
+        "EmptyHint": "Выбранные признаки появятся здесь.",
+        "RemoveLabel": "Удалить признаки",
+        "RemovePlaceholder": "Выбрать удаляемые признаки",
+        "RemoveEmptyHint": "Удаляемые признаки появятся здесь."
+      },
+      "ShoulderToShoulder": {
+        "FeatureLabel": "Плечом к плечу",
+        "RequiredAllies": "Союзников рядом",
+        "Hint": "Переключаемые правила способности включены, пока рядом находится не меньше указанного числа союзников."
       }
     }
   }

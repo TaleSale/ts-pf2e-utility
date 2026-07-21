@@ -37,18 +37,6 @@ const PACK_CONFIGS = Object.freeze([
       "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
     ]),
   },
-  {
-    label: "creature-builder",
-    dbPath: path.join(MODULE_ROOT, ".pack-build", "creature-builder"),
-    publishPath: path.join(MODULE_ROOT, "packs", "creature-builder"),
-    sourceFiles: Object.freeze([]),
-  },
-  {
-    label: "success-effects",
-    dbPath: path.join(MODULE_ROOT, ".pack-build", "success-effects"),
-    publishPath: path.join(MODULE_ROOT, "packs", "success-effects"),
-    sourceFiles: Object.freeze([]),
-  },
 ]);
 
 function getFoundryAppPath() {

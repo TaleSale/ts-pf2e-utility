@@ -96,6 +96,10 @@ function appendLabelsToPrimaryName(name, activeLabels) {
   return secondaryName ? `${nextPrimary}${TAG_SEPARATOR}${secondaryName}` : nextPrimary;
 }
 
+export function applySpellModLabels(name, flags) {
+  return appendLabelsToPrimaryName(name, collectActiveLabels(flags, name));
+}
+
 function getCurrentFlags(item) {
   return foundry.utils.deepClone(item.getFlag(MODULE_ID, FLAG_KEY) ?? {});
 }

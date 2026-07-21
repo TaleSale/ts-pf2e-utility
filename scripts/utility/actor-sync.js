@@ -139,13 +139,13 @@ function buildDialogShell({
     ? `<div style="margin-top:6px; color:var(--color-text-secondary);">${escapeHtml(description)}</div>`
     : "";
   return `
-    <form class="tsu-actor-sync-form" style="display:flex; flex-direction:column; gap:12px; min-height:0;">
+    <form class="tsu-actor-sync-form" style="display:flex; flex-direction:column; gap:12px; min-height:0; height:100%; overflow:hidden;">
       <div class="tsu-drop-zone" id="${DROP_ZONE_ID}" style="border:2px dashed var(--color-border-light-primary); border-radius:8px; padding:18px; text-align:center; background:color-mix(in srgb, var(--color-bg-option) 60%, transparent);">
         <div style="font-size:16px; font-weight:600;">Перетащите лист актёра мира сюда</div>
         ${descriptionHtml}
         <div class="tsu-drop-actor" style="margin-top:10px; font-weight:600;">${escapeHtml(actorLabel)}</div>
       </div>
-      <div class="tsu-dialog-content" style="display:flex; flex-direction:column; gap:10px;">${content}</div>
+      <div class="tsu-dialog-content" style="display:grid; flex:1 1 auto; grid-auto-rows:max-content; gap:10px; min-height:0; max-height:min(560px, calc(100vh - 300px)); overflow-x:hidden; overflow-y:scroll; overscroll-behavior:contain; padding-right:6px; scrollbar-gutter:stable;">${content}</div>
       <div style="display:flex; justify-content:flex-end; gap:8px;">
         <button type="submit">
           <i class="${buttonIcon}"></i> ${escapeHtml(buttonLabel)}
@@ -211,6 +211,29 @@ function getDocumentImage(document) {
   return document?.img || document?.texture?.src || "icons/svg/mystery-man.svg";
 }
 
+function getTokenImage(token) {
+  return token?.texture?.src || "icons/svg/mystery-man.svg";
+}
+
+function getDynamicTokenImage(token) {
+  return token?.ring?.subject?.texture || null;
+}
+
+function normalizeTokenImages(token, actorImage) {
+  if (!token || !actorImage) return;
+
+  token.texture ??= {};
+  if (!token.texture.src || token.texture.src === "icons/svg/mystery-man.svg") {
+    token.texture.src = actorImage;
+  }
+
+  token.ring ??= {};
+  token.ring.subject ??= {};
+  if (!token.ring.subject.texture) {
+    token.ring.subject.texture = actorImage;
+  }
+}
+
 function getPrototypeTokenData(actor) {
   return foundry.utils.deepClone(actor?.prototypeToken?.toObject?.() ?? actor?.prototypeToken ?? {});
 }
@@ -237,8 +260,11 @@ function buildActorRefreshPreview(actor, sourceActor) {
   const sourceToken = getPrototypeTokenData(sourceActor);
   const currentImage = getDocumentImage(actor);
   const sourceImage = getDocumentImage(sourceActor);
-  const currentTokenImage = getDocumentImage(currentToken);
-  const sourceTokenImage = getDocumentImage(sourceToken);
+  const currentTokenImage = getTokenImage(currentToken);
+  const rawSourceTokenImage = getTokenImage(sourceToken);
+  const sourceTokenImage = rawSourceTokenImage === "icons/svg/mystery-man.svg" ? sourceImage : rawSourceTokenImage;
+  const currentDynamicTokenImage = getDynamicTokenImage(currentToken) || currentImage;
+  const sourceDynamicTokenImage = getDynamicTokenImage(sourceToken) || sourceImage;
   const currentTokenName = currentToken.name || actor.name;
   const sourceTokenName = sourceToken.name || sourceActor.name;
   const preservedActorName = getPreservedDisplayName(actor.name, sourceActor.name);
@@ -263,12 +289,16 @@ function buildActorRefreshPreview(actor, sourceActor) {
           <img src="${escapeHtml(currentImage)}" alt="" style="width:96px; height:96px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
           <div style="margin-top:8px; font-weight:600;">Текущий токен</div>
           <img src="${escapeHtml(currentTokenImage)}" alt="" style="width:64px; height:64px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
+          <div style="margin-top:8px; font-weight:600;">Текущий динамический токен</div>
+          <img src="${escapeHtml(currentDynamicTokenImage)}" alt="" style="width:64px; height:64px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
         </div>
         <div>
           <div style="font-weight:600; margin-bottom:6px;">Будет изображение</div>
           <img src="${escapeHtml(sourceImage)}" alt="" style="width:96px; height:96px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
           <div style="margin-top:8px; font-weight:600;">Будет токен</div>
           <img src="${escapeHtml(sourceTokenImage)}" alt="" style="width:64px; height:64px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
+          <div style="margin-top:8px; font-weight:600;">Будет динамический токен</div>
+          <img src="${escapeHtml(sourceDynamicTokenImage)}" alt="" style="width:64px; height:64px; object-fit:contain; border:1px solid var(--color-border-light-primary); border-radius:6px; background:var(--color-bg-option);">
         </div>
       </div>
     </section>
@@ -316,10 +346,12 @@ function buildActorRefreshPreview(actor, sourceActor) {
   `;
 }
 
-function buildManualSourceInput(actor) {
+function buildManualSourceInput(actor, { hasAutomaticSource = false } = {}) {
   return `
     <section data-manual-source-drop style="border:1px solid var(--color-border-light-primary); border-radius:8px; padding:12px;">
-      <div style="color:var(--color-text-secondary);">У этого актёра нет ссылки на исходный документ компендиума.</div>
+      <div style="color:var(--color-text-secondary);">${hasAutomaticSource
+        ? "Можно указать другого актёра из компендиума вместо найденного автоматически."
+        : "У этого актёра нет ссылки на исходный документ компендиума."}</div>
       <label style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
         <span style="font-weight:600;">Ссылка на актёра из компендиума</span>
         <input type="text" name="manualSourceUuid" placeholder="Compendium.pf2e...Actor..." autocomplete="off" style="width:100%;">
@@ -369,6 +401,8 @@ async function replaceActorWithSource(actor, sourceActor, {
   } else if (keepToken) {
     actorData.prototypeToken.name = sourceToken.name || sourceActor.name;
   }
+
+  normalizeTokenImages(actorData.prototypeToken, actorData.img);
 
   const items = Array.isArray(actorData.items) ? foundry.utils.deepClone(actorData.items) : [];
   const effects = Array.isArray(actorData.effects) ? actorData.effects : [];
@@ -728,7 +762,7 @@ export async function openActorFullRefreshDialog() {
         const contentRoot = root.querySelector(".tsu-dialog-content");
         if (contentRoot instanceof HTMLElement) {
           contentRoot.innerHTML = selectedSourceActor
-            ? buildActorRefreshPreview(selectedActor, selectedSourceActor)
+            ? `${buildActorRefreshPreview(selectedActor, selectedSourceActor)}${buildManualSourceInput(selectedActor, { hasAutomaticSource: true })}`
             : buildManualSourceInput(selectedActor);
         }
 
@@ -798,7 +832,7 @@ export async function openActorFullRefreshDialog() {
 
         const manualSourceInput = root.querySelector('input[name="manualSourceUuid"]');
         let sourceActor = selectedSourceActor ?? await resolveSourceActor(selectedActor);
-        if (!sourceActor && manualSourceInput?.value?.trim()) {
+        if (manualSourceInput?.value?.trim()) {
           sourceActor = await resolveManualSource();
           if (!sourceActor) return;
         }

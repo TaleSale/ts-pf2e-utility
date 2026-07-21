@@ -2,7 +2,7 @@
   "id": "ts-pf2e-utility",
   "title": "TS-PF2E-UTILITY",
   "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
-  "version": "1.6.5",
+  "version": "1.7.2",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
@@ -108,6 +108,16 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       }
+    },
+    {
+      "name": "actors",
+      "label": "Актеры",
+      "path": "packs/actors",
+      "type": "Actor",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -120,7 +130,8 @@
         "mechanics",
         "utility",
         "creature-builder",
-        "success-effects"
+        "success-effects",
+        "actors"
       ],
       "folders": []
     }

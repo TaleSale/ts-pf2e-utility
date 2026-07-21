@@ -117,7 +117,11 @@ function getDefaultConfig() {
     targetId: "",
     createName: "Strike",
     createSlug: "",
+    createDescription: "",
     weaponType: "melee",
+    rangeMode: "increment",
+    rangeIncrement: 10,
+    maxRange: 60,
     damageType: "bludgeoning",
     damageRows: [],
     traits: [],
@@ -135,6 +139,11 @@ function getDefaultConfig() {
 function normalizeInteger(value, fallback = 0) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? Math.trunc(numeric) : fallback;
+}
+
+function normalizeRangeDistance(value, fallback) {
+  const distance = normalizeInteger(value, fallback);
+  return Math.min(500, Math.max(5, Math.round(distance / 5) * 5));
 }
 
 function normalizeQuality(value, fallback = "moderate") {
@@ -226,7 +235,11 @@ function normalizeConfig(value) {
   config.targetId = String(config.targetId ?? "").trim();
   config.createName = String(config.createName ?? "").trim() || getDefaultConfig().createName;
   config.createSlug = String(config.createSlug ?? "").trim();
+  config.createDescription = String(config.createDescription ?? "").trim();
   config.weaponType = ["melee", "ranged"].includes(String(config.weaponType ?? "").trim()) ? config.weaponType : "melee";
+  config.rangeMode = ["increment", "max"].includes(String(config.rangeMode ?? "").trim()) ? config.rangeMode : "increment";
+  config.rangeIncrement = normalizeRangeDistance(config.rangeIncrement, 10);
+  config.maxRange = normalizeRangeDistance(config.maxRange, 60);
   config.damageType = String(config.damageType ?? "").trim() || "bludgeoning";
   config.damageRows = normalizeDamageRows(config);
   config.traits = normalizeSlugList(config.traits);
@@ -563,6 +576,12 @@ function renderCreatureAttackControls({ item, flags, occurrenceIndex = 0 }) {
           <input type="text" class="ts-creature-attack-input" data-field="createSlug" value="${escapeHtml(config.createSlug)}">
         </div>
       </div>
+      <div class="form-group" style="${showCreateName ? "" : "display: none;"}">
+        <label>${escapeHtml(localize("ActionPlus.CreatureAttack.DescriptionLabel"))}</label>
+        <div class="form-fields">
+          <textarea class="ts-creature-attack-input" data-field="createDescription" rows="3" style="resize: vertical;">${escapeHtml(config.createDescription)}</textarea>
+        </div>
+      </div>
       <div class="form-group">
         <label>${escapeHtml(localize("ActionPlus.CreatureAttack.WeaponTypeLabel"))}</label>
         <div class="form-fields">
@@ -572,6 +591,29 @@ function renderCreatureAttackControls({ item, flags, occurrenceIndex = 0 }) {
               ["ranged", localize("ActionPlus.CreatureAttack.WeaponTypes.Ranged")],
             ], config.weaponType)}
           </select>
+        </div>
+      </div>
+      <div class="form-group" style="${config.weaponType === "ranged" ? "" : "display: none;"}">
+        <label>${escapeHtml(localize("ActionPlus.CreatureAttack.RangeModeLabel"))}</label>
+        <div class="form-fields">
+          <select class="ts-creature-attack-input" data-field="rangeMode">
+            ${renderSelectOptions([
+              ["increment", localize("ActionPlus.CreatureAttack.RangeModes.Increment")],
+              ["max", localize("ActionPlus.CreatureAttack.RangeModes.Maximum")],
+            ], config.rangeMode)}
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="${config.weaponType === "ranged" && config.rangeMode === "increment" ? "" : "display: none;"}">
+        <label>${escapeHtml(localize("ActionPlus.CreatureAttack.RangeIncrementLabel"))}</label>
+        <div class="form-fields">
+          <input type="number" class="ts-creature-attack-input" data-field="rangeIncrement" value="${config.rangeIncrement}" min="5" max="500" step="5">
+        </div>
+      </div>
+      <div class="form-group" style="${config.weaponType === "ranged" && config.rangeMode === "max" ? "" : "display: none;"}">
+        <label>${escapeHtml(localize("ActionPlus.CreatureAttack.MaxRangeLabel"))}</label>
+        <div class="form-fields">
+          <input type="number" class="ts-creature-attack-input" data-field="maxRange" value="${config.maxRange}" min="5" max="500" step="5">
         </div>
       </div>
       <div class="form-group">
@@ -711,6 +753,18 @@ function activateCreatureAttackListeners({ app, html, item, optionIndex, occurre
       await savePanelState();
     });
   }
+
+  panel.querySelector('.ts-creature-attack-input[data-field="weaponType"]')?.addEventListener("change", async () => {
+    app?.render?.(false);
+  });
+
+  panel.querySelector('.ts-creature-attack-input[data-field="rangeIncrement"]')?.addEventListener("change", async () => {
+    app?.render?.(false);
+  });
+
+  panel.querySelector('.ts-creature-attack-input[data-field="rangeMode"]')?.addEventListener("change", async () => {
+    app?.render?.(false);
+  });
 
   panel.querySelector(".ts-creature-attack-apply")?.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -927,6 +981,11 @@ function buildAttackUpdate(target, config, actor, sourceItem, previousConfig = c
 
   if (target.type === "melee") {
     update["system.weaponType.value"] = config.weaponType;
+    update["system.range"] = config.weaponType === "ranged"
+      ? config.rangeMode === "max"
+        ? { increment: null, max: config.maxRange }
+        : { increment: config.rangeIncrement, max: null }
+      : null;
   }
 
   addAttackExtras(update, target, config, previousConfig);
@@ -952,11 +1011,16 @@ async function createCreatureAttackItem(item, config) {
     type: "melee",
     img: "systems/pf2e/icons/default-icons/melee.svg",
     system: {
-      description: { value: "" },
+      description: { value: config.createDescription },
       ...(config.createSlug ? { slug: config.createSlug } : {}),
       bonus: { value: Number(attackValue) || 0 },
       damageRolls: buildDamageRolls(config, actor),
       weaponType: { value: config.weaponType },
+      range: config.weaponType === "ranged"
+        ? config.rangeMode === "max"
+          ? { increment: null, max: config.maxRange }
+          : { increment: config.rangeIncrement, max: null }
+        : null,
       ...getAttackExtrasSystem(config),
     },
   }]);

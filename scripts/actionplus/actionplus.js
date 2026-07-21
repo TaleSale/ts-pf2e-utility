@@ -195,9 +195,43 @@ Hooks.once("init", () => {
     },
   });
 
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("criticalSpecialization"), {
+    name: i18nKey(`${SETTINGS_ROOT}.CriticalSpecialization.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.CriticalSpecialization.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => rerenderOpenActionSheets(),
+  });
+
   game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("enhancement"), {
     name: i18nKey(`${SETTINGS_ROOT}.Enhancement.Name`),
     hint: i18nKey(`${SETTINGS_ROOT}.Enhancement.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => {
+      rerenderOpenActionSheets();
+    },
+  });
+
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("degreeOfSuccess"), {
+    name: i18nKey(`${SETTINGS_ROOT}.DegreeOfSuccess.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.DegreeOfSuccess.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => {
+      rerenderOpenActionSheets();
+    },
+  });
+
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("shoulderToShoulder"), {
+    name: i18nKey(`${SETTINGS_ROOT}.ShoulderToShoulder.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.ShoulderToShoulder.Hint`),
     scope: "world",
     config: true,
     default: true,
@@ -211,6 +245,9 @@ Hooks.once("init", () => {
     ["actorLanguages", "ActorLanguages"],
     ["actorSenses", "ActorSenses"],
     ["actorTraits", "ActorTraits"],
+    ["spellSet", "SpellSet"],
+    ["alchemy", "Alchemy"],
+    ["appearances", "Appearances"],
   ]) {
     game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey(featureId), {
       name: i18nKey(`${SETTINGS_ROOT}.${i18nRoot}.Name`),

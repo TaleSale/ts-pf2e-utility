@@ -40,17 +40,26 @@
         "CreateOption": "Create",
         "CreateButton": "Create attack",
         "NameLabel": "Name",
+        "DescriptionLabel": "Description",
         "WeaponTypeLabel": "Attack type",
         "WeaponTypes": {
           "Melee": "Melee",
           "Ranged": "Ranged"
+        },
+        "RangeModeLabel": "Range type",
+        "RangeIncrementLabel": "Range increment",
+        "MaxRangeLabel": "Maximum range",
+        "RangeModes": {
+          "Increment": "Range increment",
+          "Maximum": "Maximum range"
         },
         "AttackLabel": "Attack bonus",
         "DamageLabel": "Damage",
         "AddDamageButton": "Add damage",
         "DamageTypeLabel": "Damage type",
         "TraitsLabel": "Traits",
-        "AddTraitPlaceholder": "Add trait",
+        "TraitsButton": "Choose traits",
+        "TraitsDialogTitle": "Attack traits",
         "EmptyTraitsHint": "Selected traits will appear here.",
         "AttackEffectsLabel": "Attack effects",
         "AddEffectPlaceholder": "Add attack effect",
@@ -58,6 +67,7 @@
         "DropEffectHint": "Drop a custom attack effect here.",
         "QualityLabel": "Quality",
         "ApplyButton": "Apply",
+        "UpdateItemButton": "Update Item",
         "Qualities": {
           "Extreme": "Extreme",
           "High": "High",
@@ -72,6 +82,12 @@
         "TypesLabel": "Types",
         "AddTypePlaceholder": "Add damage type",
         "EmptyTypesHint": "Selected types will appear here.",
+        "ExceptionsLabel": "Exceptions",
+        "AddExceptionPlaceholder": "Add exception",
+        "EmptyExceptionsHint": "Selected exceptions will appear here.",
+        "DoubleVsLabel": "Double resistance against",
+        "AddDoubleVsPlaceholder": "Add damage type",
+        "EmptyDoubleVsHint": "Types receiving double resistance will appear here.",
         "ValueLabel": "Value",
         "FlatValueLabel": "Value",
         "ModifierLabel": "Modifier",
@@ -89,8 +105,23 @@
           "LevelMinus": "Level -"
         }
       },
+      "CriticalSpecialization": {
+        "FeatureLabel": "Critical Specialization",
+        "Hint": "All selected weapon filters are alternatives; the level requirement is applied in addition to them. With no filters, the rule applies to every weapon.",
+        "LevelLabel": "Minimum creature level",
+        "AnyLevel": "Any level",
+        "CategoriesLabel": "Weapon categories",
+        "GroupsLabel": "Weapon groups",
+        "TraitsLabel": "Weapon traits",
+        "DropHint": "Drop weapons here to add their model (item:base)",
+        "EmptyBases": "No weapon models selected.",
+        "WeaponOnly": "Only weapons can be dropped here.",
+        "MissingBase": "This weapon has no model (base item)."
+      },
       "Enhancement": {
         "FeatureLabel": "Enhancement",
+        "NameLabel": "Name",
+        "NamePlaceholder": "For example, Shared Luck",
         "LevelRequirementLabel": "Level",
         "ActionSlugLabel": "Action (slug)",
         "TextLabel": "Enhancement text",
@@ -108,9 +139,36 @@
         "EmptyPlaceholder": "Doesn't matter",
         "HeaderLevel": "Enhancement ({level})",
         "HeaderLevelAction": "Enhancement ({level}, {action})",
+        "HeaderNamedLevel": "{name} ({level})",
+        "HeaderNamedLevelAction": "{name} ({level}, {action})",
         "HeaderDefault": "Enhancement",
         "LabelLevel": "(Lvl.{level})",
         "FallbackLabel": "Enhancement"
+      },
+      "DegreeOfSuccess": {
+        "FeatureLabel": "Degree of Success",
+        "Hint": "Reacts to a target's saving throw or to the source's check against a target. Enable target and source consequences independently.",
+        "Target": "Target",
+        "Source": "Source",
+        "Damage": "Damage:",
+        "Value": "Value:",
+        "Time": "Time:",
+        "DropHint": "Drop a condition/effect here",
+        "OnlyEffectsWarning": "Only conditions and effects can be dropped here.",
+        "InvalidDamage": "Invalid damage formula: {formula}",
+        "DurationUnits": {
+          "unlimited": "Unlimited",
+          "rounds": "Rounds",
+          "minutes": "Minutes",
+          "hours": "Hours",
+          "days": "Days"
+        },
+        "Degrees": {
+          "criticalSuccess": "Critical Success",
+          "success": "Success",
+          "failure": "Failure",
+          "criticalFailure": "Critical Failure"
+        }
       },
       "ActorLanguages": {
         "FeatureLabel": "Languages",
@@ -127,12 +185,36 @@
         "RangeLabel": "Range",
         "EmptyHint": "Selected senses will appear here."
       },
+      "SpellSet": {
+        "FeatureLabel": "Spell Set"
+      },
+      "Alchemy": {
+        "FeatureLabel": "Alchemy"
+      },
+      "Appearances": {
+        "FeatureLabel": "Appearances",
+        "AppearanceName": "Appearance name",
+        "ActorName": "Sheet and token name",
+        "ActorImage": "Sheet image",
+        "TokenImage": "Token image",
+        "DynamicTokenImage": "Dynamic token image",
+        "SelectorLabel": "Appearances",
+        "Original": "Original"
+      },
       "ActorTraits": {
         "FeatureLabel": "Traits",
         "Hint": "Selected traits are granted through PF2E ActorTraits while the action is on the actor.",
         "Label": "Traits",
         "AddPlaceholder": "Add trait",
-        "EmptyHint": "Selected traits will appear here."
+        "EmptyHint": "Selected traits will appear here.",
+        "RemoveLabel": "Remove traits",
+        "RemovePlaceholder": "Choose traits to remove",
+        "RemoveEmptyHint": "Traits selected for removal will appear here."
+      },
+      "ShoulderToShoulder": {
+        "FeatureLabel": "Shoulder to Shoulder",
+        "RequiredAllies": "Adjacent allies",
+        "Hint": "The action's toggleable rules are enabled while at least this many allies are adjacent."
       }
     }
   }

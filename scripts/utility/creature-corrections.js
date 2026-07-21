@@ -59,6 +59,17 @@ const DC_CHOICES = [
   ["perception", "Восприятие"],
   ["hp", "ОЗ"],
 ];
+const SIZE_CHOICES = [
+  ["", "Не изменять"],
+  ["tiny", "Крошечный"],
+  ["sm", "Маленький"],
+  ["med", "Средний"],
+  ["lg", "Большой"],
+  ["huge", "Огромный"],
+  ["grg", "Исполинский"],
+];
+const CREATURE_SIZES = new Set(SIZE_CHOICES.map(([value]) => value));
+const SIZE_LABELS = new Map(SIZE_CHOICES);
 const CHOICE_LABELS = new Map([...ABILITY_CHOICES, ...SKILL_CHOICES, ...DC_CHOICES]);
 const MONSTER_LEVELS = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 const OLD_RANKS = ["none", "terrible", "low", "moderate", "high", "extreme"];
@@ -242,6 +253,8 @@ function normalizeFeature(entry) {
     gainLevel: normalizeLevel(source.gainLevel),
     loseLevel: normalizeLevel(source.loseLevel),
     note: String(source.note ?? "").trim(),
+    spellSetDescription: String(source.spellSetDescription ?? "").trim(),
+    usesInternalLevels: source.usesInternalLevels === true,
   };
 }
 
@@ -261,7 +274,9 @@ function normalizeStringList(value) {
 
 function normalizeCorrection(value) {
   const source = value && typeof value === "object" ? value : {};
+  const size = String(source.size ?? "").trim();
   return {
+    size: CREATURE_SIZES.has(size) ? size : "",
     abilities: normalizeRanked(source.abilities),
     skills: normalizeRanked(source.skills),
     dcs: normalizeRanked(source.dcs),
@@ -316,6 +331,9 @@ function renderFeatureRows(correction, key) {
   const rows = correction[key];
   const body = rows.length ? rows.map((feature, index) => `
     <div class="tsu-correction-feature-row" data-index="${index}">
+      <span class="tsu-correction-feature-drag-handle" draggable="true" data-field="${key}" data-index="${index}" data-tooltip="Изменить порядок">
+        <i class="fas fa-grip-vertical"></i>
+      </span>
       <span class="tsu-correction-feature-name">${renderFeatureName(feature)}</span>
       <label>Получает <input type="number" min="-1" max="25" class="tsu-correction-feature-input" data-field="${key}" data-index="${index}" data-prop="gainLevel" value="${escapeHtml(feature.gainLevel)}"></label>
       <label>Пропадает <input type="number" min="-1" max="25" class="tsu-correction-feature-input" data-field="${key}" data-index="${index}" data-prop="loseLevel" value="${escapeHtml(feature.loseLevel)}"></label>
@@ -345,6 +363,14 @@ function renderCorrectionEditor(item) {
   return `
     <fieldset class="tsu-correction-editor">
       <legend>Корректировка конструктора существ</legend>
+      <section>
+        <label class="tsu-correction-title-row">
+          <span>Размер существа</span>
+          <select class="tsu-correction-size-input">
+            ${SIZE_CHOICES.map(([value, label]) => `<option value="${value}" ${correction.size === value ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
+      </section>
       <section>
         <h4>${SECTION_LABELS.abilities}</h4>
         ${renderRankRows("abilities", correction.abilities)}
@@ -505,6 +531,7 @@ function removeSectionEntriesFromOtherRanks(correction, section, sourceRank) {
 
 async function persistCorrection(item, correction) {
   const normalized = normalizeCorrection(correction);
+  await hydrateCorrectionSpellSetDescriptions(normalized);
   const previousCorrection = getCorrection(item);
   const currentDescription = item.system?.description?.value ?? item._source?.system?.description?.value ?? "";
   await item.update({
@@ -513,8 +540,11 @@ async function persistCorrection(item, correction) {
   });
 }
 
-function buildCorrectionDescription(item, correction = getCorrection(item)) {
+function buildCorrectionDescription(item, correction = getCorrection(item), actionPlusSource = item) {
   const blocks = [];
+  if (correction.size) {
+    blocks.push(`<h2>Размер существа:</h2>\n<p>${escapeHtml(SIZE_LABELS.get(correction.size) ?? correction.size)}</p>`);
+  }
   for (const [key, label] of Object.entries({
     abilities: SECTION_LABELS.abilities,
     skills: SECTION_LABELS.skills,
@@ -529,6 +559,28 @@ function buildCorrectionDescription(item, correction = getCorrection(item)) {
     if (lines.length) blocks.push(`<h2>${escapeHtml(label)}:</h2>\n${lines.join("\n")}`);
   }
 
+  const extraFeatureLines = ["classFeatures", "styleFeatures"]
+    .flatMap((key) => correction[key])
+    .filter((feature) => String(feature.spellSetDescription ?? "").trim())
+    .map((feature) => {
+      const gain = feature.gainLevel !== "" ? `с ${escapeHtml(feature.gainLevel)}-го ур.` : "с любого уровня";
+      const lose = feature.loseLevel !== "" ? `; пропадает на ${escapeHtml(feature.loseLevel)}-м ур.` : "";
+      const name = escapeHtml(feature.name || "Способность");
+      const featureLink = feature.uuid ? `@UUID[${feature.uuid}]{${name}}` : name;
+      const levelNote = feature.gainLevel === "" && feature.loseLevel === "" ? "" : ` (${gain}${lose})`;
+      return `<div class="tsu-correction-extra-feature"><h3>${featureLink}${levelNote}</h3><div class="tsu-correction-extra-feature-details">${feature.spellSetDescription}</div></div>`;
+    });
+  const ownActionPlusDescription = buildActionPlusCatalogDescription(actionPlusSource);
+  if (ownActionPlusDescription) {
+    const ownName = escapeHtml(actionPlusSource?.name || item.name || "Корректировка");
+    const ownUuid = String(actionPlusSource?.uuid ?? item.uuid ?? "").trim();
+    const ownLink = ownUuid ? `@UUID[${ownUuid}]{${ownName}}` : ownName;
+    extraFeatureLines.unshift(`<div class="tsu-correction-extra-feature"><h3>${ownLink}</h3><div class="tsu-correction-extra-feature-details">${ownActionPlusDescription}</div></div>`);
+  }
+  if (extraFeatureLines.length) {
+    blocks.push(`<h2>Дополнительные функции:</h2>\n${extraFeatureLines.join("\n")}`);
+  }
+
   if (correction.equipment.length) {
     blocks.push(`<h2>${SECTION_LABELS.equipment}:</h2>\n${correction.equipment.map((kit) => `<p>${escapeHtml(kit)}</p>`).join("\n")}`);
   }
@@ -539,7 +591,7 @@ function buildCorrectionDescription(item, correction = getCorrection(item)) {
   ]) {
     const lines = correction[key]
       .filter((feature) => feature.name || feature.uuid)
-      .map((feature) => `<p>${formatFeatureDescriptionLine(feature)}</p>`);
+      .map((feature) => formatFeatureDescriptionBlock(feature));
     if (lines.length) blocks.push(`<h2>${escapeHtml(label)}:</h2>\n${lines.join("\n")}`);
   }
 
@@ -651,9 +703,9 @@ function removeGeneratedCorrectionDescription(description, previousAutoDescripti
   return removeLegacyAutoCorrectionDescription(withoutElementMarkers, previousAutoDescription).trim();
 }
 
-function buildMergedCorrectionDescription(item, correction, currentDescription, previousCorrection = getCorrection(item)) {
+function buildMergedCorrectionDescription(item, correction, currentDescription, previousCorrection = getCorrection(item), nextActionPlusSource = item) {
   const previousAutoDescription = buildCorrectionDescription(item, previousCorrection);
-  const nextRawAutoDescription = buildCorrectionDescription(item, correction);
+  const nextRawAutoDescription = buildCorrectionDescription(item, correction, nextActionPlusSource);
   const manualDescription = removeGeneratedCorrectionDescription(
     removeGeneratedCorrectionDescription(currentDescription, previousAutoDescription),
     nextRawAutoDescription,
@@ -681,6 +733,280 @@ function formatFeatureDescriptionLine(feature) {
   return `${gain}${link}${lose}${note}`;
 }
 
+function formatFeatureDescriptionBlock(feature) {
+  return `<p>${formatFeatureDescriptionLine(feature)}</p>`;
+}
+
+function formatStoredSpellLink(spell) {
+  const uuid = String(spell?.uuid ?? spell?.source?._stats?.compendiumSource ?? spell?.source?.flags?.core?.sourceId ?? "").trim();
+  const name = escapeHtml(spell?.name || "Заклинание");
+  return uuid ? `@UUID[${uuid}]{${name}}` : name;
+}
+
+function formatStoredSpellModifiers(spell) {
+  const labels = [spell?.atWill ? "По желанию" : "", spell?.constant ? "Постоянно" : "", spell?.self ? "На себя" : ""].filter(Boolean);
+  return labels.length ? ` <span class="tsu-correction-spell-condition">(${labels.join(", ")})</span>` : "";
+}
+
+function formatStoredAlchemyLink(item) {
+  const uuid = String(item?.uuid ?? item?.source?._stats?.compendiumSource ?? item?.source?.flags?.core?.sourceId ?? "").trim();
+  const name = escapeHtml(item?.name || "Алхимический предмет");
+  return uuid ? `@UUID[${uuid}]{${name}}` : name;
+}
+
+function getActionPlusSourceData(source) {
+  const flags = source?.flags?.[MODULE_ID] ?? {};
+  const options = Array.isArray(flags.actionOptions) ? flags.actionOptions : [flags.actionOption].filter(Boolean);
+  const count = (featureId) => options.filter((option) => option === featureId).length;
+  const collection = (flagKey, featureId) => {
+    const value = flags[flagKey];
+    const entries = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+    return entries.slice(0, count(featureId));
+  };
+  return { flags, options, count, collection };
+}
+
+function localizeConfigValue(record, slug) {
+  const label = record?.[slug] ?? slug;
+  const localized = game.i18n.localize(String(label ?? slug));
+  return localized === String(label) ? String(label ?? slug) : localized;
+}
+
+function formatCatalogList(title, values) {
+  const unique = Array.from(new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean)));
+  return unique.length ? `<p><strong>${escapeHtml(title)}:</strong> ${unique.map((value) => escapeHtml(value)).join(", ")}</p>` : "";
+}
+
+function buildActorExtrasCatalogDescription(source) {
+  const { collection } = getActionPlusSourceData(source);
+  const languages = collection("actorLanguages", "actorLanguages")
+    .flatMap((config) => Array.isArray(config?.values) ? config.values : [])
+    .map((slug) => localizeConfigValue(CONFIG.PF2E?.languages, slug));
+  const traits = collection("actorTraits", "actorTraits")
+    .flatMap((config) => Array.isArray(config?.values) ? config.values : [])
+    .map((slug) => localizeConfigValue(CONFIG.PF2E?.creatureTraits, slug));
+  const senses = collection("actorSenses", "actorSenses")
+    .flatMap((config) => Array.isArray(config?.senses) ? config.senses : [])
+    .filter((sense) => String(sense?.type ?? "").trim())
+    .map((sense) => {
+      const type = localizeConfigValue(CONFIG.PF2E?.senses, sense?.type);
+      const acuity = localizeConfigValue(CONFIG.PF2E?.senseAcuity ?? CONFIG.PF2E?.senseAcuities, sense?.acuity || "precise");
+      const range = Math.max(0, Number.parseInt(sense?.range, 10) || 0);
+      return range ? `${type} (${acuity}, ${range} фт.)` : `${type} (${acuity})`;
+    });
+  return [
+    formatCatalogList("Признаки", traits),
+    formatCatalogList("Чувства", senses),
+    formatCatalogList("Языки", languages),
+  ].filter(Boolean).join("");
+}
+
+function buildCreatureAttackCatalogDescription(source) {
+  const { collection } = getActionPlusSourceData(source);
+  const attacks = collection("creatureAttack", "creatureAttack").map((config) => {
+    const name = String(config?.createName ?? "Strike").trim() || "Strike";
+    const weaponType = config?.weaponType === "ranged" ? "дальняя" : "ближняя";
+    const traits = (Array.isArray(config?.traits) ? config.traits : [])
+      .map((slug) => localizeConfigValue(CONFIG.PF2E?.weaponTraits, slug));
+    const rawRows = Array.isArray(config?.damageRows) && config.damageRows.length
+      ? config.damageRows
+      : [{ damageType: config?.damageType }];
+    const damageTypes = rawRows.map((row) => localizeConfigValue(CONFIG.PF2E?.damageTypes, row?.damageType || "bludgeoning"));
+    const details = [weaponType, traits.length ? `признаки: ${traits.join(", ")}` : "", `урон: ${Array.from(new Set(damageTypes)).join(", ")}`].filter(Boolean);
+    return `${name} (${details.join("; ")})`;
+  });
+  return formatCatalogList("Атаки существа", attacks);
+}
+
+function buildCriticalSpecializationCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source);
+  if (!options.includes("criticalSpecialization")) return "";
+  const config = flags.criticalSpecialization && typeof flags.criticalSpecialization === "object"
+    ? flags.criticalSpecialization
+    : {};
+  const filters = [
+    ...(Array.isArray(config.categories) ? config.categories : []).map((slug) => localizeConfigValue(CONFIG.PF2E?.weaponCategories, slug)),
+    ...(Array.isArray(config.groups) ? config.groups : []).map((slug) => localizeConfigValue(CONFIG.PF2E?.weaponGroups, slug)),
+    ...(Array.isArray(config.traits) ? config.traits : []).map((slug) => localizeConfigValue(CONFIG.PF2E?.weaponTraits, slug)),
+    ...(Array.isArray(config.bases) ? config.bases : []).map((slug) => localizeConfigValue(CONFIG.PF2E?.baseWeaponTypes, slug)),
+  ];
+  const level = config.level === null || config.level === undefined || config.level === "" ? null : Number(config.level);
+  const levelText = Number.isInteger(level) && level >= 0 ? `с ${level}-го уровня` : "на всех уровнях";
+  const scope = filters.length ? `; оружие: ${Array.from(new Set(filters)).join(", ")}` : "; всё подходящее оружие";
+  return `<p><strong>Критическая специализация:</strong> ${escapeHtml(levelText + scope)}</p>`;
+}
+
+function buildActionPlusCatalogDescription(source) {
+  return [
+    buildActorExtrasCatalogDescription(source),
+    buildCreatureAttackCatalogDescription(source),
+    buildDamageAdjustmentsCatalogDescription(source),
+    buildRegenerationCatalogDescription(source),
+    buildBloodlineCatalogDescription(source),
+    buildEnhancementCatalogDescription(source),
+    buildDegreeOfSuccessCatalogDescription(source),
+    buildSpellSetCatalogDescription(source),
+    buildAlchemyCatalogDescription(source),
+    buildCriticalSpecializationCatalogDescription(source),
+    buildAppearancesCatalogDescription(source),
+    buildShoulderToShoulderCatalogDescription(source),
+  ].filter(Boolean).join("");
+}
+
+function actionPlusTypeLabel(slug) {
+  for (const choices of [CONFIG.PF2E?.weaknessTypes, CONFIG.PF2E?.resistanceTypes, CONFIG.PF2E?.immunityTypes, CONFIG.PF2E?.damageTypes]) {
+    const label = localizeConfigValue(choices, slug);
+    if (label && label !== slug) return label;
+  }
+  return String(slug || "—");
+}
+
+function damageAdjustmentFormula(config) {
+  const modifier = Math.max(0, Number(config?.modifier) || 0);
+  switch (config?.valueMode) {
+    case "levelDiv": return `уровень / ${modifier || 2}`;
+    case "level": return "уровень";
+    case "levelTimes": return `уровень × ${modifier || 2}`;
+    case "levelPlus": return `уровень + ${modifier}`;
+    case "levelMinus": return `уровень − ${modifier}`;
+    default: return String(Number(config?.flatValue) || 0);
+  }
+}
+
+function buildDamageAdjustmentsCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source);
+  const count = options.filter((option) => option === "damageAdjustments").length;
+  if (!count) return "";
+  const labels = { Weakness: "Слабость", Resistance: "Сопротивление", Immunity: "Иммунитет" };
+  return (Array.isArray(flags.damageAdjustments) ? flags.damageAdjustments.slice(0, count) : []).map((config) => {
+    const types = (Array.isArray(config?.types) ? config.types : []).map(actionPlusTypeLabel).join(", ") || "тип не выбран";
+    const value = config?.adjustmentType === "Immunity" ? "" : `: ${escapeHtml(damageAdjustmentFormula(config))}`;
+    const exceptions = (Array.isArray(config?.exceptions) ? config.exceptions : []).map(actionPlusTypeLabel);
+    const doubleVs = (Array.isArray(config?.doubleVs) ? config.doubleVs : []).map(actionPlusTypeLabel);
+    const notes = [exceptions.length ? `исключения: ${exceptions.join(", ")}` : "", doubleVs.length ? `двойное против: ${doubleVs.join(", ")}` : ""].filter(Boolean);
+    return `<p><strong>${labels[config?.adjustmentType] ?? "Корректировка"}:</strong> ${escapeHtml(types)}${value}${notes.length ? ` <span class="tsu-correction-spell-condition">(${escapeHtml(notes.join("; "))})</span>` : ""}</p>`;
+  }).join("");
+}
+
+function buildRegenerationCatalogDescription(source) {
+  const { options } = getActionPlusSourceData(source); if (!options.includes("regeneration")) return "";
+  const rules = (source?.system?.rules ?? []).filter((rule) => rule?.key === "FastHealing" && rule?.type === "regeneration");
+  return rules.map((rule) => `<p><strong>Регенерация:</strong> ${escapeHtml(String(rule.value ?? "—"))}${Array.isArray(rule.deactivatedBy) && rule.deactivatedBy.length ? `; отключается: ${escapeHtml(rule.deactivatedBy.join(", "))}` : ""}</p>`).join("") || "<p><strong>Регенерация:</strong> правило не настроено</p>";
+}
+
+function buildBloodlineCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source); if (!options.includes("bloodline")) return "";
+  const spells = Array.isArray(flags.bloodlineSpells) ? flags.bloodlineSpells : [];
+  return `<p><strong>Наследие крови:</strong> ${spells.length ? spells.map((spell) => escapeHtml(spell.name || spell.id)).join(", ") : "заклинания не выбраны"}</p>`;
+}
+
+function buildEnhancementCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source); const count = options.filter((option) => option === "enhancement").length; if (!count) return "";
+  return (Array.isArray(flags.enhancements) ? flags.enhancements.slice(0, count) : []).map((config) => {
+    const conditions = [config?.levelRequirement !== "" && config?.levelRequirement != null ? `уровень ${config.levelRequirement}+` : "", config?.actionSlug ? `действие: ${config.actionSlug}` : ""].filter(Boolean);
+    return `<p><strong>Усиление${config?.name ? ` «${escapeHtml(config.name)}»` : ""}:</strong>${conditions.length ? ` ${escapeHtml(conditions.join(", "))}.` : ""} ${escapeHtml(config?.text || "текст не задан")}</p>`;
+  }).join("");
+}
+
+function buildDegreeOfSuccessCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source); if (!options.includes("degreeOfSuccess")) return "";
+  const labels = { criticalSuccess: "Критический успех", success: "Успех", failure: "Провал", criticalFailure: "Критический провал" };
+  const recipients = { target: "цель", source: "источник" }; const rows = [];
+  for (const [degree, degreeLabel] of Object.entries(labels)) for (const [recipient, recipientLabel] of Object.entries(recipients)) {
+    const config = flags.degreeOfSuccess?.[degree]?.[recipient]; if (!config?.enabled) continue;
+    const effects = (Array.isArray(config.effects) ? config.effects : []).map((effect) => effect.name || effect.uuid).filter(Boolean);
+    const values = [config.damage ? `урон ${config.damage}` : "", effects.length ? `эффекты: ${effects.join(", ")}` : ""].filter(Boolean).join("; ") || "без последствий";
+    rows.push(`<p><strong>${degreeLabel}, ${recipientLabel}:</strong> ${escapeHtml(values)}</p>`);
+  }
+  return rows.join("") || "<p><strong>Степени успеха:</strong> последствия не настроены</p>";
+}
+
+function buildAppearancesCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source); const count = options.filter((option) => option === "appearances").length; if (!count) return "";
+  const values = (Array.isArray(flags.appearances) ? flags.appearances.slice(0, count) : []).map((config) => config?.name || config?.actorName).filter(Boolean);
+  return `<p><strong>Облики:</strong> ${values.length ? values.map(escapeHtml).join(", ") : "не настроены"}</p>`;
+}
+
+function buildShoulderToShoulderCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source); if (!options.includes("shoulderToShoulder")) return "";
+  return `<p><strong>Плечом к плечу:</strong> союзников рядом — ${Math.max(1, Number(flags.shoulderToShoulder?.requiredAllies ?? flags.shoulderToShoulder) || 1)}</p>`;
+}
+
+function actionPlusUsesInternalLevels(source) {
+  const { options } = getActionPlusSourceData(source);
+  return options.includes("spellSet") || options.includes("alchemy");
+}
+
+function buildAlchemyCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source);
+  if (!options.includes("alchemy")) return "";
+  const ranges = Array.isArray(flags.alchemyRanges) ? flags.alchemyRanges : [];
+  const details = ranges.map((range) => {
+    const start = Math.max(1, Number(range?.start) || 1); const end = Math.min(20, Number(range?.end) || 20);
+    const items = (Array.isArray(range?.items) ? range.items : []).filter((item) => item?.name);
+    return `<details><summary>Уровни ${start}-${end}</summary>${items.length ? `<p>${items.map((item) => `${formatStoredAlchemyLink(item)} ×${Math.max(1, Number(item.quantity) || 1)}`).join(", ")}</p>` : "<p>Предметы не настроены.</p>"}</details>`;
+  }).join("");
+  const content = details || "<p>Диапазоны не настроены.</p>";
+  const sourceAlreadyNamesAlchemy = /алхими|alchemy/i.test(String(source?.name ?? ""));
+  return `${sourceAlreadyNamesAlchemy ? "" : "<p><strong>Алхимия:</strong></p>"}${content}`;
+}
+
+function buildSpellSetCatalogDescription(source) {
+  const { flags, options } = getActionPlusSourceData(source);
+  if (!options.includes("spellSet")) return "";
+  const count = options.filter((option) => option === "spellSet").length;
+  const configs = Array.isArray(flags.spellSets) ? flags.spellSets.slice(0, count) : [];
+  const typeLabels = { prepared: "Подготов.", spontaneous: "Спонтан.", innate: "Врождён.", focus: "Фокус." };
+  const traditionLabels = { arcane: "Аркана.", divine: "Сакральная.", occult: "Оккультная.", primal: "Природная." };
+  const abilityLabels = { int: "Интеллект.", wis: "Мудрость.", cha: "Харизма." };
+  const groups = new Map();
+  for (const config of configs) {
+    if (!config) continue;
+    const key = `${config.type || "prepared"}:${config.tradition || "arcane"}:${config.ability || "cha"}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(config);
+  }
+  const sections = [];
+  for (const groupConfigs of groups.values()) {
+    const sample = groupConfigs[0];
+    const heading = [typeLabels[sample.type] ?? sample.type, traditionLabels[sample.tradition] ?? sample.tradition, abilityLabels[sample.ability] ?? sample.ability].filter(Boolean).map((part) => escapeHtml(part)).join(" ");
+    const details = groupConfigs.map((config) => {
+    const rows = [];
+    for (let rank = 0; rank <= 10; rank++) {
+      const spells = (Array.isArray(config.spells) ? config.spells : []).filter((spell) => Number(spell.rank) === rank && spell.name);
+      if (spells.length) rows.push(`<p><strong>${rank === 0 ? "Чары" : `Ранг ${rank}`}:</strong> ${spells.map((spell) => {
+        const link = `${formatStoredSpellLink(spell)}${formatStoredSpellModifiers(spell)}`;
+        if (config.type !== "innate") return link;
+        const start = Math.max(1, Number(spell.start) || 1); const end = Math.min(20, Number(spell.end) || 20); const uses = Math.max(1, Number(spell.uses) || 1);
+        return `${link} <span class="tsu-correction-spell-condition">(уровни ${start}-${end}, ${uses} раз)</span>`;
+      }).join(", ")}</p>`);
+    }
+      if (config.type === "innate") return rows.join("");
+      const start = config.startLevel === "" || config.startLevel == null ? 1 : Math.max(1, Number(config.startLevel) || 1);
+      const end = config.endLevel === "" || config.endLevel == null ? 20 : Math.min(20, Number(config.endLevel) || 20);
+      return `<details><summary>Уровни ${start}-${end}</summary>${rows.join("")}</details>`;
+    }).join("");
+    sections.push(sample.type === "innate"
+      ? `<p>${heading}</p><details class="tsu-correction-innate-spells"><summary>Врождённые заклинания</summary>${details}</details>`
+      : `<p>${heading}</p>${details}`);
+  }
+  const content = sections.join("");
+  if (!content) return "";
+  const sourceAlreadyNamesSpellSet = /(?:спис|набор).*заклин|spell\s*set/i.test(String(source?.name ?? ""));
+  return `${sourceAlreadyNamesSpellSet ? "" : "<p><strong>Списки заклинаний:</strong></p>"}${content}`;
+}
+
+async function hydrateCorrectionSpellSetDescriptions(correction) {
+  for (const key of ["classFeatures", "styleFeatures"]) {
+    for (const feature of correction[key]) {
+      if (!feature.uuid) { feature.spellSetDescription = ""; continue; }
+      const source = await fromUuid(feature.uuid).catch(() => null);
+      feature.spellSetDescription = source ? buildActionPlusCatalogDescription(source) : feature.spellSetDescription;
+      feature.usesInternalLevels = source ? actionPlusUsesInternalLevels(source) : feature.usesInternalLevels;
+    }
+  }
+}
+
 function getFeatureSourceFromItem(droppedItem) {
   const uuid = droppedItem?.uuid ?? "";
   return {
@@ -690,6 +1016,8 @@ function getFeatureSourceFromItem(droppedItem) {
     gainLevel: String(droppedItem?.system?.level?.value ?? ""),
     loseLevel: "",
     note: "",
+    spellSetDescription: buildActionPlusCatalogDescription(droppedItem),
+    usesInternalLevels: actionPlusUsesInternalLevels(droppedItem),
   };
 }
 
@@ -747,6 +1075,7 @@ function addRankedCorrections(result, entries, rankKey, { skillMode = false, dcM
 
 function collectCorrectionApplication(actor) {
   const result = {
+    size: "",
     stats: {},
     skills: {},
     lores: new Map(),
@@ -760,6 +1089,7 @@ function collectCorrectionApplication(actor) {
   for (const item of getCorrectionActions(actor)) {
     const correction = getCorrection(item);
     result.correctionIds.push(item.id);
+    if (correction.size) result.size = correction.size;
 
     for (const rank of RANKS) {
       addRankedCorrections(result, correction.abilities[rank], rank);
@@ -788,6 +1118,8 @@ function buildActorCorrectionUpdate(actor, application) {
   const level = getActorLevel(actor);
   const update = {};
   const abilityKeys = new Set(["str", "dex", "con", "int", "wis", "cha"]);
+
+  if (application.size) update["system.traits.size.value"] = application.size;
 
   for (const [key, rank] of Object.entries(application.stats)) {
     if (abilityKeys.has(key)) {
@@ -830,43 +1162,41 @@ function buildActorCorrectionUpdate(actor, application) {
 
   update[`flags.${MODULE_ID}.creatureCorrectionApplication`] = {
     corrections: application.correctionIds,
+    size: application.size,
     equipment: application.equipment,
     stats: application.stats,
     skills: application.skills,
     lores: Array.from(application.lores.values()),
+    spellcasting: application.stats.spell ? (() => {
+      const value = getTableValue("spellcasting", level, application.stats.spell);
+      return value === null ? null : { dc: Number(value) + 8 };
+    })() : null,
   };
 
   return update;
 }
 
-function findCorrectionSpellcastingEntry(actor) {
-  return actor?.itemTypes?.spellcastingEntry?.find((item) => item.getFlag(MODULE_ID, "creatureCorrectionSpellcasting")) ?? null;
-}
-
 async function applySpellCorrection(actor, rank) {
   const value = getTableValue("spellcasting", getActorLevel(actor), rank);
   if (value === null) return;
+  const dc = Number(value) + 8;
 
-  const existing = findCorrectionSpellcastingEntry(actor);
-  const source = {
-    name: "Заклинания корректировки",
-    type: "spellcastingEntry",
-    system: {
-      spelldc: { value: Number(value), dc: Number(value) + 10 },
-      tradition: "arcane",
-      prepared: { value: "innate" },
-    },
-    flags: { [MODULE_ID]: { creatureCorrectionSpellcasting: true } },
-  };
+  const spellSetEntries = actor.itemTypes?.spellcastingEntry?.filter((item) => (
+    item.getFlag(MODULE_ID, "spellSetGenerated")?.kind === "entry"
+  )) ?? [];
 
-  if (existing) {
-    await existing.update({
-      "system.spelldc.value": Number(value),
-      "system.spelldc.dc": Number(value) + 10,
-    });
-  } else {
-    await actor.createEmbeddedDocuments("Item", [source]);
+  if (spellSetEntries.length) {
+    await actor.updateEmbeddedDocuments("Item", spellSetEntries.map((entry) => ({
+      _id: entry.id,
+      "system.spelldc.dc": dc,
+      "system.spelldc.value": dc - 8,
+    })));
   }
+}
+
+async function removeLegacyCorrectionSpellcasting(actor) {
+  const ids = actor.itemTypes?.spellcastingEntry?.filter((item) => item.getFlag(MODULE_ID, "creatureCorrectionSpellcasting")).map((item) => item.id) ?? [];
+  if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
 }
 
 function loreDisplayName(lore) {
@@ -890,7 +1220,13 @@ async function applyLoreCorrections(actor, lores) {
     ));
 
     if (existing) {
-      updates.push({ _id: existing.id, "system.mod.value": Number(value), "system.proficient.value": 0 });
+      // pf2e-ru's Lore preUpdateItem hook expects updateData.name to exist.
+      updates.push({
+        _id: existing.id,
+        name: existing.name,
+        "system.mod.value": Number(value),
+        "system.proficient.value": 0,
+      });
     } else {
       creates.push({
         name: loreDisplayName(lore),
@@ -924,6 +1260,40 @@ function actorHasFeature(actor, feature) {
   ));
 }
 
+function buildSpellSetDescription(source, level) {
+  const flags = source?.flags?.[MODULE_ID] ?? {};
+  const options = Array.isArray(flags.actionOptions) ? flags.actionOptions : [flags.actionOption].filter(Boolean);
+  if (!options.includes("spellSet")) return "";
+  const count = options.filter((option) => option === "spellSet").length;
+  const configs = Array.isArray(flags.spellSets) ? flags.spellSets.slice(0, count) : [];
+  const maxRank = Math.min(10, Math.ceil(level / 2));
+  const blocks = [];
+  for (const config of configs) {
+    if (!config || (["prepared", "spontaneous"].includes(config.type) && ((config.startLevel !== "" && config.startLevel != null && level < Number(config.startLevel)) || (config.endLevel !== "" && config.endLevel != null && level > Number(config.endLevel))))) continue;
+    const active = (Array.isArray(config.spells) ? config.spells : []).filter((spell) => {
+      if (["prepared", "spontaneous"].includes(config.type)) return Number(spell.rank) <= maxRank && (Number(spell.rank) === 0 || !spell.evenOnly || level % 2 === 0);
+      const starts = level >= Number(spell.start || 1); const ends = config.type !== "innate" || level <= Number(spell.end || 20); return starts && ends;
+    });
+    const rows = [];
+    for (let rank = 0; rank <= 10; rank++) {
+      const spells = active.filter((spell) => Number(spell.rank) === rank && spell.name);
+      if (spells.length) rows.push(`<p><strong>${rank === 0 ? "Чары" : `Ранг ${rank}`}:</strong> ${spells.map((spell) => `${formatStoredSpellLink(spell)}${formatStoredSpellModifiers(spell)}`).join(", ")}</p>`);
+    }
+    blocks.push(`<h3>${escapeHtml(config.name || source.name || "Набор заклинаний")}</h3>${rows.join("")}`);
+  }
+  return blocks.join("");
+}
+
+function buildAlchemyDescription(source, level) {
+  const flags = source?.flags?.[MODULE_ID] ?? {};
+  const options = Array.isArray(flags.actionOptions) ? flags.actionOptions : [flags.actionOption].filter(Boolean);
+  if (!options.includes("alchemy")) return "";
+  const range = (Array.isArray(flags.alchemyRanges) ? flags.alchemyRanges : []).find((entry) => level >= Number(entry?.start || 1) && level <= Number(entry?.end || 20));
+  const items = (Array.isArray(range?.items) ? range.items : []).filter((item) => item?.name);
+  if (!items.length) return "";
+  return `<h3>Продвинутая алхимия</h3><p>${items.map((item) => `${formatStoredAlchemyLink(item)} ×${Math.max(1, Number(item.quantity) || 1)}`).join(", ")}</p>`;
+}
+
 async function applyFeatureCorrections(actor, activeFeatures, allFeatures = activeFeatures) {
   const managedKeys = new Set(allFeatures.map((feature) => featureKey(feature)));
   const activeKeys = new Set(activeFeatures.map((feature) => featureKey(feature)));
@@ -937,9 +1307,9 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
   if (deleteIds.length) await actor.deleteEmbeddedDocuments("Item", deleteIds);
 
   const creates = [];
+  const updates = [];
   for (const feature of activeFeatures) {
     if (!feature.name && !feature.uuid) continue;
-    if (actorHasFeature(actor, feature)) continue;
 
     const sourceItem = feature.uuid ? await fromUuid(feature.uuid).catch(() => null) : null;
     const source = sourceItem?.toObject?.() ?? {
@@ -947,12 +1317,31 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
       type: "action",
       system: { description: { value: feature.note || "" }, traits: { value: [] } },
     };
+    const spellSetDescription = [buildSpellSetDescription(source, getActorLevel(actor)), buildAlchemyDescription(source, getActorLevel(actor))].filter(Boolean).join("");
+    if (spellSetDescription) {
+      source.system ??= {};
+      source.system.description ??= {};
+      source.system.description.value = spellSetDescription;
+    }
+    const existing = (actor.items?.contents ?? actor.items ?? []).find((item) => item.getFlag?.(MODULE_ID, "creatureCorrectionFeature") === featureKey(feature));
+    if (existing) {
+      const updateSource = foundry.utils.deepClone(source);
+      updateSource._id = existing.id;
+      delete updateSource.folder; delete updateSource.sort; delete updateSource.ownership;
+      updateSource.flags ??= {}; updateSource.flags[MODULE_ID] ??= {};
+      updateSource.flags[MODULE_ID].creatureCorrectionFeature = featureKey(feature);
+      if (existing.system?.frequency?.value != null && updateSource.system?.frequency) updateSource.system.frequency.value = existing.system.frequency.value;
+      updates.push(updateSource);
+      continue;
+    }
+    if (actorHasFeature(actor, feature)) continue;
     source.flags ??= {};
     source.flags[MODULE_ID] ??= {};
     source.flags[MODULE_ID].creatureCorrectionFeature = featureKey(feature);
     creates.push(source);
   }
 
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
   if (creates.length) await actor.createEmbeddedDocuments("Item", creates);
 }
 
@@ -965,6 +1354,7 @@ async function applyCreatureCorrectionToActor(actor) {
   const update = buildActorCorrectionUpdate(actor, application);
   if (Object.keys(update).length) await actor.update(update);
 
+  await removeLegacyCorrectionSpellcasting(actor);
   if (application.stats.spell) await applySpellCorrection(actor, application.stats.spell);
   await applyLoreCorrections(actor, Array.from(application.lores.values()));
   await applyFeatureCorrections(actor, application.features, application.allFeatures);
@@ -1011,6 +1401,13 @@ async function runScheduledActorCorrectionApply(actor, state) {
 function activateCorrectionEditor(root, item) {
   const editor = root.querySelector(".tsu-correction-editor");
   if (!editor) return;
+  let draggedFeature = null;
+
+  editor.querySelector(".tsu-correction-size-input")?.addEventListener("change", async (event) => {
+    const correction = getCorrection(item);
+    correction.size = String(event.currentTarget.value ?? "").trim();
+    await persistCorrection(item, correction);
+  });
 
   for (const button of editor.querySelectorAll(".tsu-correction-edit-rank")) {
     button.addEventListener("click", async () => {
@@ -1082,10 +1479,55 @@ function activateCorrectionEditor(root, item) {
   }
 
   for (const list of editor.querySelectorAll(".tsu-correction-feature-list")) {
-    list.addEventListener("dragover", (event) => event.preventDefault());
+    for (const handle of list.querySelectorAll(".tsu-correction-feature-drag-handle")) {
+      handle.addEventListener("dragstart", (event) => {
+        draggedFeature = {
+          field: handle.dataset.field,
+          index: Number(handle.dataset.index),
+        };
+        handle.closest(".tsu-correction-feature-row")?.classList.add("tsu-correction-feature-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", `tsu-correction-feature:${draggedFeature.field}:${draggedFeature.index}`);
+      });
+      handle.addEventListener("dragend", () => {
+        draggedFeature = null;
+        editor.querySelectorAll(".tsu-correction-feature-row").forEach((row) => {
+          row.classList.remove("tsu-correction-feature-dragging", "tsu-correction-feature-drop-before", "tsu-correction-feature-drop-after");
+        });
+      });
+    }
+
+    list.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      if (draggedFeature?.field !== list.dataset.field) return;
+      event.dataTransfer.dropEffect = "move";
+      const targetRow = event.target.closest(".tsu-correction-feature-row");
+      list.querySelectorAll(".tsu-correction-feature-row").forEach((row) => {
+        row.classList.remove("tsu-correction-feature-drop-before", "tsu-correction-feature-drop-after");
+      });
+      if (!targetRow || Number(targetRow.dataset.index) === draggedFeature.index) return;
+      const after = event.clientY > targetRow.getBoundingClientRect().top + targetRow.getBoundingClientRect().height / 2;
+      targetRow.classList.add(after ? "tsu-correction-feature-drop-after" : "tsu-correction-feature-drop-before");
+    });
     list.addEventListener("drop", async (event) => {
       event.preventDefault();
       event.stopPropagation();
+      if (draggedFeature?.field === list.dataset.field) {
+        const targetRow = event.target.closest(".tsu-correction-feature-row");
+        const correction = getCorrection(item);
+        const features = correction[list.dataset.field];
+        const sourceIndex = draggedFeature.index;
+        let targetIndex = targetRow ? Number(targetRow.dataset.index) : features.length;
+        if (targetRow && event.clientY > targetRow.getBoundingClientRect().top + targetRow.getBoundingClientRect().height / 2) targetIndex += 1;
+        if (sourceIndex < targetIndex) targetIndex -= 1;
+        if (sourceIndex === targetIndex) return;
+        const [feature] = features.splice(sourceIndex, 1);
+        if (!feature) return;
+        features.splice(targetIndex, 0, feature);
+        draggedFeature = null;
+        await persistCorrection(item, correction);
+        return;
+      }
       const data = TextEditor.getDragEventData(event);
       if (data?.type !== "Item" || !data.uuid) return;
       const droppedItem = await fromUuid(data.uuid).catch(() => null);
@@ -1209,9 +1651,18 @@ Hooks.on("renderItemSheet", (app, html) => {
 
 Hooks.on("preUpdateItem", (item, changed) => {
   if (!isCorrectionAction(item, changed)) return;
-  if (!foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.${FLAG_KEY}`)) return;
+  const correctionChanged = foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.${FLAG_KEY}`);
+  const actionPlusChanged = foundry.utils.hasProperty(changed, `flags.${MODULE_ID}`)
+    || foundry.utils.hasProperty(changed, "system.rules");
+  if (!correctionChanged && !actionPlusChanged) return;
 
   const correction = getCorrection(item, changed);
+  const pendingSource = foundry.utils.mergeObject(
+    foundry.utils.deepClone(item.toObject()),
+    foundry.utils.expandObject(changed),
+    { inplace: false, performDeletions: true },
+  );
+  pendingSource.uuid = item.uuid;
   const currentDescription = foundry.utils.getProperty(changed, "system.description.value")
     ?? item._source?.system?.description?.value
     ?? item.system?.description?.value
@@ -1219,7 +1670,7 @@ Hooks.on("preUpdateItem", (item, changed) => {
   foundry.utils.setProperty(
     changed,
     "system.description.value",
-    buildMergedCorrectionDescription(item, correction, currentDescription, getCorrection(item)),
+    buildMergedCorrectionDescription(item, correction, currentDescription, getCorrection(item), pendingSource),
   );
 });
 

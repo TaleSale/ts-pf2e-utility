@@ -30,9 +30,21 @@
           "Name": "Weak., Res., and Imm.",
           "Hint": "Builds weakness, resistance, and immunity rules from selected types and level-based formulas."
         },
+        "CriticalSpecialization": {
+          "Name": "Critical Specialization",
+          "Hint": "Builds a CriticalSpecialization rule with level and weapon filters."
+        },
         "Enhancement": {
           "Name": "Enhancement",
           "Hint": "Adds conditional extra text to action descriptions through ItemAlteration based on creature level and/or an action slug."
+        },
+        "DegreeOfSuccess": {
+          "Name": "Degree of Success",
+          "Hint": "Automatically applies configured target and source consequences for PF2E roll outcomes."
+        },
+        "ShoulderToShoulder": {
+          "Name": "Shoulder to Shoulder",
+          "Hint": "Automatically enables an action's toggleable rules while enough allies are adjacent."
         },
         "ActorLanguages": {
           "Name": "Languages",
@@ -41,6 +53,18 @@
         "ActorSenses": {
           "Name": "Senses",
           "Hint": "Adds an Action extra feature for showing selected senses on the character sheet."
+        },
+        "SpellSet": {
+          "Name": "Spell Set",
+          "Hint": "Adds a level-scaled spellcasting set to the Action extra features."
+        },
+        "Alchemy": {
+          "Name": "Alchemy",
+          "Hint": "Adds level-scaled advanced alchemy formulas to the Action extra features."
+        },
+        "Appearances": {
+          "Name": "Appearances",
+          "Hint": "Adds configurable NPC sheet and token appearances."
         },
         "ActorTraits": {
           "Name": "Traits",
@@ -61,7 +85,7 @@
       },
       "WallTextures": {
         "Name": "Enable wall textures",
-        "Hint": "Adds wall texture controls to ordinary wall settings.",
+        "Hint": "Adds wall texture controls to ordinary walls and secret doors.",
         "Fieldset": "Wall texture",
         "EnableLabel": "Wall texture",
         "StyleLabel": "Wall style",
@@ -118,6 +142,16 @@
         "ItemsLabel": "Items",
         "SpellsLabel": "Spells"
       }
+    },
+    "TempHP": {
+      "TemporaryButton": "Apply temporary HP",
+      "OverflowButton": "Heal + temporary HP",
+      "TemporaryTitle": "Apply the result as temporary Hit Points",
+      "OverflowTitle": "Restore Hit Points and apply the excess as temporary Hit Points",
+      "AdjustmentTitle": "Adjust temporary healing",
+      "AdjustmentLabel": "Adjustment",
+      "Applied": "Applied {amount} points to the selected token(s).",
+      "NoChange": "The selected token(s) already have at least {amount} temporary Hit Points."
     }
   }
 }

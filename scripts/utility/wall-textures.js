@@ -77,9 +77,11 @@ function isEnabled(value) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
-function isNormalWall(wall) {
+function supportsWallTexture(wall) {
   const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
-  return Number(wall?.door ?? noDoor) === noDoor;
+  const secretDoor = globalThis.CONST?.WALL_DOOR_TYPES?.SECRET ?? 2;
+  const doorType = Number(wall?.door ?? noDoor);
+  return doorType === noDoor || doorType === secretDoor;
 }
 
 function getStyleDefinition(style) {
@@ -369,7 +371,7 @@ function createWallTextureFieldset(wall) {
 
 Hooks.on("renderWallConfig", (app, element) => {
   if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return;
-  if (!isNormalWall(app.document)) return;
+  if (!supportsWallTexture(app.document)) return;
 
   const root = getElement(element);
   if (!root || root.querySelector(".tsu-wall-texture-config")) return;
@@ -388,7 +390,7 @@ Hooks.on("renderWallConfig", (app, element) => {
 function findConnectedWallTextureFlags(coords) {
   const walls = canvas?.scene?.walls ?? [];
   for (const wall of walls) {
-    if (!isNormalWall(wall)) continue;
+    if (!supportsWallTexture(wall)) continue;
     const flags = getFlagData(wall);
     if (!isEnabled(flags.enabled)) continue;
 
@@ -407,14 +409,14 @@ function findConnectedWallTextureFlags(coords) {
   return null;
 }
 
-function getConnectedNormalWalls(sourceWall) {
+function getConnectedTextureWalls(sourceWall) {
   const sourceCoords = getWallCoords(sourceWall);
   if (!sourceCoords) return [];
 
   const walls = canvas?.scene?.walls ?? [];
   const connected = [];
   for (const wall of walls) {
-    if (wall.id === sourceWall.id || !isNormalWall(wall)) continue;
+    if (wall.id === sourceWall.id || !supportsWallTexture(wall)) continue;
 
     const coords = getWallCoords(wall);
     if (!coords) continue;
@@ -443,7 +445,7 @@ async function copyTextureToConnectedWalls(sourceWall) {
   const serializedFlags = JSON.stringify(flags);
 
   const updates = [];
-  for (const wall of getConnectedNormalWalls(sourceWall)) {
+  for (const wall of getConnectedTextureWalls(sourceWall)) {
     if (JSON.stringify(getFlagData(wall)) === serializedFlags) continue;
     updates.push({
       _id: wall.id,
@@ -467,7 +469,7 @@ async function copyTextureToConnectedWalls(sourceWall) {
 
 Hooks.on("preCreateWall", (wall, data) => {
   if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return;
-  if (!isNormalWall(data)) return;
+  if (!supportsWallTexture(data)) return;
 
   const existingFlags = foundry.utils.getProperty(data, `flags.${MODULE_ID}.${FLAG_ROOT}`)
     ?? wall.getFlag?.(MODULE_ID, FLAG_ROOT);
@@ -559,7 +561,7 @@ function endpointHasOverlay(endpointEntries) {
 }
 
 function createWallSprite(wall, endpointMap = null) {
-  if (!isNormalWall(wall)) return null;
+  if (!supportsWallTexture(wall)) return null;
 
   const flags = getFlagData(wall);
   if (!isEnabled(flags.enabled)) return null;
@@ -607,7 +609,7 @@ function getTexturedWalls() {
     .map((placeable) => placeable.document)
     .filter((wall) => {
       const flags = getFlagData(wall);
-      return isNormalWall(wall) && isEnabled(flags.enabled) && getWallCoords(wall);
+      return supportsWallTexture(wall) && isEnabled(flags.enabled) && getWallCoords(wall);
     });
 }
 
