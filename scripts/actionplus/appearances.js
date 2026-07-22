@@ -7,15 +7,23 @@ const ACTOR_STATE_FLAG = "appearanceState";
 
 const htmlElement = (html) => html instanceof HTMLElement ? html : html?.[0] ?? html?.element ?? null;
 const localize = (key) => game.i18n.localize(`${I18N_PREFIX}.ActionPlus.Appearances.${key}`);
+const validScale = (value, fallback = 1, minimum = 0.2) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(3, Math.max(minimum, number)) : fallback;
+};
 
 function normalizeAppearance(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
     name: String(source.name ?? ""),
     actorName: String(source.actorName ?? ""),
+    tokenName: String(source.tokenName ?? source.actorName ?? ""),
     actorImg: String(source.actorImg ?? ""),
     tokenImg: String(source.tokenImg ?? ""),
+    tokenScale: validScale(source.tokenScale),
     dynamicTokenImg: String(source.dynamicTokenImg ?? ""),
+    dynamicRingEnabled: Boolean(source.dynamicRingEnabled),
+    dynamicTokenScale: validScale(source.dynamicTokenScale, 1, 0.5),
   };
 }
 
@@ -29,25 +37,48 @@ function renderControls({ flags, occurrenceIndex = 0 }) {
   const fields = [
     ["name", "AppearanceName", false],
     ["actorName", "ActorName", false],
+    ["tokenName", "TokenName", false],
     ["actorImg", "ActorImage", true],
     ["tokenImg", "TokenImage", true],
     ["dynamicTokenImg", "DynamicTokenImage", true],
   ];
   return `<div class="ts-appearance-editor">
-    ${fields.map(([field, label, isImage]) => `<div class="form-group"><label>${escapeHtml(localize(label))}</label><div class="form-fields">${isImage
+    ${fields.map(([field, label, isImage, inputType = "text"]) => `<div class="form-group"><label>${escapeHtml(localize(label))}</label><div class="form-fields">${isImage
       ? `<file-picker class="ts-appearance-input" data-field="${field}" type="imagevideo" value="${escapeHtml(config[field])}"></file-picker>`
-      : `<input type="text" class="ts-appearance-input" data-field="${field}" value="${escapeHtml(config[field])}">`
+      : `<input type="${inputType}" class="ts-appearance-input" data-field="${field}" value="${escapeHtml(config[field])}" ${inputType === "number" ? 'min="0.2" max="3" step="0.05"' : ""}>`
     }</div></div>`).join("")}
+    <div class="form-group"><label>${escapeHtml(localize("TokenScale"))}</label><div class="form-fields">
+      <input type="number" class="ts-appearance-input" data-field="tokenScale" value="${config.tokenScale}" min="0.2" max="3" step="0.05">
+    </div></div>
+    <div class="form-group"><label>${escapeHtml(localize("DynamicRingEnabled"))}</label><div class="form-fields">
+      <input type="checkbox" class="ts-appearance-input" data-field="dynamicRingEnabled" ${config.dynamicRingEnabled ? "checked" : ""}>
+    </div></div>
+    <div class="form-group"><label>${escapeHtml(localize("DynamicTokenScale"))}</label><div class="form-fields">
+      <input type="number" class="ts-appearance-input" data-field="dynamicTokenScale" value="${config.dynamicTokenScale}" min="0.5" max="3" step="0.02">
+    </div></div>
   </div>`;
 }
 
 async function persist(item, occurrenceIndex, panel) {
   const configs = getConfigs(item);
   const config = normalizeAppearance(configs[occurrenceIndex]);
-  for (const input of panel.querySelectorAll(".ts-appearance-input")) config[input.dataset.field] = input.value.trim();
+  for (const input of panel.querySelectorAll(".ts-appearance-input")) {
+    if (input.type === "checkbox") config[input.dataset.field] = input.checked;
+    else if (input.type === "number") {
+      const minimum = input.dataset.field === "dynamicTokenScale" ? 0.5 : 0.2;
+      config[input.dataset.field] = validScale(input.value, 1, minimum);
+    }
+    else config[input.dataset.field] = input.value.trim();
+  }
   configs[occurrenceIndex] = config;
   await item.update({ [`flags.${MODULE_ID}.${FLAG_KEY}`]: configs }, { render: false });
-  item.actor?.sheet?.render(false);
+  const actor = item.actor;
+  const appearanceId = `${item.id}:${occurrenceIndex}`;
+  if (actor?.getFlag(MODULE_ID, ACTOR_STATE_FLAG)?.active === appearanceId) {
+    await applyAppearance(actor, appearanceId, getActorAppearances(actor));
+  } else {
+    actor?.sheet?.render(false);
+  }
 }
 
 function activateListeners({ item, html, optionIndex, occurrenceIndex = 0 }) {
@@ -86,38 +117,68 @@ function readOriginal(actor) {
     actorImg: actor.img,
     tokenName: actor.prototypeToken?.name ?? actor.name,
     tokenImg: actor.prototypeToken?.texture?.src ?? actor.img,
+    tokenScale: Math.abs(actor.prototypeToken?.texture?.scaleX ?? 1),
     dynamicTokenImg: actor.prototypeToken?.ring?.subject?.texture ?? "",
+    dynamicRingEnabled: actor.prototypeToken?.ring?.enabled ?? false,
+    dynamicTokenScale: actor.prototypeToken?.ring?.subject?.scale ?? 1,
   };
 }
 
 async function applyAppearance(actor, appearanceId, appearances) {
   const currentState = actor.getFlag(MODULE_ID, ACTOR_STATE_FLAG) ?? {};
-  const original = currentState.active ? (currentState.original ?? readOriginal(actor)) : readOriginal(actor);
+  const liveOriginal = readOriginal(actor);
+  const savedOriginal = currentState.original && typeof currentState.original === "object" ? currentState.original : {};
+  const original = currentState.active ? {
+    ...liveOriginal,
+    ...savedOriginal,
+    tokenScale: validScale(savedOriginal.tokenScale, liveOriginal.tokenScale),
+    dynamicTokenScale: validScale(savedOriginal.dynamicTokenScale, liveOriginal.dynamicTokenScale, 0.5),
+    dynamicRingEnabled: typeof savedOriginal.dynamicRingEnabled === "boolean"
+      ? savedOriginal.dynamicRingEnabled
+      : liveOriginal.dynamicRingEnabled,
+  } : liveOriginal;
   const appearance = appearances.find((entry) => entry.id === appearanceId) ?? null;
   const data = appearance ? {
     name: appearance.actorName || original.name,
     actorImg: appearance.actorImg || original.actorImg,
-    tokenName: appearance.actorName || original.tokenName,
+    tokenName: appearance.tokenName || original.tokenName,
     tokenImg: appearance.tokenImg || original.tokenImg,
+    tokenScale: appearance.tokenScale,
     dynamicTokenImg: appearance.dynamicTokenImg || original.dynamicTokenImg,
+    dynamicRingEnabled: appearance.dynamicRingEnabled,
+    dynamicTokenScale: appearance.dynamicTokenScale,
   } : original;
+  data.tokenScale = validScale(data.tokenScale, original.tokenScale);
+  data.dynamicTokenScale = validScale(data.dynamicTokenScale, original.dynamicTokenScale, 0.5);
 
   const update = {
     name: data.name,
     img: data.actorImg,
     "prototypeToken.name": data.tokenName,
     "prototypeToken.texture.src": data.tokenImg,
+    "prototypeToken.texture.scaleX": data.tokenScale * Math.sign(actor.prototypeToken?.texture?.scaleX || 1),
+    "prototypeToken.texture.scaleY": data.tokenScale * Math.sign(actor.prototypeToken?.texture?.scaleY || 1),
+    "prototypeToken.ring.enabled": data.dynamicRingEnabled,
+    "prototypeToken.ring.subject.texture": data.dynamicTokenImg,
+    "prototypeToken.ring.subject.scale": data.dynamicTokenScale,
     [`flags.${MODULE_ID}.${ACTOR_STATE_FLAG}`]: { original, active: appearance?.id ?? "" },
   };
-  if (actor.prototypeToken?.ring) update["prototypeToken.ring.subject.texture"] = data.dynamicTokenImg;
   await actor.update(update);
 
-  const tokenUpdate = { name: data.tokenName, "texture.src": data.tokenImg };
+  const tokenUpdate = {
+    name: data.tokenName,
+    "texture.src": data.tokenImg,
+    "ring.enabled": data.dynamicRingEnabled,
+    "ring.subject.texture": data.dynamicTokenImg,
+    "ring.subject.scale": data.dynamicTokenScale,
+  };
   for (const token of actor.getActiveTokens?.(false, true) ?? []) {
     const document = token.document ?? token;
-    const current = { ...tokenUpdate };
-    if (document.ring) current["ring.subject.texture"] = data.dynamicTokenImg;
-    await document.update(current);
+    await document.update({
+      ...tokenUpdate,
+      "texture.scaleX": data.tokenScale * Math.sign(document.texture?.scaleX || 1),
+      "texture.scaleY": data.tokenScale * Math.sign(document.texture?.scaleY || 1),
+    });
   }
 }
 

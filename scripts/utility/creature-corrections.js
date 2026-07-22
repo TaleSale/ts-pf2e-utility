@@ -9,6 +9,10 @@ const AUTO_DESCRIPTION_START = "<!-- ts-pf2e-utility:creature-correction:auto:st
 const AUTO_DESCRIPTION_END = "<!-- ts-pf2e-utility:creature-correction:auto:end -->";
 const AUTO_DESCRIPTION_CLASS = "tsu-correction-auto-description";
 const AUTO_DESCRIPTION_ATTRIBUTE = "data-tsu-correction-auto-description";
+const ACTION_PLUS_AUTO_DESCRIPTION_START = "<!-- ts-pf2e-utility:action-plus:auto:start -->";
+const ACTION_PLUS_AUTO_DESCRIPTION_END = "<!-- ts-pf2e-utility:action-plus:auto:end -->";
+const ACTION_PLUS_AUTO_DESCRIPTION_CLASS = "tsu-action-plus-auto-description";
+const ACTION_PLUS_AUTO_DESCRIPTION_ATTRIBUTE = "data-tsu-action-plus-auto-description";
 const actorCorrectionApplyTasks = new WeakMap();
 const RANKS = ["high", "medium", "low"];
 const RANK_LABELS = {
@@ -853,6 +857,38 @@ function buildActionPlusCatalogDescription(source) {
   ].filter(Boolean).join("");
 }
 
+function removeStandaloneActionPlusDescription(description) {
+  let result = String(description ?? "");
+  while (result.includes(ACTION_PLUS_AUTO_DESCRIPTION_START) && result.includes(ACTION_PLUS_AUTO_DESCRIPTION_END)) {
+    const startIndex = result.indexOf(ACTION_PLUS_AUTO_DESCRIPTION_START);
+    const endIndex = result.indexOf(ACTION_PLUS_AUTO_DESCRIPTION_END, startIndex);
+    if (endIndex < 0) break;
+    result = `${result.slice(0, startIndex)}${result.slice(endIndex + ACTION_PLUS_AUTO_DESCRIPTION_END.length)}`;
+  }
+
+  if (typeof document !== "undefined") {
+    const template = document.createElement("template");
+    template.innerHTML = result;
+    for (const element of template.content.querySelectorAll(`.${ACTION_PLUS_AUTO_DESCRIPTION_CLASS}, [${ACTION_PLUS_AUTO_DESCRIPTION_ATTRIBUTE}]`)) {
+      element.remove();
+    }
+    result = template.innerHTML;
+  }
+  return result.trim();
+}
+
+function buildMergedStandaloneActionPlusDescription(source, currentDescription, level) {
+  const generatedDescription = [
+    buildSpellSetDescription(source, level),
+    buildAlchemyDescription(source, level),
+  ].filter(Boolean).join("");
+  const manualDescription = removeStandaloneActionPlusDescription(currentDescription);
+  const wrappedGenerated = generatedDescription
+    ? `${ACTION_PLUS_AUTO_DESCRIPTION_START}\n<div class="${ACTION_PLUS_AUTO_DESCRIPTION_CLASS}" ${ACTION_PLUS_AUTO_DESCRIPTION_ATTRIBUTE}="true">\n${generatedDescription}\n</div>\n${ACTION_PLUS_AUTO_DESCRIPTION_END}`
+    : "";
+  return [manualDescription, wrappedGenerated].filter(Boolean).join("\n");
+}
+
 function actionPlusTypeLabel(slug) {
   for (const choices of [CONFIG.PF2E?.weaknessTypes, CONFIG.PF2E?.resistanceTypes, CONFIG.PF2E?.immunityTypes, CONFIG.PF2E?.damageTypes]) {
     const label = localizeConfigValue(choices, slug);
@@ -977,8 +1013,11 @@ function buildSpellSetCatalogDescription(source) {
       if (spells.length) rows.push(`<p><strong>${rank === 0 ? "Чары" : `Ранг ${rank}`}:</strong> ${spells.map((spell) => {
         const link = `${formatStoredSpellLink(spell)}${formatStoredSpellModifiers(spell)}`;
         if (config.type !== "innate") return link;
-        const start = Math.max(1, Number(spell.start) || 1); const end = Math.min(20, Number(spell.end) || 20); const uses = Math.max(1, Number(spell.uses) || 1);
-        return `${link} <span class="tsu-correction-spell-condition">(уровни ${start}-${end}, ${uses} раз)</span>`;
+        const start = Math.max(1, Number(spell.start) || 1);
+        const end = Math.min(20, Number(spell.end) || 20);
+        const uses = Math.max(1, Number(spell.uses) || 1);
+        const usesLabel = spell.atWill || spell.constant ? "" : `, ${uses} раз`;
+        return `${link} <span class="tsu-correction-spell-condition">(уровни ${start}-${end}${usesLabel})</span>`;
       }).join(", ")}</p>`);
     }
       if (config.type === "innate") return rows.join("");
@@ -1317,11 +1356,14 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
       type: "action",
       system: { description: { value: feature.note || "" }, traits: { value: [] } },
     };
-    const spellSetDescription = [buildSpellSetDescription(source, getActorLevel(actor)), buildAlchemyDescription(source, getActorLevel(actor))].filter(Boolean).join("");
-    if (spellSetDescription) {
+    const generatedDescription = [buildSpellSetDescription(source, getActorLevel(actor)), buildAlchemyDescription(source, getActorLevel(actor))].filter(Boolean).join("");
+    if (generatedDescription) {
       source.system ??= {};
       source.system.description ??= {};
-      source.system.description.value = spellSetDescription;
+      source.system.description.value = [source.system.description.value, generatedDescription]
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join("\n");
     }
     const existing = (actor.items?.contents ?? actor.items ?? []).find((item) => item.getFlag?.(MODULE_ID, "creatureCorrectionFeature") === featureKey(feature));
     if (existing) {
@@ -1647,6 +1689,30 @@ Hooks.on("renderItemSheet", (app, html) => {
   const insertTarget = publicationFieldset ?? detailsTab;
   insertTarget.insertAdjacentHTML(publicationFieldset ? "afterend" : "beforeend", renderCorrectionEditor(item));
   activateCorrectionEditor(root, item);
+});
+
+Hooks.on("preUpdateItem", (item, changed) => {
+  if (item.type !== "action" || isCorrectionAction(item, changed) || isCorrectionAction(item)) return;
+  const actionPlusChanged = foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOptions`)
+    || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOption`)
+    || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.spellSets`)
+    || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.alchemyRanges`);
+  if (!actionPlusChanged) return;
+
+  const pendingSource = foundry.utils.mergeObject(
+    foundry.utils.deepClone(item.toObject()),
+    foundry.utils.expandObject(changed),
+    { inplace: false, performDeletions: true },
+  );
+  const currentDescription = foundry.utils.getProperty(changed, "system.description.value")
+    ?? item._source?.system?.description?.value
+    ?? item.system?.description?.value
+    ?? "";
+  foundry.utils.setProperty(
+    changed,
+    "system.description.value",
+    buildMergedStandaloneActionPlusDescription(pendingSource, currentDescription, getActorLevel(item.actor)),
+  );
 });
 
 Hooks.on("preUpdateItem", (item, changed) => {

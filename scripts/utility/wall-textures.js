@@ -715,6 +715,11 @@ function createWallRibbonMesh(style, points) {
   });
   if (cleanPoints.length < 2) return null;
 
+  const firstPoint = cleanPoints[0];
+  const lastPoint = cleanPoints[cleanPoints.length - 1];
+  const isClosed = cleanPoints.length > 2
+    && pointsMatch(firstPoint.x, firstPoint.y, lastPoint.x, lastPoint.y);
+
   const texture = PIXI.Texture.from(style.assets.straightLong);
   setNearestScaleMode(texture);
   setRepeatWrapMode(texture);
@@ -739,8 +744,14 @@ function createWallRibbonMesh(style, points) {
 
   for (let index = 0; index < cleanPoints.length; index += 1) {
     const point = cleanPoints[index];
-    const previousDirection = segmentDirections[Math.max(0, index - 1)];
-    const nextDirection = segmentDirections[Math.min(segmentDirections.length - 1, index)];
+    const atFirstPoint = index === 0;
+    const atClosingPoint = isClosed && index === cleanPoints.length - 1;
+    const previousDirection = atFirstPoint && isClosed
+      ? segmentDirections[segmentDirections.length - 1]
+      : segmentDirections[Math.max(0, index - 1)];
+    const nextDirection = atClosingPoint
+      ? segmentDirections[0]
+      : segmentDirections[Math.min(segmentDirections.length - 1, index)];
     const previousNormal = { x: -previousDirection.y, y: previousDirection.x };
     const nextNormal = { x: -nextDirection.y, y: nextDirection.x };
 

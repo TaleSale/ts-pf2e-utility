@@ -193,10 +193,14 @@
       "Appearances": {
         "FeatureLabel": "Облики",
         "AppearanceName": "Название облика",
-        "ActorName": "Имя листа и токена",
+        "ActorName": "Имя листа",
+        "TokenName": "Имя токена",
         "ActorImage": "Изображение листа",
         "TokenImage": "Изображение токена",
+        "TokenScale": "Масштаб",
         "DynamicTokenImage": "Изображение динамического токена",
+        "DynamicRingEnabled": "Динамическое кольцо включено",
+        "DynamicTokenScale": "Коррекция масштаба",
         "SelectorLabel": "Облики",
         "Original": "Оригинал"
       },

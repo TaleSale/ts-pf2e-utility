@@ -194,10 +194,14 @@
       "Appearances": {
         "FeatureLabel": "Appearances",
         "AppearanceName": "Appearance name",
-        "ActorName": "Sheet and token name",
+        "ActorName": "Sheet name",
+        "TokenName": "Token name",
         "ActorImage": "Sheet image",
         "TokenImage": "Token image",
+        "TokenScale": "Token scale (ratio)",
         "DynamicTokenImage": "Dynamic token image",
+        "DynamicRingEnabled": "Dynamic ring enabled",
+        "DynamicTokenScale": "Scale correction",
         "SelectorLabel": "Appearances",
         "Original": "Original"
       },
