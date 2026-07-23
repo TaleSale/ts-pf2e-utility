@@ -1,6 +1,7 @@
 import { escapeHtml, MODULE_ID } from "../core.js";
 
 export const CREATURE_CORRECTION_FLAG_KEY = "creatureCorrection";
+export const ACTOR_CORRECTIONS_LABEL = "Корректировки";
 const FLAG_KEY = CREATURE_CORRECTION_FLAG_KEY;
 const CORRECTION_TRAIT_SLUG = "correction";
 const CORRECTION_TRAIT_LABEL = "Корректировка";
@@ -1596,7 +1597,7 @@ function createActorCorrectionBlock(root, items) {
   section.className = "adjustments-section section-container tsu-actor-corrections";
   section.innerHTML = `
     <div class="section-header tsu-actor-corrections-header">
-      <h4>КОРРЕКТИРОВКИ</h4>
+      <h4>${ACTOR_CORRECTIONS_LABEL}</h4>
       <div class="actions-controls controls">
         <a class="tsu-actor-corrections-create" data-action="create-correction" data-tooltip="Создать корректировку"><i class="fas fa-plus"></i></a>
       </div>
@@ -1631,12 +1632,74 @@ function findOriginalItemRow(root, item) {
     `[data-document-id="${cssEscape(item.id)}"]`,
   ];
   for (const element of root.querySelectorAll(selectors.join(","))) {
-    if (element.closest(".tsu-actor-corrections")) continue;
+    if (element.closest(".tsu-actor-corrections, .tsu-character-corrections-list")) continue;
     const row = element.closest("li.item, .item") ?? element;
-    if (row.closest(".tsu-actor-corrections")) continue;
+    if (row.closest(".tsu-actor-corrections, .tsu-character-corrections-list")) continue;
     return row;
   }
   return null;
+}
+
+function findOriginalItemRows(root, item) {
+  const selectors = [
+    `[data-item-id="${cssEscape(item.id)}"]`,
+    `[data-item-id="${cssEscape(item._id ?? item.id)}"]`,
+    `[data-document-id="${cssEscape(item.id)}"]`,
+  ];
+  return Array.from(root.querySelectorAll(selectors.join(",")))
+    .map((element) => element.closest("li.item, .item") ?? element)
+    .filter((row, index, rows) => (
+      rows.indexOf(row) === index
+      && !row.closest(".tsu-actor-corrections, .tsu-character-corrections-list")
+    ));
+}
+
+function removeCharacterCorrectionBlock(root) {
+  root.querySelector(".tsu-character-corrections-header")?.remove();
+  root.querySelector(".tsu-character-corrections-list")?.remove();
+}
+
+function organizeCharacterCorrectionBlock(root, actor, items) {
+  const panel = root.querySelector('.tab.actions[data-tab="actions"] .actions-panel[data-tab="encounter"]')
+    ?? root.querySelector('.actions-panel[data-tab="encounter"]');
+  if (!panel) return;
+
+  let header = root.querySelector(".tsu-character-corrections-header");
+  let list = root.querySelector(".tsu-character-corrections-list");
+  if (!header || !list) {
+    removeCharacterCorrectionBlock(root);
+    header = document.createElement("header");
+    header.className = "tsu-character-corrections-header";
+    header.innerHTML = `${escapeHtml(ACTOR_CORRECTIONS_LABEL)}<div class="controls"><button type="button" class="tsu-actor-corrections-create" data-action="create-correction"><i class="fa-solid fa-fw fa-plus"></i></button></div>`;
+    list = document.createElement("ol");
+    list.className = "actions-list item-list directory-list tsu-character-corrections-list";
+    panel.append(header, list);
+    activateActorCorrectionBlock(root, actor);
+  }
+
+  for (const item of items) {
+    const rows = findOriginalItemRows(root, item);
+    const existing = list.querySelector(`[data-item-id="${cssEscape(item.id)}"], [data-document-id="${cssEscape(item.id)}"]`);
+    if (existing) {
+      rows.forEach((row) => row.remove());
+    } else if (rows.length) {
+      list.append(rows[0]);
+      rows.slice(1).forEach((row) => row.remove());
+    } else {
+      const row = document.createElement("li");
+      row.className = "action item";
+      row.dataset.itemId = item.id;
+      row.innerHTML = `<a class="icon item-image framed"><img src="${escapeHtml(item.img)}"></a><h4 class="name"><a>${escapeHtml(item.name)}</a></h4><div class="item-controls"><a data-action="edit-item"><i class="fa-solid fa-fw fa-edit"></i></a><a data-action="delete-item"><i class="fa-solid fa-fw fa-trash"></i></a></div>`;
+      row.addEventListener("dblclick", () => item.sheet?.render(true));
+      list.append(row);
+    }
+  }
+}
+
+function hideCorrectionItems(root, items) {
+  root.querySelector(".tsu-actor-corrections")?.remove();
+  removeCharacterCorrectionBlock(root);
+  for (const item of items) findOriginalItemRows(root, item).forEach((row) => row.remove());
 }
 
 function cssEscape(value) {
@@ -1768,14 +1831,33 @@ Hooks.on("createActor", (actor) => {
 
 Hooks.on("renderActorSheet", (app, html) => {
   const actor = app.document ?? app.object;
-  if (!actor || actor.type !== "npc") return;
+  if (!actor || !["npc", "character"].includes(actor.type)) return;
 
   const items = getCorrectionItems(actor);
   const root = getHtmlElement(html);
   if (!root) return;
 
   root.querySelector(".tsu-actor-corrections")?.remove();
+  removeCharacterCorrectionBlock(root);
   if (!items.length) return;
+
+  if (!game.user?.isGM) {
+    const hide = () => {
+      if (root.isConnected) hideCorrectionItems(root, items);
+    };
+    hideCorrectionItems(root, items);
+    for (const delay of [0, 100, 500]) setTimeout(hide, delay);
+    return;
+  }
+
+  if (actor.type === "character") {
+    const organize = () => {
+      if (root.isConnected) organizeCharacterCorrectionBlock(root, actor, items);
+    };
+    organizeCharacterCorrectionBlock(root, actor, items);
+    for (const delay of [0, 100, 500]) setTimeout(organize, delay);
+    return;
+  }
 
   const anchor = findActorBlockAnchor(root);
   anchor.after(createActorCorrectionBlock(root, items));

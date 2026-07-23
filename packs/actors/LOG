@@ -1,22 +1,14 @@
-2026/07/22-16:01:05.646 2630 Recovering log #29
-2026/07/22-16:01:05.650 2630 Level-0 table #32: started
-2026/07/22-16:01:05.864 2630 Level-0 table #32: 818049 bytes OK
-2026/07/22-16:01:05.991 2630 Delete type=0 #29
-2026/07/22-16:01:05.992 2630 Delete type=3 #27
-2026/07/22-16:01:14.947 5a8 Compacting 1@0 + 1@1 files
-2026/07/22-16:01:15.175 5a8 Generated table #34@0: 550 keys, 824224 bytes
-2026/07/22-16:01:15.175 5a8 Compacted 1@0 + 1@1 files => 824224 bytes
-2026/07/22-16:01:15.255 5a8 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/22-16:01:15.255 5a8 Delete type=2 #30
-2026/07/22-16:01:15.256 5a8 Delete type=2 #32
-2026/07/22-17:17:34.491 5a8 Level-0 table #36: started
-2026/07/22-17:17:34.635 5a8 Level-0 table #36: 606095 bytes OK
-2026/07/22-17:17:34.682 5a8 Delete type=0 #33
-2026/07/22-17:17:34.764 5a8 Manual compaction at level-0 from '!actors!1LYLon2SnCfd0XBd' @ 72057594037927935 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at '!actors.items!gp7GMxzlcvBD7h6O.ztUKgReb0MuYFV32' @ 2562 : 1
-2026/07/22-17:17:34.764 5a8 Compacting 1@0 + 1@1 files
-2026/07/22-17:17:34.981 5a8 Generated table #37@0: 717 keys, 1096254 bytes
-2026/07/22-17:17:34.981 5a8 Compacted 1@0 + 1@1 files => 1096254 bytes
-2026/07/22-17:17:34.998 5a8 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/22-17:17:34.998 5a8 Delete type=2 #34
-2026/07/22-17:17:34.998 5a8 Delete type=2 #36
-2026/07/22-17:17:34.999 5a8 Manual compaction at level-0 from '!actors.items!gp7GMxzlcvBD7h6O.ztUKgReb0MuYFV32' @ 2562 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at (end)
+2026/07/23-16:34:04.105 b90 Recovering log #44
+2026/07/23-16:34:04.213 b90 Delete type=0 #44
+2026/07/23-16:34:04.213 b90 Delete type=3 #42
+2026/07/23-17:26:05.742 cdc Level-0 table #50: started
+2026/07/23-17:26:05.889 cdc Level-0 table #50: 617907 bytes OK
+2026/07/23-17:26:05.918 cdc Delete type=0 #48
+2026/07/23-17:26:05.976 cdc Manual compaction at level-0 from '!actors!1LYLon2SnCfd0XBd' @ 72057594037927935 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at '!folders!whay7C8Yn0CXig9X' @ 2846 : 1
+2026/07/23-17:26:05.976 cdc Compacting 1@0 + 1@1 files
+2026/07/23-17:26:06.233 cdc Generated table #51@0: 829 keys, 1292182 bytes
+2026/07/23-17:26:06.234 cdc Compacted 1@0 + 1@1 files => 1292182 bytes
+2026/07/23-17:26:06.258 cdc compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/07/23-17:26:06.259 cdc Delete type=2 #46
+2026/07/23-17:26:06.261 cdc Delete type=2 #50
+2026/07/23-17:26:06.263 cdc Manual compaction at level-0 from '!folders!whay7C8Yn0CXig9X' @ 2846 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at (end)

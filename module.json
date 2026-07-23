@@ -2,7 +2,7 @@
   "id": "ts-pf2e-utility",
   "title": "TS-PF2E-UTILITY",
   "description": "Utility module for PF2E with multilingual tavern games and other Tale Sale tools.",
-  "version": "1.7.4",
+  "version": "1.7.5",
   "compatibility": {
     "minimum": "14",
     "verified": "14"

@@ -174,6 +174,7 @@ async function applyAppearance(actor, appearanceId, appearances) {
   };
   for (const token of actor.getActiveTokens?.(false, true) ?? []) {
     const document = token.document ?? token;
+    if (document.canUserModify instanceof Function && !document.canUserModify(game.user, "update")) continue;
     await document.update({
       ...tokenUpdate,
       "texture.scaleX": data.tokenScale * Math.sign(document.texture?.scaleX || 1),
@@ -184,20 +185,30 @@ async function applyAppearance(actor, appearanceId, appearances) {
 
 function injectSelector(app, html) {
   const actor = app?.document ?? app?.actor ?? null;
-  if (actor?.type !== "npc") return;
-  const appearances = getActorAppearances(actor);
-  if (!appearances.length) return;
+  if (!actor || !["npc", "character"].includes(actor.type)) return;
   const root = htmlElement(html);
-  if (!root || root.querySelector(".ts-appearance-selector")) return;
+  if (!root) return;
+  if (actor.canUserModify instanceof Function ? !actor.canUserModify(game.user, "update") : !actor.isOwner) return;
+  const appearances = getActorAppearances(actor);
+  if (!appearances.length || root.querySelector(".ts-appearance-selector")) return;
   const active = actor.getFlag(MODULE_ID, ACTOR_STATE_FLAG)?.active ?? "";
   const options = [
     `<option value="" ${active ? "" : "selected"}>${escapeHtml(localize("Original"))}</option>`,
     ...appearances.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === active ? "selected" : ""}>${escapeHtml(entry.name)}</option>`),
   ].join("");
-  const markup = `<label class="ts-appearance-selector" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%"><span style="font-weight:600">${escapeHtml(localize("SelectorLabel"))}</span><select style="width:100%">${options}</select></label>`;
-  const portrait = root.querySelector(".sidebar .image-container");
+  const selectorTitle = actor.type === "npc"
+    ? `<span style="font-weight:600">${escapeHtml(localize("SelectorLabel"))}</span>`
+    : "";
+  const characterSpacing = actor.type === "character" ? "margin-top:10px;" : "";
+  const markup = `<label class="ts-appearance-selector" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%;${characterSpacing}">${selectorTitle}<select style="width:100%">${options}</select></label>`;
+  const portrait = actor.type === "character"
+    ? root.querySelector('.tab[data-tab="character"] .subsection.details .image-container')
+    : root.querySelector(".sidebar .image-container");
   const fallback = root.querySelector("header.sheet-header, .sheet-header") ?? root;
-  if (portrait) portrait.insertAdjacentHTML("afterend", markup);
+  if (portrait && actor.type === "character") {
+    portrait.style.maxHeight = "none";
+    portrait.insertAdjacentHTML("beforeend", markup);
+  } else if (portrait) portrait.insertAdjacentHTML("afterend", markup);
   else fallback.insertAdjacentHTML("afterbegin", markup);
   root.querySelector(".ts-appearance-selector select")?.addEventListener("change", async (event) => {
     event.currentTarget.disabled = true;
