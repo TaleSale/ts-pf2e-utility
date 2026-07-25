@@ -5,20 +5,35 @@ const FEATURE_ID = "shoulderToShoulder";
 const FLAG_KEY = "shoulderToShoulder";
 const MIN_ALLIES = 1;
 const MAX_ALLIES = 20;
+const MIN_REACH = 0;
+const MAX_REACH = 1000;
 
 function localize(key) {
   return game.i18n.localize(`${I18N_PREFIX}.ActionPlus.ShoulderToShoulder.${key}`);
 }
 
 function normalizeRequiredAllies(value) {
-  const number = Number(value?.requiredAllies ?? value);
+  const number = Number(value);
   return Number.isFinite(number)
     ? Math.clamp(Math.trunc(number), MIN_ALLIES, MAX_ALLIES)
     : MIN_ALLIES;
 }
 
-function getRequiredAllies(item) {
-  return normalizeRequiredAllies(item?.getFlag?.(MODULE_ID, FLAG_KEY));
+function normalizeConfiguration(value) {
+  const legacyRequiredAllies = normalizeRequiredAllies(value?.requiredAllies ?? value);
+  const reach = Number(value?.reach);
+  return {
+    nearSelf: value?.nearSelf !== false,
+    selfRequiredAllies: normalizeRequiredAllies(value?.selfRequiredAllies ?? legacyRequiredAllies),
+    nearTarget: value?.nearTarget === true,
+    targetRequiredAllies: normalizeRequiredAllies(value?.targetRequiredAllies ?? legacyRequiredAllies),
+    useReach: value?.useReach === true,
+    reach: Number.isFinite(reach) ? Math.clamp(reach, MIN_REACH, MAX_REACH) : 5,
+  };
+}
+
+function getConfiguration(item) {
+  return normalizeConfiguration(item?.getFlag?.(MODULE_ID, FLAG_KEY));
 }
 
 function hasToggleableRollOption(item) {
@@ -42,18 +57,34 @@ function getConfiguredSceneActors() {
 }
 
 function renderControls({ item }) {
+  const configuration = getConfiguration(item);
   return `
     <div class="form-group" style="margin: 0;">
-      <label>${foundry.utils.escapeHTML(localize("RequiredAllies"))}</label>
+      <label>${foundry.utils.escapeHTML(localize("NearSelf"))}</label>
       <div class="form-fields">
+        <input type="checkbox" class="ts-shoulder-to-shoulder-near-self" ${configuration.nearSelf ? "checked" : ""}>
         <input
           type="number"
-          class="ts-shoulder-to-shoulder-allies"
+          class="ts-shoulder-to-shoulder-self-allies"
           min="${MIN_ALLIES}"
           max="${MAX_ALLIES}"
           step="1"
-          value="${getRequiredAllies(item)}"
+          value="${configuration.selfRequiredAllies}"
         >
+      </div>
+    </div>
+    <div class="form-group" style="margin: 0;">
+      <label>${foundry.utils.escapeHTML(localize("NearTarget"))}</label>
+      <div class="form-fields">
+        <input type="checkbox" class="ts-shoulder-to-shoulder-near-target" ${configuration.nearTarget ? "checked" : ""}>
+        <input type="number" class="ts-shoulder-to-shoulder-target-allies" min="${MIN_ALLIES}" max="${MAX_ALLIES}" step="1" value="${configuration.targetRequiredAllies}">
+      </div>
+    </div>
+    <div class="form-group" style="margin: 0;">
+      <label>${foundry.utils.escapeHTML(localize("Reach"))}</label>
+      <div class="form-fields">
+        <input type="checkbox" class="ts-shoulder-to-shoulder-use-reach" ${configuration.useReach ? "checked" : ""}>
+        <input type="number" class="ts-shoulder-to-shoulder-reach" min="${MIN_REACH}" max="${MAX_REACH}" step="1" value="${configuration.reach}" ${configuration.useReach ? "" : "disabled"}>
       </div>
       <p class="hint">${foundry.utils.escapeHTML(localize("Hint"))}</p>
     </div>
@@ -64,12 +95,21 @@ function activateListeners({ html, item, optionIndex }) {
   const panel = html.querySelector(
     `.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"]`,
   );
-  const input = panel?.querySelector(".ts-shoulder-to-shoulder-allies");
-  input?.addEventListener("change", async (event) => {
-    const requiredAllies = normalizeRequiredAllies(event.currentTarget.value);
-    event.currentTarget.value = requiredAllies;
-    await item.setFlag(MODULE_ID, FLAG_KEY, { requiredAllies });
-  });
+  if (!panel) return;
+  const save = async () => {
+    const configuration = normalizeConfiguration({
+      nearSelf: panel.querySelector(".ts-shoulder-to-shoulder-near-self")?.checked,
+      selfRequiredAllies: panel.querySelector(".ts-shoulder-to-shoulder-self-allies")?.value,
+      nearTarget: panel.querySelector(".ts-shoulder-to-shoulder-near-target")?.checked,
+      targetRequiredAllies: panel.querySelector(".ts-shoulder-to-shoulder-target-allies")?.value,
+      useReach: panel.querySelector(".ts-shoulder-to-shoulder-use-reach")?.checked,
+      reach: panel.querySelector(".ts-shoulder-to-shoulder-reach")?.value,
+    });
+    const reachInput = panel.querySelector(".ts-shoulder-to-shoulder-reach");
+    if (reachInput) reachInput.disabled = !configuration.useReach;
+    await item.setFlag(MODULE_ID, FLAG_KEY, configuration);
+  };
+  for (const input of panel.querySelectorAll("input")) input.addEventListener("change", save);
 }
 
 registerActionPlusFeature({
@@ -85,10 +125,8 @@ function activeTokensFor(actor) {
   return canvas.tokens?.placeables?.filter((token) => token.actor === actor) ?? [];
 }
 
-function isAdjacent(token, other) {
+function isWithinReach(token, other, reach) {
   if (!token?.actor || !other?.actor || token === other) return false;
-  const alliance = token.actor.alliance;
-  if (alliance == null || alliance !== other.actor.alliance) return false;
 
   const gridSize = Number(canvas.scene?.grid?.size);
   const tokenDocument = token.document;
@@ -109,24 +147,39 @@ function isAdjacent(token, other) {
 
     // Less than one empty grid space between occupied token rectangles means
     // their nearest occupied squares are adjacent (including diagonally).
-    return horizontalGap < gridSize && verticalGap < gridSize && elevationGap <= gridDistance;
+    // Measure between the nearest occupied grid spaces. Touching token
+    // rectangles are one grid increment apart; every full gap adds another.
+    const planarDistance = (Math.floor(Math.max(horizontalGap, verticalGap) / gridSize) + 1) * gridDistance;
+    return Math.max(planarDistance, elevationGap) <= reach;
   }
 
   const distance = token.distanceTo?.(other);
-  return Number.isFinite(distance) && distance <= (Number(canvas.scene?.grid?.distance) || 5);
+  return Number.isFinite(distance) && distance <= reach;
 }
 
-function hasEnoughAdjacentAllies(actor, requiredAllies) {
+function countAlliesWithinReach(origin, alliance, reach, excludedTokens = new Set([origin])) {
+  return (canvas.tokens?.placeables ?? []).filter((other) => (
+    !excludedTokens.has(other) && other?.actor?.alliance === alliance && isWithinReach(origin, other, reach)
+  )).length;
+}
+
+function hasEnoughNearbyAllies(actor, configuration) {
   const actorTokens = activeTokensFor(actor);
   if (!actorTokens.length) return false;
-
-  const sceneTokens = canvas.tokens?.placeables ?? [];
-  return actorTokens.some((token) => {
-    // Count creature tokens, not unique actor UUIDs: several unlinked copies of
-    // the same NPC are separate allies on the battlefield.
-    const adjacentAllies = sceneTokens.filter((other) => isAdjacent(token, other));
-    return adjacentAllies.length >= requiredAllies;
-  });
+  const alliance = actor.alliance;
+  if (alliance == null) return false;
+  const reach = configuration.useReach
+    ? configuration.reach
+    : (Number(canvas.scene?.grid?.distance) || 5);
+  if (configuration.nearSelf && actorTokens.some((token) => (
+    countAlliesWithinReach(token, alliance, reach) >= configuration.selfRequiredAllies
+  ))) return true;
+  if (!configuration.nearTarget) return false;
+  const actorTokenSet = new Set(actorTokens);
+  return Array.from(game.user?.targets ?? []).some((target) => (
+    target?.actor
+    && countAlliesWithinReach(target, alliance, reach, actorTokenSet) >= configuration.targetRequiredAllies
+  ));
 }
 
 // Synthetic actors belonging to unlinked copies of the same NPC can expose
@@ -142,7 +195,7 @@ async function syncActorRuleValues(actor) {
   try {
     for (const item of getConfiguredItems(actor)) {
       if (!item.isOwner) continue;
-      const active = hasEnoughAdjacentAllies(actor, getRequiredAllies(item));
+      const active = hasEnoughNearbyAllies(actor, getConfiguration(item));
       const rules = foundry.utils.deepClone(item._source?.system?.rules ?? item.system?.rules ?? []);
       let changed = false;
       for (const rule of rules) {
@@ -189,6 +242,8 @@ Hooks.on("updateToken", (_document, changed) => {
   if (!["x", "y", "elevation", "width", "height"].some((key) => key in changed)) return;
   refreshShoulderToShoulder();
 });
+
+Hooks.on("targetToken", refreshShoulderToShoulder);
 
 Hooks.on("updateItem", (item, changed) => {
   if (item.type !== "action" || !item.actor) return;

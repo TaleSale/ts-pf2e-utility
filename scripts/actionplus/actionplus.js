@@ -159,6 +159,18 @@ Hooks.once("init", () => {
     },
   });
 
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("lightBlindness"), {
+    name: i18nKey(`${SETTINGS_ROOT}.LightBlindness.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.LightBlindness.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => {
+      rerenderOpenActionSheets();
+    },
+  });
+
   game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("bloodline"), {
     name: i18nKey(`${SETTINGS_ROOT}.BloodMagic.Name`),
     hint: i18nKey(`${SETTINGS_ROOT}.BloodMagic.Hint`),

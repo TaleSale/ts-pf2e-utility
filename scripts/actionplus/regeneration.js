@@ -37,6 +37,8 @@ Hooks.on("preUpdateItem", (item, changed) => {
   applyRegenerationRuleSyncToPendingUpdate(item, changed);
 });
 
+Hooks.on("renderActorSheet", injectActorSheetButtons);
+
 function renderRegenerationControls({ item }) {
   const rules = getRegenerationRules(item);
   const hasRules = rules.length > 0;
@@ -57,6 +59,63 @@ function renderRegenerationControls({ item }) {
 
 function activateRegenerationListeners({ item }) {
   ensureRegenerationRulesCurrent(item);
+}
+
+function getHtmlElement(html) {
+  if (html instanceof HTMLElement) return html;
+  if (html?.[0] instanceof HTMLElement) return html[0];
+  if (html?.element instanceof HTMLElement) return html.element;
+  return null;
+}
+
+function injectUseButton(row, actor) {
+  if (!(row instanceof HTMLElement)) return;
+  row.querySelectorAll(".item-summary .ts-regeneration-use").forEach((button) => button.remove());
+  row.querySelector(":scope > .button-group > .use-action[data-action=\"use-action\"]")?.closest(".button-group")?.remove();
+  if (row.querySelector(":scope > .ts-regeneration-use")) return;
+  const group = document.createElement("div");
+  group.className = "button-group ts-regeneration-use";
+  group.innerHTML = `
+    <button type="button" class="blue">
+      <i class="fas fa-ban"></i> ${foundry.utils.escapeHTML(localize("ActionPlus.Regeneration.ApplyDisabled"))}
+    </button>
+  `;
+  group.querySelector("button")?.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await applyRegenerationBlockEffect(actor);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  const summary = row.querySelector(":scope > .item-summary");
+  if (summary) summary.before(group);
+  else row.append(group);
+}
+
+function injectActorSheetButtons(app, html) {
+  if (!game.user.isGM) return;
+  const actor = app?.document ?? app?.actor ?? app?.object ?? null;
+  const root = getHtmlElement(html);
+  if (!actor || !root) return;
+  const items = (actor.itemTypes?.action ?? []).filter((item) => isActionPlusFeatureEnabled(item, FEATURE_ID));
+  if (!items.length) return;
+
+  const scan = () => {
+    if (!root.isConnected) return;
+    for (const item of items) {
+      const escapedId = CSS.escape(item.id);
+      for (const row of root.querySelectorAll(`[data-item-id="${escapedId}"], [data-document-id="${escapedId}"]`)) {
+        if (!row.matches(".item-summary")) injectUseButton(row, actor);
+      }
+    }
+  };
+
+  scan();
+  const observer = new MutationObserver(scan);
+  observer.observe(root, { childList: true, subtree: true });
 }
 
 async function cleanupRegeneration({ item }) {

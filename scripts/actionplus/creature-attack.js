@@ -1,4 +1,4 @@
-import { escapeHtml, I18N_PREFIX, MODULE_ID } from "../core.js";
+import { areCreatureCorrectionsLocked, escapeHtml, I18N_PREFIX, isCreatureCorrectionManagedItem, MODULE_ID } from "../core.js";
 import {
   getItemActionPlusOptions,
   isActionPlusFeatureEnabled,
@@ -40,7 +40,7 @@ const STRIKE_BONUS_TABLE = {
   "24": { low: 36, moderate: 42, high: 44, extreme: 46 },
 };
 
-const STRIKE_DAMAGE_TABLE = {
+export const STRIKE_DAMAGE_TABLE = {
   "-1": { low: "1d4", moderate: "1d4", high: "1d4+1", extreme: "1d6+1" },
   "0": { low: "1d4+1", moderate: "1d4+2", high: "1d6+2", extreme: "1d6+3" },
   "1": { low: "1d4+2", moderate: "1d6+2", high: "1d6+3", extreme: "1d8+4" },
@@ -1030,6 +1030,7 @@ async function createCreatureAttackItem(item, config) {
 
 async function refreshCreatureAttack(item, previousConfig = null, occurrenceIndex = null, { allowCreate = false } = {}) {
   if (!isSupportedActionPlusItem(item) || !item.actor) return;
+  if (areCreatureCorrectionsLocked(item.actor) && isCreatureCorrectionManagedItem(item)) return;
   if (!isActionPlusFeatureEnabled(item, FEATURE_ID)) return;
 
   if (occurrenceIndex === null) {
@@ -1076,3 +1077,5 @@ async function refreshActorCreatureAttacks(actor) {
     await refreshCreatureAttack(item);
   }
 }
+
+Hooks.on("tsPf2eUtilityCorrectionLockChanged", (actor, locked) => { if (!locked) void refreshActorCreatureAttacks(actor); });

@@ -1,14 +1,16 @@
-2026/07/23-16:34:03.431 24e4 Recovering log #136
-2026/07/23-16:34:03.540 24e4 Delete type=0 #136
-2026/07/23-16:34:03.540 24e4 Delete type=3 #134
-2026/07/23-17:26:05.491 cdc Level-0 table #142: started
-2026/07/23-17:26:05.527 cdc Level-0 table #142: 61633 bytes OK
-2026/07/23-17:26:05.550 cdc Delete type=0 #140
-2026/07/23-17:26:05.567 cdc Manual compaction at level-0 from '!folders!1Kxyex5XsfmVx4tY' @ 72057594037927935 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at '!items!x4VOKvNWg77CNtpC' @ 1154 : 1
-2026/07/23-17:26:05.567 cdc Compacting 1@0 + 1@1 files
-2026/07/23-17:26:05.713 cdc Generated table #143@0: 268 keys, 440676 bytes
-2026/07/23-17:26:05.713 cdc Compacted 1@0 + 1@1 files => 440676 bytes
-2026/07/23-17:26:05.733 cdc compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/23-17:26:05.734 cdc Delete type=2 #138
-2026/07/23-17:26:05.734 cdc Delete type=2 #142
-2026/07/23-17:26:05.734 cdc Manual compaction at level-0 from '!items!x4VOKvNWg77CNtpC' @ 1154 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at (end)
+2026/07/25-16:40:54.311 1170 Recovering log #171
+2026/07/25-16:40:54.311 1170 Level-0 table #173: started
+2026/07/25-16:40:54.391 1170 Level-0 table #173: 4564 bytes OK
+2026/07/25-16:40:54.655 1170 Delete type=0 #171
+2026/07/25-16:40:54.656 1170 Delete type=3 #170
+2026/07/25-17:13:53.214 b60 Level-0 table #176: started
+2026/07/25-17:13:53.215 b60 Level-0 table #176: 0 bytes OK
+2026/07/25-17:13:53.231 b60 Delete type=0 #174
+2026/07/25-17:13:53.248 b60 Manual compaction at level-0 from '!folders!1Kxyex5XsfmVx4tY' @ 72057594037927935 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at '!items!DIa0RjZZ6DNV8iAc' @ 1316 : 1
+2026/07/25-17:13:53.248 b60 Compacting 1@0 + 1@1 files
+2026/07/25-17:13:53.363 b60 Generated table #177@0: 299 keys, 795790 bytes
+2026/07/25-17:13:53.364 b60 Compacted 1@0 + 1@1 files => 795790 bytes
+2026/07/25-17:13:53.397 b60 compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/07/25-17:13:53.398 b60 Delete type=2 #169
+2026/07/25-17:13:53.398 b60 Delete type=2 #173
+2026/07/25-17:13:53.401 b60 Manual compaction at level-0 from '!items!DIa0RjZZ6DNV8iAc' @ 1316 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at (end)

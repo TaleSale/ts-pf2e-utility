@@ -3,7 +3,10 @@ import { MODULE_ID, i18nKey, t } from "../core.js";
 const SETTING_ENABLE = "enableWallTextures";
 const I18N_ROOT = "Settings.WallTextures";
 const FLAG_ROOT = "wallTexture";
-const DEFAULT_STYLE = "grey-brick";
+const DEFAULT_STYLE = "brick-grey-dense";
+const WALL_TEXTURE_STYLE_ALIASES = Object.freeze({
+  "grey-brick": DEFAULT_STYLE,
+});
 const WALL_TEXTURE_CONTAINER = "tsu-wall-textures";
 const TEXTURE_ASSET_BASE = `modules/${MODULE_ID}/images/scene-walls`;
 const SOURCE_TEXTURE_SIZE = 200;
@@ -35,17 +38,31 @@ const OVERLAY_SOURCE_FRAMES = Object.freeze({
 });
 const WALL_TEXTURE_STYLES = Object.freeze({
   [DEFAULT_STYLE]: {
-    labelKey: `${I18N_ROOT}.Choices.GreyBrick`,
-    fallback: "Grey brick",
+    labelKey: `${I18N_ROOT}.Choices.BrickGreyDense`,
+    fallback: "Brick - Dense grey",
     assets: Object.freeze({
-      straight: `${TEXTURE_ASSET_BASE}/grey-brick.webp`,
-      straightLong: `${TEXTURE_ASSET_BASE}/grey-brick.webp`,
-      diag: `${TEXTURE_ASSET_BASE}/grey-brick.webp`,
-      corner: `${TEXTURE_ASSET_BASE}/grey-brick.webp`,
-      joint: `${TEXTURE_ASSET_BASE}/grey-brick.webp`,
+      straight: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
+      straightLong: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
+      diag: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
+      corner: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
+      joint: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
     }),
   },
+  "brick-grey": createWallTextureStyle("BrickGrey", "Brick - Grey", "brick-grey.webp"),
+  "brick-red": createWallTextureStyle("BrickRed", "Brick - Red", "brick-red.webp"),
+  "metal-iron": createWallTextureStyle("MetalIron", "Metal - Iron", "metal-iron.png"),
+  "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png"),
+  "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png"),
 });
+
+function createWallTextureStyle(label, fallback, filename) {
+  const asset = `${TEXTURE_ASSET_BASE}/${filename}`;
+  return Object.freeze({
+    labelKey: `${I18N_ROOT}.Choices.${label}`,
+    fallback,
+    assets: Object.freeze({ straight: asset, straightLong: asset, diag: asset, corner: asset, joint: asset }),
+  });
+}
 
 let redrawTimeout = null;
 const propagatingWalls = new Set();
@@ -85,7 +102,11 @@ function supportsWallTexture(wall) {
 }
 
 function getStyleDefinition(style) {
-  return WALL_TEXTURE_STYLES[style] ?? WALL_TEXTURE_STYLES[DEFAULT_STYLE];
+  return WALL_TEXTURE_STYLES[normalizeStyleKey(style)] ?? WALL_TEXTURE_STYLES[DEFAULT_STYLE];
+}
+
+function normalizeStyleKey(style) {
+  return WALL_TEXTURE_STYLE_ALIASES[style] ?? style;
 }
 
 function getWallCoords(wall) {
@@ -307,7 +328,7 @@ function centerDisplayObject(displayObject, width, height) {
 function createWallTextureFieldset(wall) {
   const flags = getFlagData(wall);
   const enabled = isEnabled(flags.enabled);
-  const selectedStyle = typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE;
+  const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE);
 
   const fieldset = document.createElement("fieldset");
   fieldset.className = "tsu-wall-texture-config";
@@ -660,7 +681,7 @@ function getNextChainWall(endpointMap, endpointKey, visitedWalls) {
 
 function getWallTextureStyleKey(wall) {
   const flags = getFlagData(wall);
-  return typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE;
+  return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE);
 }
 
 function buildWallTextureChains(walls, endpointMap) {

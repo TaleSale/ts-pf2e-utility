@@ -22,6 +22,7 @@
       "Regeneration": {
         "FeatureLabel": "Regeneration",
         "HintTitle": "Regeneration automation",
+        "ApplyDisabled": "Disable regeneration",
         "Messages": {
           "Ready": "The action will watch this regeneration rule's \"Deactivated by\" list and apply a temporary no-regeneration effect when matching damage is received.",
           "MissingRule": "No regeneration rule element was found on this action. Add a regeneration rule first.",
@@ -31,6 +32,11 @@
           "Name": "Regeneration Disabled",
           "Description": "This creature's regeneration is disabled until the end of its next turn."
         }
+      },
+      "LightBlindness": {
+        "FeatureLabel": "Light Blindness",
+        "Hint": "Dazzled is maintained automatically in bright light. The blindness use button is shown in the expanded ability on the creature sheet.",
+        "ApplyBlinded": "Use"
       },
       "CreatureAttack": {
         "FeatureLabel": "Creature Attack",
@@ -217,8 +223,57 @@
       },
       "ShoulderToShoulder": {
         "FeatureLabel": "Shoulder to Shoulder",
-        "RequiredAllies": "Adjacent allies",
-        "Hint": "The action's toggleable rules are enabled while at least this many allies are adjacent."
+        "NearSelf": "Allies near me",
+        "NearTarget": "Allies near the enemy",
+        "Reach": "Within reach",
+        "Hint": "The action's toggleable rules are enabled when an enabled condition is met. Within reach allows a distance to be used instead of normal adjacency. The enemy condition uses your current target."
+      },
+      "TroopDamage": {
+        "FeatureLabel": "Troop Damage",
+        "Hint": "The description and rules update automatically when settings change. Manual text before the generated block is preserved.",
+        "ModeLabel": "Action cost",
+        "VariableMode": "1–2–3 actions (melee)",
+        "FixedMode": "2 actions (ranged)",
+        "SaveLabel": "Saving throw and DC quality",
+        "Fortitude": "Fortitude",
+        "Reflex": "Reflex",
+        "Will": "Will",
+        "Extreme": "Extreme",
+        "High": "High",
+        "Moderate": "Moderate",
+        "Low": "Low",
+        "CurrentDc": "Current DC: {dc}",
+        "EmanationLabel": "Emanation width (feet)",
+        "BurstLargeLabel": "Burst, 3–4 segments (feet)",
+        "BurstSmallLabel": "Burst, 1–2 segments (feet)",
+        "AreaTypeLabel": "Area shape",
+        "AreaBurst": "Burst",
+        "AreaLine": "Line",
+        "AreaCone": "Cone",
+        "AreaEmanation": "Emanation",
+        "AreaLargeLabel": "Area distance at 3–4 segments (feet)",
+        "AreaSmallLabel": "Area distance at 1–2 segments (feet)",
+        "RangeLabel": "Area placement range (feet)",
+        "ReductionLabel": "Weaken damage by",
+        "DamageTypesLabel": "Available damage types",
+        "DamageTypesHint": "Selected damage types.",
+        "ChooseDamageTypesButton": "Choose damage types",
+        "DamageTypesDialogTitle": "Troop damage types",
+        "SearchPlaceholder": "Search",
+        "UpdateTypesButton": "Apply selection",
+        "CancelButton": "Cancel",
+        "ApplyButton": "Autofill",
+        "Applied": "Troop damage has been filled in.",
+        "FourSegments": "4 segments:",
+        "ThreeSegments": "3 segments:",
+        "TwoSegments": "2 segments:",
+        "ChooseType": "You can choose the damage type in the menu at the top of the creature sheet.",
+        "VariableIntro": "The troop makes a coordinated attack against enemies in a {template} with a {check}.",
+        "FixedIntro": "The troop makes coordinated ranged strikes in a {burst} within {range} feet, dealing the damage below with a {check}. When the troop is reduced to 2 segments, its area of fire shrinks to a {small}.",
+        "FixedIntroBurst": "The troop makes coordinated ranged strikes in an {area} placed within {range} feet, dealing the damage below with a {check}. When the troop is reduced to 2 segments, the area shrinks to a {small}.",
+        "FixedIntroArea": "The troop makes coordinated strikes against creatures in an {area}, dealing the damage below with a {check}. When the troop is reduced to 2 segments, the area shrinks to a {small}.",
+        "VariableEnding": "Damage depends on the number of actions spent and the number of troop segments, while its type depends on the selection at the top of the character sheet.",
+        "FixedEnding": "Damage depends on the number of troop segments, while its type depends on the selection at the top of the character sheet."
       }
     }
   }

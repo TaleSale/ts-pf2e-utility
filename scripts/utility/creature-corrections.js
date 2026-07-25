@@ -1,4 +1,4 @@
-import { escapeHtml, MODULE_ID } from "../core.js";
+import { areCreatureCorrectionsLocked, CREATURE_CORRECTIONS_LOCK_FLAG, escapeHtml, MODULE_ID } from "../core.js";
 
 export const CREATURE_CORRECTION_FLAG_KEY = "creatureCorrection";
 export const ACTOR_CORRECTIONS_LABEL = "Корректировки";
@@ -966,7 +966,12 @@ function buildAppearancesCatalogDescription(source) {
 
 function buildShoulderToShoulderCatalogDescription(source) {
   const { flags, options } = getActionPlusSourceData(source); if (!options.includes("shoulderToShoulder")) return "";
-  return `<p><strong>Плечом к плечу:</strong> союзников рядом — ${Math.max(1, Number(flags.shoulderToShoulder?.requiredAllies ?? flags.shoulderToShoulder) || 1)}</p>`;
+  const config = flags.shoulderToShoulder;
+  const legacy = Math.max(1, Number(config?.requiredAllies ?? config) || 1);
+  const self = config?.nearSelf !== false ? `рядом с собой — ${Math.max(1, Number(config?.selfRequiredAllies) || legacy)}` : "";
+  const target = config?.nearTarget === true ? `рядом с врагом — ${Math.max(1, Number(config?.targetRequiredAllies) || legacy)}` : "";
+  const reach = config?.useReach === true ? `; в досягаемости — ${Math.max(0, Number(config?.reach) || 5)}` : "";
+  return `<p><strong>Плечом к плечу:</strong> ${[self, target].filter(Boolean).join("; ") || "условия отключены"}${reach}</p>`;
 }
 
 function actionPlusUsesInternalLevels(source) {
@@ -1311,7 +1316,7 @@ function buildSpellSetDescription(source, level) {
   for (const config of configs) {
     if (!config || (["prepared", "spontaneous"].includes(config.type) && ((config.startLevel !== "" && config.startLevel != null && level < Number(config.startLevel)) || (config.endLevel !== "" && config.endLevel != null && level > Number(config.endLevel))))) continue;
     const active = (Array.isArray(config.spells) ? config.spells : []).filter((spell) => {
-      if (["prepared", "spontaneous"].includes(config.type)) return Number(spell.rank) <= maxRank && (Number(spell.rank) === 0 || !spell.evenOnly || level % 2 === 0);
+      if (["prepared", "spontaneous"].includes(config.type)) return Number(spell.rank) <= maxRank && (!spell.evenOnly || Number(spell.rank) < maxRank || level % 2 === 0);
       const starts = level >= Number(spell.start || 1); const ends = config.type !== "innate" || level <= Number(spell.end || 20); return starts && ends;
     });
     const rows = [];
@@ -1370,11 +1375,18 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
     if (existing) {
       const updateSource = foundry.utils.deepClone(source);
       updateSource._id = existing.id;
-      delete updateSource.folder; delete updateSource.sort; delete updateSource.ownership;
+      delete updateSource.folder; delete updateSource.sort; delete updateSource.ownership; delete updateSource._stats;
       updateSource.flags ??= {}; updateSource.flags[MODULE_ID] ??= {};
       updateSource.flags[MODULE_ID].creatureCorrectionFeature = featureKey(feature);
       if (existing.system?.frequency?.value != null && updateSource.system?.frequency) updateSource.system.frequency.value = existing.system.frequency.value;
-      updates.push(updateSource);
+      // Updating an unchanged managed action still fires updateItem. For actions
+      // with a spell set that hook rebuilds all generated entries and prepared
+      // slots, which can change their document order when an unrelated
+      // correction is applied. Only submit an embedded update when the source
+      // feature has actually changed.
+      const changes = foundry.utils.diffObject(existing.toObject(), updateSource);
+      delete changes._id;
+      if (Object.keys(changes).length) updates.push(updateSource);
       continue;
     }
     if (actorHasFeature(actor, feature)) continue;
@@ -1390,6 +1402,7 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
 
 async function applyCreatureCorrectionToActor(actor) {
   if (!actor || actor.type !== "npc") return;
+  if (areCreatureCorrectionsLocked(actor)) return;
   const correctionItems = getCorrectionActions(actor);
   if (!correctionItems.length) return;
 
@@ -1405,6 +1418,7 @@ async function applyCreatureCorrectionToActor(actor) {
 
 function scheduleActorCorrectionApply(actor) {
   if (!actor || actor.type !== "npc") return;
+  if (areCreatureCorrectionsLocked(actor)) return;
 
   const state = actorCorrectionApplyTasks.get(actor) ?? { timer: null, running: false, rerun: false };
   actorCorrectionApplyTasks.set(actor, state);
@@ -1592,13 +1606,21 @@ function getCorrectionItems(actor) {
     .sort((left, right) => String(left.name).localeCompare(String(right.name), game.i18n?.lang || "ru"));
 }
 
-function createActorCorrectionBlock(root, items) {
+function correctionLockControl(actor) {
+  const locked = areCreatureCorrectionsLocked(actor);
+  const label = locked ? "Разблокировать обновление корректировок" : "Заблокировать обновление корректировок";
+  const icon = locked ? "fa-lock" : "fa-lock-open";
+  return `<a class="tsu-actor-corrections-lock${locked ? " active" : ""}" data-action="toggle-correction-lock" data-tooltip="${label}" aria-label="${label}"><i class="fas ${icon}"></i></a>`;
+}
+
+function createActorCorrectionBlock(root, actor, items) {
   const section = document.createElement("div");
   section.className = "adjustments-section section-container tsu-actor-corrections";
   section.innerHTML = `
     <div class="section-header tsu-actor-corrections-header">
       <h4>${ACTOR_CORRECTIONS_LABEL}</h4>
       <div class="actions-controls controls">
+        ${correctionLockControl(actor)}
         <a class="tsu-actor-corrections-create" data-action="create-correction" data-tooltip="Создать корректировку"><i class="fas fa-plus"></i></a>
       </div>
     </div>
@@ -1670,7 +1692,7 @@ function organizeCharacterCorrectionBlock(root, actor, items) {
     removeCharacterCorrectionBlock(root);
     header = document.createElement("header");
     header.className = "tsu-character-corrections-header";
-    header.innerHTML = `${escapeHtml(ACTOR_CORRECTIONS_LABEL)}<div class="controls"><button type="button" class="tsu-actor-corrections-create" data-action="create-correction"><i class="fa-solid fa-fw fa-plus"></i></button></div>`;
+    header.innerHTML = `${escapeHtml(ACTOR_CORRECTIONS_LABEL)}<div class="controls"><button type="button" class="tsu-actor-corrections-lock${areCreatureCorrectionsLocked(actor) ? " active" : ""}" data-action="toggle-correction-lock" data-tooltip="${areCreatureCorrectionsLocked(actor) ? "Разблокировать обновление корректировок" : "Заблокировать обновление корректировок"}"><i class="fa-solid fa-fw ${areCreatureCorrectionsLocked(actor) ? "fa-lock" : "fa-lock-open"}"></i></button><button type="button" class="tsu-actor-corrections-create" data-action="create-correction"><i class="fa-solid fa-fw fa-plus"></i></button></div>`;
     list = document.createElement("ol");
     list.className = "actions-list item-list directory-list tsu-character-corrections-list";
     panel.append(header, list);
@@ -1719,6 +1741,15 @@ function findActorBlockAnchor(root) {
 }
 
 function activateActorCorrectionBlock(root, actor) {
+  root.querySelector(".tsu-actor-corrections-lock")?.addEventListener("click", async () => {
+    const locked = !areCreatureCorrectionsLocked(actor);
+    await actor.setFlag(MODULE_ID, CREATURE_CORRECTIONS_LOCK_FLAG, locked);
+    if (!locked) {
+      await applyCreatureCorrectionToActor(actor);
+      Hooks.callAll("tsPf2eUtilityCorrectionLockChanged", actor, false);
+    }
+  });
+
   root.querySelector(".tsu-actor-corrections-create")?.addEventListener("click", async () => {
     await actor.createEmbeddedDocuments("Item", [{
       type: "action",
@@ -1860,6 +1891,6 @@ Hooks.on("renderActorSheet", (app, html) => {
   }
 
   const anchor = findActorBlockAnchor(root);
-  anchor.after(createActorCorrectionBlock(root, items));
+  anchor.after(createActorCorrectionBlock(root, actor, items));
   activateActorCorrectionBlock(root, actor);
 });

@@ -1,10 +1,20 @@
 const MODULE_ID = "ts-pf2e-utility";
 const FLAG_PATH = `flags.${MODULE_ID}.tempHealing`;
+const SETTING_ENABLE = "enableTempHealing";
 const INLINE_DAMAGE_PATTERN = /@(Damage)\[((?:[^[\]]|\[[^[\]]*\])*)\](?:{([^}]+)})?/gi;
 
 let pendingRoll = null;
 
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, SETTING_ENABLE, {
+    name: "TS_PF2E_UTILITY.Settings.Other.TempHealing.Name",
+    hint: "TS_PF2E_UTILITY.Settings.Other.TempHealing.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+  });
+
   CONFIG.TextEditor.enrichers.unshift({
     pattern: INLINE_DAMAGE_PATTERN,
     enricher: enrichTempHealingDamage,
@@ -66,6 +76,7 @@ async function enrichTempHealingDamage(match, options) {
   normalizedMatch[2] = normalizedFormula;
 
   const element = await CONFIG.ux.TextEditor.enrichString(normalizedMatch, options);
+  if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return element;
   if (element instanceof HTMLElement) {
     element.dataset.tempHealing = mode;
     element.dataset.tooltip = localize(mode === "overflow" ? "OverflowTitle" : "TemporaryTitle");
@@ -74,6 +85,7 @@ async function enrichTempHealingDamage(match, options) {
 }
 
 function rememberTempHealingRoll(event) {
+  if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return;
   const link = event.target.closest?.("a.inline-roll[data-temp-healing]");
   if (!link) return;
 

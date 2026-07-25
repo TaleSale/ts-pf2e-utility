@@ -12,6 +12,7 @@ import "./actionplus/damage-adjustments.js";
 import "./actionplus/critical-specialization.js";
 import "./actionplus/enhancement.js";
 import "./actionplus/regeneration.js";
+import "./actionplus/light-blindness.js";
 import "./actionplus/degree-of-success.js";
 import "./actionplus/actor-extras.js";
 import "./utility/journals/index.js";
@@ -24,8 +25,10 @@ import "./actionplus/spell-set.js";
 import "./actionplus/alchemy.js";
 import "./actionplus/appearances.js";
 import "./actionplus/shoulder-to-shoulder.js";
+import "./actionplus/troop-damage.js";
 import "./utility/creature-corrections.js";
 import "./utility/temp-hp.js";
+import "./utility/damage-save.js";
 
 registerModularLocalization();
 registerGame(createBeerFuriousGameDefinition());

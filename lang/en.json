@@ -11,12 +11,27 @@
         "Scene": "Scene",
         "ActionPlus": "Action Extra Features",
         "Spells": "Spells",
-        "Journals": "Journals"
+        "Journals": "Journals",
+        "Other": "Other"
+      },
+      "Other": {
+        "DamageSave": {
+          "Name": "First save with damage",
+          "Hint": "When rolling damage from an ability, adds the first Fortitude, Reflex, or Will save from its description to the damage message."
+        },
+        "TempHealing": {
+          "Name": "Enable thealing and t+healing",
+          "Hint": "Enables temporary-HP behavior and custom button labels for thealing and t+healing. When disabled, both work as ordinary healing."
+        }
       },
       "ActionPlus": {
         "Regeneration": {
           "Name": "Regeneration",
           "Hint": "Automates disabling regeneration when matching damage is received."
+        },
+        "LightBlindness": {
+          "Name": "Light Blindness",
+          "Hint": "Automatically applies dazzled and blinded according to the token's illumination."
         },
         "BloodMagic": {
           "Name": "Bloodline",
@@ -91,7 +106,12 @@
         "StyleLabel": "Wall style",
         "FieldHint": "Draws the selected texture along this wall segment.",
         "Choices": {
-          "GreyBrick": "Grey brick"
+          "BrickGreyDense": "Brick - Dense grey",
+          "BrickGrey": "Brick - Grey",
+          "BrickRed": "Brick - Red",
+          "MetalIron": "Metal - Iron",
+          "WoodNut": "Wood - Walnut",
+          "WoodAlder": "Wood - Alder"
         }
       },
       "SpellAtWill": {

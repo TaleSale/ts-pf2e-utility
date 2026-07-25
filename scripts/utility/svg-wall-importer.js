@@ -510,7 +510,12 @@ function dialogContent() {
         <div class="form-fields">
           <select name="textureStyle">
             <option value="">Без текстуры</option>
-            <option value="grey-brick">Серый кирпич</option>
+            <option value="brick-grey-dense">Кирпич - Серый Плотный</option>
+            <option value="brick-grey">Кирпич - Серый</option>
+            <option value="brick-red">Кирпич - Красный</option>
+            <option value="metal-iron">Металл - Железо</option>
+            <option value="wood-nut">Дерево - Орех</option>
+            <option value="wood-alder">Дерево - Ольха</option>
           </select>
         </div>
       </div>

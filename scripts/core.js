@@ -1,6 +1,17 @@
 export const MODULE_ID = "ts-pf2e-utility";
 export const SOCKET_CHANNEL = `module.${MODULE_ID}`;
 export const I18N_PREFIX = "TS_PF2E_UTILITY";
+export const CREATURE_CORRECTIONS_LOCK_FLAG = "creatureCorrectionsLocked";
+
+export function areCreatureCorrectionsLocked(actor) {
+  return Boolean(actor?.getFlag?.(MODULE_ID, CREATURE_CORRECTIONS_LOCK_FLAG)
+    ?? actor?.flags?.[MODULE_ID]?.[CREATURE_CORRECTIONS_LOCK_FLAG]);
+}
+
+export function isCreatureCorrectionManagedItem(item) {
+  return Boolean(item?.getFlag?.(MODULE_ID, "creatureCorrectionFeature")
+    ?? item?.flags?.[MODULE_ID]?.creatureCorrectionFeature);
+}
 
 
 export function moduleLog(..._args) {}
@@ -1021,6 +1032,7 @@ export function initializeModuleRuntime() {
     localizeSectionHeader("actionPlusShowRegeneration", `===${t("Settings.Sections.ActionPlus", "Action Extra Features")}===`);
     localizeSectionHeader("enableSpellAtWill", `===${t("Settings.Sections.Spells", "Spells")}===`);
     localizeSectionHeader("defaultJournalStyle", `===${t("Settings.Sections.Journals", "Journals")}===`);
+    localizeSectionHeader("enableTempHealing", `===${t("Settings.Sections.Other", "Other")}===`);
 
     const journalHeader = root.querySelector(`[name="${MODULE_ID}.defaultJournalStyle"]`)?.closest(".form-group")?.previousElementSibling;
     if (journalHeader instanceof HTMLHeadingElement) {
