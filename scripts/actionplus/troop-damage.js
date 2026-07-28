@@ -212,8 +212,9 @@ function scaleDamage(formula, numerator, denominator, reduction) {
   return `${scaledDice}d${faces}${scaledModifier > 0 ? `+${scaledModifier}` : scaledModifier < 0 ? scaledModifier : ""}`;
 }
 
-function damageButton(formula, numerator, denominator, reduction) {
-  return `@Damage[${scaleDamage(formula, numerator, denominator, reduction)}[untyped]|options:area-damage]`;
+function damageButton(formula, numerator, denominator, reduction, mode) {
+  const selection = mode === "fixed" ? "troopsShoots" : "troopsStrikes";
+  return `@Damage[${scaleDamage(formula, numerator, denominator, reduction)}[@item.flags.pf2e.rulesSelections.${selection}]|options:area-damage]`;
 }
 
 function qualityFormula(actor, quality) {
@@ -236,14 +237,14 @@ function buildDescription(item, config) {
     const introKey = config.fixedAreaType === "burst" ? "FixedIntroBurst" : "FixedIntroArea";
     return `<p>${localize(introKey).replace("{area}", area).replace("{range}", config.range).replace("{check}", check).replace("{small}", smallArea)}</p>`
       + `<p>${escapeHtml(localize("FixedEnding"))}</p>`
-      + `<p><strong>${escapeHtml(localize("FourSegments"))}</strong> ${damageButton(high, 3, 4, config.damageReduction)}<br>`
-      + `<strong>${escapeHtml(localize("ThreeSegments"))}</strong> ${damageButton(moderate, 3, 4, config.damageReduction)}<br>`
-      + `<strong>${escapeHtml(localize("TwoSegments"))}</strong> ${damageButton(low, 3, 4, config.damageReduction)}</p>`;
+      + `<p><strong>${escapeHtml(localize("FourSegments"))}</strong> ${damageButton(high, 3, 4, config.damageReduction, config.mode)}<br>`
+      + `<strong>${escapeHtml(localize("ThreeSegments"))}</strong> ${damageButton(moderate, 3, 4, config.damageReduction, config.mode)}<br>`
+      + `<strong>${escapeHtml(localize("TwoSegments"))}</strong> ${damageButton(low, 3, 4, config.damageReduction, config.mode)}</p>`;
   }
   const rows = [
     [localize("FourSegments"), high], [localize("ThreeSegments"), moderate], [localize("TwoSegments"), low],
-  ].map(([label, formula]) => `<strong>${escapeHtml(label)}</strong><br>◆ ${damageButton(formula, 1, 3, config.damageReduction)}<br>◆◆ ${damageButton(formula, 2, 3, config.damageReduction)}<br>◆◆◆ ${damageButton(formula, 1, 1, config.damageReduction)}`).join("<br>");
-  return `<p>${localize("VariableIntro").replace("{template}", templateButton("emanation", config.emanation)).replace("{check}", check)}</p><p>${escapeHtml(localize("VariableEnding"))}</p><p>${rows}</p>`;
+  ].map(([label, formula]) => `<strong>${escapeHtml(label)}</strong><br>◆ ${damageButton(formula, 1, 3, config.damageReduction, config.mode)}<br>◆◆ ${damageButton(formula, 2, 3, config.damageReduction, config.mode)}<br>◆◆◆ ${damageButton(formula, 1, 1, config.damageReduction, config.mode)}`).join("<br>");
+  return `<p><strong>${escapeHtml(localize("FrequencyLabel"))}</strong> ${escapeHtml(localize("OncePerRound"))}</p><p>${localize("VariableIntro").replace("{template}", templateButton("emanation", config.emanation)).replace("{check}", check)}</p><p>${escapeHtml(localize("VariableEnding"))}</p><p>${rows}</p>`;
 }
 
 function wrapGeneratedDescription(description) {
@@ -316,7 +317,7 @@ async function apply(item, config) {
     "system.description.value": mergeDescription(item, buildDescription(item, config)),
     "system.rules": [...rules, ...nextRules],
     [`flags.${MODULE_ID}.${FLAG_KEY}`]: config,
-    [`flags.${MODULE_ID}.${GENERATED_FLAG}`]: { option: nextRules[0].option, version: 2 },
+    [`flags.${MODULE_ID}.${GENERATED_FLAG}`]: { option: nextRules[0].option, version: 4 },
   });
   } finally {
     APPLYING_ITEMS.delete(item);
@@ -327,7 +328,7 @@ function activateListeners({ html, item, optionIndex }) {
   const root = getHtmlElement(html);
   const panel = root?.querySelector(`.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"]`);
   if (!panel) return;
-  if (item.getFlag(MODULE_ID, GENERATED_FLAG)?.version !== 2) {
+  if (item.getFlag(MODULE_ID, GENERATED_FLAG)?.version !== 4) {
     void apply(item, getConfig(item));
   }
   for (const input of panel.querySelectorAll(".ts-troop-damage-input")) {
@@ -366,10 +367,11 @@ registerActionPlusFeature({
 
 Hooks.on("updateItem", (item, changed) => {
   if (item.type !== "action" || !isActionPlusFeatureEnabled(item, FEATURE_ID, changed)) return;
-  if (item.getFlag(MODULE_ID, GENERATED_FLAG)) return;
   const optionsChanged = foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOptions`)
     || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOption`);
-  if (optionsChanged) void apply(item, getConfig(item));
+  if (optionsChanged) {
+    void apply(item, getConfig(item));
+  }
 });
 
 Hooks.on("updateActor", (actor, changed) => {
@@ -377,6 +379,18 @@ Hooks.on("updateActor", (actor, changed) => {
     || foundry.utils.hasProperty(changed, "system.details.level")
     || foundry.utils.hasProperty(changed, "level");
   if (!levelChanged) return;
+  for (const item of actor.itemTypes?.action ?? []) {
+    if (isActionPlusFeatureEnabled(item, FEATURE_ID)) void apply(item, getConfig(item));
+  }
+});
+
+Hooks.on("createItem", (item) => {
+  if (item.actor && item.type === "action" && isActionPlusFeatureEnabled(item, FEATURE_ID)) {
+    void apply(item, getConfig(item));
+  }
+});
+
+Hooks.on("createActor", (actor) => {
   for (const item of actor.itemTypes?.action ?? []) {
     if (isActionPlusFeatureEnabled(item, FEATURE_ID)) void apply(item, getConfig(item));
   }

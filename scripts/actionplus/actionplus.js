@@ -258,6 +258,7 @@ Hooks.once("init", () => {
     ["actorSenses", "ActorSenses"],
     ["actorTraits", "ActorTraits"],
     ["spellSet", "SpellSet"],
+    ["coven", "Coven"],
     ["alchemy", "Alchemy"],
     ["appearances", "Appearances"],
   ]) {
@@ -382,6 +383,18 @@ Hooks.on("renderItemSheet", (app, html) => {
       <div class="ts-utility-feature-blocks">
         ${featureBlocksHtml}
       </div>
+      <div class="ts-utility-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px;">
+        <div style="font-weight: 600;">TS-PF2E-UTILITY</div>
+        <button
+          type="button"
+          class="ts-utility-add-feature"
+          ${canAddFeature ? "" : "disabled"}
+          data-tooltip="${foundry.utils.escapeHTML(localize("ActionPlus.Labels.AddFeature"))}"
+          style="flex: 0 0 24px; width: 24px; min-width: 24px; max-width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center;"
+        >
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
   `;
 
   injectHtml += "</fieldset>";
@@ -397,18 +410,20 @@ Hooks.on("renderItemSheet", (app, html) => {
 
   const fieldset = root.querySelector(".ts-utility-fieldset:last-of-type");
   const selects = Array.from(fieldset?.querySelectorAll(".ts-utility-select") ?? []);
-  const addButton = fieldset?.querySelector(".ts-utility-add-feature");
+  const addButtons = Array.from(fieldset?.querySelectorAll(".ts-utility-add-feature") ?? []);
   const removeButtons = Array.from(fieldset?.querySelectorAll(".ts-utility-remove-feature") ?? []);
 
-  addButton?.addEventListener("click", async () => {
-    const nextFeature = visibleFeatureEntries
-      .map(([value]) => value)
-      .find((value) => featureAllowsMultiple(value) || !currentOptions.includes(value));
-    if (!nextFeature) return;
+  for (const addButton of addButtons) {
+    addButton.addEventListener("click", async () => {
+      const nextFeature = visibleFeatureEntries
+        .map(([value]) => value)
+        .find((value) => featureAllowsMultiple(value) || !currentOptions.includes(value));
+      if (!nextFeature) return;
 
-    const nextOptions = [...currentOptions, nextFeature];
-    await persistActionPlusOptions(item, nextOptions);
-  });
+      const nextOptions = [...currentOptions, nextFeature];
+      await persistActionPlusOptions(item, nextOptions);
+    });
+  }
 
   for (const select of selects) {
     select.addEventListener("change", async (event) => {

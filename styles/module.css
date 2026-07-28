@@ -3311,6 +3311,10 @@
   color: inherit;
 }
 
+.tsu-actor-corrections-lock.active {
+  color: #ffd166;
+}
+
 .tsu-correction-fallback-row {
   min-height: 24px;
   padding: 2px 4px;
@@ -4663,6 +4667,15 @@
 .tsu-correction-spell-set-summary details > p { margin-left:14px; }
 .tsu-correction-spell-condition { opacity:.75; white-space:nowrap; }
 .tsu-correction-spell-set-summary .tsu-correction-innate-spells > summary { font-weight:700; }
+.ts-coven-base { margin:8px 0; padding:7px; border:1px solid var(--color-border-light-primary); border-radius:3px; }
+.ts-coven-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
+.ts-coven-title button { width:auto; }
+.ts-coven-spell button { width:26px; min-width:26px; height:26px; padding:0; }
+.ts-coven-spells { list-style:none; margin:5px 0 0; padding:0; }
+.ts-coven-spell-drop { min-height:48px; border:1px dashed var(--color-border-light-primary); }
+.ts-coven-spell { display:grid; grid-template-columns:32px minmax(100px,1fr) 26px; gap:7px; align-items:center; padding:4px; border-top:1px solid var(--color-border-light-primary); }
+.ts-coven-spell img { width:32px; height:32px; border:0; }
+.ts-coven-empty { padding:8px; text-align:center; opacity:.7; }
 .tsu-correction-extra-feature { margin:6px 0 10px; }
 .tsu-correction-extra-feature > h3 { margin:0 0 3px; font-size:1em; border:0; }
 .tsu-correction-extra-feature-details { margin-left:12px; padding-left:8px; border-left:2px solid var(--color-border-light-primary); }

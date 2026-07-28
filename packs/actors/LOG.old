@@ -1,14 +1,18 @@
-2026/07/27-08:28:53.168 25a0 Recovering log #113
-2026/07/27-08:28:53.295 25a0 Level-0 table #118: started
-2026/07/27-08:28:53.514 25a0 Level-0 table #118: 1386938 bytes OK
-2026/07/27-08:28:53.609 25a0 Delete type=0 #113
-2026/07/27-08:28:53.609 25a0 Delete type=3 #111
-2026/07/27-08:29:00.567 3b7c Compacting 1@0 + 2@1 files
-2026/07/27-08:29:00.775 3b7c Generated table #120@0: 665 keys, 2215258 bytes
-2026/07/27-08:29:00.989 3b7c Generated table #121@0: 714 keys, 2113960 bytes
-2026/07/27-08:29:01.166 3b7c Generated table #122@0: 144 keys, 211904 bytes
-2026/07/27-08:29:01.166 3b7c Compacted 1@0 + 2@1 files => 4541122 bytes
-2026/07/27-08:29:01.220 3b7c compacted to: files[ 0 3 0 0 0 0 0 ]
-2026/07/27-08:29:01.220 3b7c Delete type=2 #115
-2026/07/27-08:29:01.222 3b7c Delete type=2 #116
-2026/07/27-08:29:01.224 3b7c Delete type=2 #118
+2026/07/27-15:17:09.372 281c Recovering log #119
+2026/07/27-15:17:09.435 281c Delete type=0 #119
+2026/07/27-15:17:09.435 281c Delete type=3 #117
+2026/07/27-17:41:03.030 3614 Level-0 table #126: started
+2026/07/27-17:41:03.304 3614 Level-0 table #126: 1171629 bytes OK
+2026/07/27-17:41:03.351 3614 Delete type=0 #124
+2026/07/27-17:41:03.607 3614 Manual compaction at level-0 from '!actors!1LYLon2SnCfd0XBd' @ 72057594037927935 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at '!folders!jqL2oayTDL568L93' @ 8195 : 1
+2026/07/27-17:41:03.607 3614 Compacting 1@0 + 3@1 files
+2026/07/27-17:41:03.883 3614 Generated table #127@0: 688 keys, 2255661 bytes
+2026/07/27-17:41:04.121 3614 Generated table #128@0: 708 keys, 2113812 bytes
+2026/07/27-17:41:04.288 3614 Generated table #129@0: 174 keys, 255962 bytes
+2026/07/27-17:41:04.288 3614 Compacted 1@0 + 3@1 files => 4625435 bytes
+2026/07/27-17:41:04.337 3614 compacted to: files[ 0 3 0 0 0 0 0 ]
+2026/07/27-17:41:04.338 3614 Delete type=2 #120
+2026/07/27-17:41:04.340 3614 Delete type=2 #121
+2026/07/27-17:41:04.342 3614 Delete type=2 #122
+2026/07/27-17:41:04.343 3614 Delete type=2 #126
+2026/07/27-17:41:04.348 3614 Manual compaction at level-0 from '!folders!jqL2oayTDL568L93' @ 8195 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at (end)

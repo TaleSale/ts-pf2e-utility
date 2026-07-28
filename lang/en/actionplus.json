@@ -10,14 +10,25 @@
       "Options": {
         "Empty": "Empty"
       },
+      "Coven": {
+        "FeatureLabel": "Coven"
+      },
       "BloodMagic": {
         "FeatureLabel": "Bloodline",
         "RuleLabel": "Blood Magic",
         "SpellsLabel": "Bloodline spells:",
-        "DropHint": "Drop spells from this character sheet here",
+        "DropHint": "Drop spells from the library here",
+        "SecondaryLabel": "Secondary blood magic",
+        "SecondaryHint": "Uses the primary bloodline's spell list and can be selected on the character sheet.",
+        "SharedSpellsHint": "The spell list is taken from the primary bloodline.",
+        "SpellSourceLabel": "Spell list",
+        "SpellSourceEmpty": "Choose a primary bloodline",
+        "SpellSourceDropHint": "Or drop a primary bloodline from the library here.",
+        "InvalidSpellSourceWarning": "Choose a primary bloodline with a configured spell list.",
+        "SelectorLabel": "Blood magic:",
+        "SecondSelectorEmpty": "Second blood magic",
         "DeleteTooltip": "Delete",
-        "OnlySpellsWarning": "Only spells can be dropped into this zone!",
-        "SameActorWarning": "The spell must be from this same character sheet!"
+        "OnlySpellsWarning": "Only spells can be dropped into this zone!"
       },
       "Regeneration": {
         "FeatureLabel": "Regeneration",
@@ -96,6 +107,7 @@
         "EmptyDoubleVsHint": "Types receiving double resistance will appear here.",
         "ValueLabel": "Value",
         "FlatValueLabel": "Value",
+        "TableValueLabel": "Value is determined by the creature level",
         "ModifierLabel": "Modifier",
         "AdjustmentTypes": {
           "Weakness": "Weakness",
@@ -104,6 +116,9 @@
         },
         "ValueModes": {
           "Flat": "Flat value",
+          "Low": "Low",
+          "Moderate": "Moderate",
+          "High": "High",
           "LevelDiv": "Level /",
           "Level": "Level",
           "LevelTimes": "Level *",
@@ -226,7 +241,7 @@
         "NearSelf": "Allies near me",
         "NearTarget": "Allies near the enemy",
         "Reach": "Within reach",
-        "Hint": "The action's toggleable rules are enabled when an enabled condition is met. Within reach allows a distance to be used instead of normal adjacency. The enemy condition uses your current target."
+        "Hint": "Choose one condition: allies near the owner or near the selected enemy. Within reach automatically selects Allies near the enemy, gathers allies the same way as PF2E's Gang Up, and applies the configured count."
       },
       "TroopDamage": {
         "FeatureLabel": "Troop Damage",
@@ -243,6 +258,8 @@
         "Moderate": "Moderate",
         "Low": "Low",
         "CurrentDc": "Current DC: {dc}",
+        "FrequencyLabel": "Frequency:",
+        "OncePerRound": "1/Round.",
         "EmanationLabel": "Emanation width (feet)",
         "BurstLargeLabel": "Burst, 3–4 segments (feet)",
         "BurstSmallLabel": "Burst, 1–2 segments (feet)",

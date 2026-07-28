@@ -22,13 +22,17 @@ import "./utility/scene-eye.js";
 import "./utility/thumb.js";
 import "./utility/spell-at-will.js";
 import "./actionplus/spell-set.js";
+import "./actionplus/coven.js";
 import "./actionplus/alchemy.js";
 import "./actionplus/appearances.js";
 import "./actionplus/shoulder-to-shoulder.js";
 import "./actionplus/troop-damage.js";
+import "./actionplus/debilitating-strike.js";
+import "./actionplus/speeds.js";
 import "./utility/creature-corrections.js";
 import "./utility/temp-hp.js";
 import "./utility/damage-save.js";
+import "./utility/hunt-prey-target.js";
 
 registerModularLocalization();
 registerGame(createBeerFuriousGameDefinition());

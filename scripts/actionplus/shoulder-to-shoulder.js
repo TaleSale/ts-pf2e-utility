@@ -5,8 +5,6 @@ const FEATURE_ID = "shoulderToShoulder";
 const FLAG_KEY = "shoulderToShoulder";
 const MIN_ALLIES = 1;
 const MAX_ALLIES = 20;
-const MIN_REACH = 0;
-const MAX_REACH = 1000;
 
 function localize(key) {
   return game.i18n.localize(`${I18N_PREFIX}.ActionPlus.ShoulderToShoulder.${key}`);
@@ -21,14 +19,14 @@ function normalizeRequiredAllies(value) {
 
 function normalizeConfiguration(value) {
   const legacyRequiredAllies = normalizeRequiredAllies(value?.requiredAllies ?? value);
-  const reach = Number(value?.reach);
+  const useReach = value?.useReach === true;
+  const nearTarget = useReach || value?.nearTarget === true;
   return {
-    nearSelf: value?.nearSelf !== false,
+    nearSelf: nearTarget ? false : value?.nearSelf !== false,
     selfRequiredAllies: normalizeRequiredAllies(value?.selfRequiredAllies ?? legacyRequiredAllies),
-    nearTarget: value?.nearTarget === true,
+    nearTarget,
     targetRequiredAllies: normalizeRequiredAllies(value?.targetRequiredAllies ?? legacyRequiredAllies),
-    useReach: value?.useReach === true,
-    reach: Number.isFinite(reach) ? Math.clamp(reach, MIN_REACH, MAX_REACH) : 5,
+    useReach,
   };
 }
 
@@ -84,7 +82,6 @@ function renderControls({ item }) {
       <label>${foundry.utils.escapeHTML(localize("Reach"))}</label>
       <div class="form-fields">
         <input type="checkbox" class="ts-shoulder-to-shoulder-use-reach" ${configuration.useReach ? "checked" : ""}>
-        <input type="number" class="ts-shoulder-to-shoulder-reach" min="${MIN_REACH}" max="${MAX_REACH}" step="1" value="${configuration.reach}" ${configuration.useReach ? "" : "disabled"}>
       </div>
       <p class="hint">${foundry.utils.escapeHTML(localize("Hint"))}</p>
     </div>
@@ -96,17 +93,38 @@ function activateListeners({ html, item, optionIndex }) {
     `.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"]`,
   );
   if (!panel) return;
-  const save = async () => {
+  const save = async (event) => {
+    const nearSelfInput = panel.querySelector(".ts-shoulder-to-shoulder-near-self");
+    const nearTargetInput = panel.querySelector(".ts-shoulder-to-shoulder-near-target");
+    const useReachInput = panel.querySelector(".ts-shoulder-to-shoulder-use-reach");
+    if (event.currentTarget.checked) {
+      if (event.currentTarget.matches(".ts-shoulder-to-shoulder-near-self") && nearTargetInput) {
+        nearTargetInput.checked = false;
+        if (useReachInput) useReachInput.checked = false;
+      }
+      if (event.currentTarget.matches(".ts-shoulder-to-shoulder-near-target") && nearSelfInput) {
+        nearSelfInput.checked = false;
+      }
+    }
+    if (event.currentTarget.matches(".ts-shoulder-to-shoulder-use-reach") && event.currentTarget.checked) {
+      if (nearSelfInput) nearSelfInput.checked = false;
+      if (nearTargetInput) nearTargetInput.checked = true;
+    }
     const configuration = normalizeConfiguration({
       nearSelf: panel.querySelector(".ts-shoulder-to-shoulder-near-self")?.checked,
       selfRequiredAllies: panel.querySelector(".ts-shoulder-to-shoulder-self-allies")?.value,
       nearTarget: panel.querySelector(".ts-shoulder-to-shoulder-near-target")?.checked,
       targetRequiredAllies: panel.querySelector(".ts-shoulder-to-shoulder-target-allies")?.value,
       useReach: panel.querySelector(".ts-shoulder-to-shoulder-use-reach")?.checked,
-      reach: panel.querySelector(".ts-shoulder-to-shoulder-reach")?.value,
     });
-    const reachInput = panel.querySelector(".ts-shoulder-to-shoulder-reach");
-    if (reachInput) reachInput.disabled = !configuration.useReach;
+    if (nearSelfInput) nearSelfInput.checked = configuration.nearSelf;
+    if (nearTargetInput) nearTargetInput.checked = configuration.nearTarget;
+    if (useReachInput) useReachInput.checked = configuration.useReach;
+    const targetAlliesInput = panel.querySelector(".ts-shoulder-to-shoulder-target-allies");
+    if (targetAlliesInput) {
+      targetAlliesInput.min = String(MIN_ALLIES);
+      targetAlliesInput.value = String(configuration.targetRequiredAllies);
+    }
     await item.setFlag(MODULE_ID, FLAG_KEY, configuration);
   };
   for (const input of panel.querySelectorAll("input")) input.addEventListener("change", save);
@@ -163,22 +181,30 @@ function countAlliesWithinReach(origin, alliance, reach, excludedTokens = new Se
   )).length;
 }
 
+function countGangUpAllies(target, alliance, excludedTokens) {
+  return (canvas.tokens?.placeables ?? []).filter((ally) => (
+    !excludedTokens.has(ally)
+    && ally?.actor?.alliance === alliance
+    && ally.canFlank?.(target) === true
+  )).length;
+}
+
 function hasEnoughNearbyAllies(actor, configuration) {
   const actorTokens = activeTokensFor(actor);
   if (!actorTokens.length) return false;
   const alliance = actor.alliance;
   if (alliance == null) return false;
-  const reach = configuration.useReach
-    ? configuration.reach
-    : (Number(canvas.scene?.grid?.distance) || 5);
+  const adjacentReach = Number(canvas.scene?.grid?.distance) || 5;
   if (configuration.nearSelf && actorTokens.some((token) => (
-    countAlliesWithinReach(token, alliance, reach) >= configuration.selfRequiredAllies
+    countAlliesWithinReach(token, alliance, adjacentReach) >= configuration.selfRequiredAllies
   ))) return true;
   if (!configuration.nearTarget) return false;
   const actorTokenSet = new Set(actorTokens);
   return Array.from(game.user?.targets ?? []).some((target) => (
     target?.actor
-    && countAlliesWithinReach(target, alliance, reach, actorTokenSet) >= configuration.targetRequiredAllies
+    && (configuration.useReach
+      ? countGangUpAllies(target, alliance, actorTokenSet)
+      : countAlliesWithinReach(target, alliance, adjacentReach, actorTokenSet)) >= configuration.targetRequiredAllies
   ));
 }
 

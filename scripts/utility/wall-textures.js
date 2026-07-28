@@ -16,8 +16,7 @@ const ENDPOINT_MASK_REACH_RATIO = 3;
 const SEGMENT_OVERLAY_TRIM_RATIO = 1;
 const SHORT_SEGMENT_OVERLAY_ONLY_GRID_RATIO = 1.25;
 const RIBBON_MITER_LIMIT_RATIO = 2.5;
-const WALL_RIBBON_V_TOP = 70 / SOURCE_TEXTURE_SIZE;
-const WALL_RIBBON_V_BOTTOM = 130 / SOURCE_TEXTURE_SIZE;
+const DEFAULT_RIBBON_BOUNDS = Object.freeze({ top: 70, bottom: 130 });
 const SEGMENT_SOURCE_FRAMES = Object.freeze({
   straight: Object.freeze({ x: 0, y: 70, width: 100, height: 60 }),
   straightLong: Object.freeze({ x: 0, y: 70, width: 200, height: 60 }),
@@ -47,20 +46,22 @@ const WALL_TEXTURE_STYLES = Object.freeze({
       corner: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
       joint: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
     }),
+    ribbonBounds: DEFAULT_RIBBON_BOUNDS,
   },
-  "brick-grey": createWallTextureStyle("BrickGrey", "Brick - Grey", "brick-grey.webp"),
-  "brick-red": createWallTextureStyle("BrickRed", "Brick - Red", "brick-red.webp"),
-  "metal-iron": createWallTextureStyle("MetalIron", "Metal - Iron", "metal-iron.png"),
-  "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png"),
-  "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png"),
+  "brick-grey": createWallTextureStyle("BrickGrey", "Brick - Grey", "brick-grey.webp", 80, 116),
+  "brick-red": createWallTextureStyle("BrickRed", "Brick - Red", "brick-red.webp", 84, 116),
+  "metal-iron": createWallTextureStyle("MetalIron", "Metal - Iron", "metal-iron.png", 80, 121),
+  "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png", 78, 122),
+  "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png", 78, 122),
 });
 
-function createWallTextureStyle(label, fallback, filename) {
+function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBottom) {
   const asset = `${TEXTURE_ASSET_BASE}/${filename}`;
   return Object.freeze({
     labelKey: `${I18N_ROOT}.Choices.${label}`,
     fallback,
     assets: Object.freeze({ straight: asset, straightLong: asset, diag: asset, corner: asset, joint: asset }),
+    ribbonBounds: Object.freeze({ top: ribbonTop, bottom: ribbonBottom }),
   });
 }
 
@@ -91,7 +92,39 @@ function getFlagData(wall) {
 }
 
 function isEnabled(value) {
-  return value === true || value === "true" || value === 1 || value === "1";
+  return value === true || value === "true" || value === "on" || value === 1 || value === "1";
+}
+
+function getMatchingEndpointPairs(sourceWall, targetWall) {
+  const source = getWallCoords(sourceWall);
+  const target = getWallCoords(targetWall);
+  if (!source || !target) return [];
+
+  const sourceEndpoints = [
+    { endpoint: "start", x: source.x1, y: source.y1 },
+    { endpoint: "end", x: source.x2, y: source.y2 },
+  ];
+  const targetEndpoints = [
+    { endpoint: "start", x: target.x1, y: target.y1 },
+    { endpoint: "end", x: target.x2, y: target.y2 },
+  ];
+
+  const matches = [];
+  for (const sourceEndpoint of sourceEndpoints) {
+    for (const targetEndpoint of targetEndpoints) {
+      if (pointsMatch(sourceEndpoint.x, sourceEndpoint.y, targetEndpoint.x, targetEndpoint.y)) {
+        matches.push({ sourceEndpoint: sourceEndpoint.endpoint, targetEndpoint: targetEndpoint.endpoint });
+      }
+    }
+  }
+  return matches;
+}
+
+function wallsConnectForTexture(sourceWall, targetWall) {
+  return getMatchingEndpointPairs(sourceWall, targetWall).some(({ sourceEndpoint, targetEndpoint }) => (
+    !isWallEndpointClosed(sourceWall, sourceEndpoint)
+    && !isWallEndpointClosed(targetWall, targetEndpoint)
+  ));
 }
 
 function supportsWallTexture(wall) {
@@ -329,6 +362,8 @@ function createWallTextureFieldset(wall) {
   const flags = getFlagData(wall);
   const enabled = isEnabled(flags.enabled);
   const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE);
+  const closedLeft = isEnabled(flags.closedLeft);
+  const closedRight = isEnabled(flags.closedRight);
 
   const fieldset = document.createElement("fieldset");
   fieldset.className = "tsu-wall-texture-config";
@@ -376,17 +411,38 @@ function createWallTextureFieldset(wall) {
   styleFields.append(styleSelect);
   styleGroup.append(styleLabel, styleFields);
 
+  const createEdgeGroup = (flag, labelKey, fallback, checked) => {
+    const group = document.createElement("div");
+    group.className = "form-group tsu-wall-texture-edge";
+    const label = document.createElement("label");
+    label.textContent = t(`${I18N_ROOT}.${labelKey}`, fallback);
+    const fields = document.createElement("div");
+    fields.className = "form-fields";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.name = `flags.${MODULE_ID}.${FLAG_ROOT}.${flag}`;
+    input.checked = checked;
+    fields.append(input);
+    group.append(label, fields);
+    return group;
+  };
+
+  const closedRightGroup = createEdgeGroup("closedRight", "ClosedRightLabel", "Closed right edge", closedRight);
+  const closedLeftGroup = createEdgeGroup("closedLeft", "ClosedLeftLabel", "Closed left edge", closedLeft);
+
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
 
   const updateStyleVisibility = () => {
     styleGroup.hidden = !enabledInput.checked;
+    closedRightGroup.hidden = !enabledInput.checked;
+    closedLeftGroup.hidden = !enabledInput.checked;
   };
   enabledInput.addEventListener("change", updateStyleVisibility);
   updateStyleVisibility();
 
-  fieldset.append(legend, enabledGroup, styleGroup, hint);
+  fieldset.append(legend, enabledGroup, styleGroup, closedRightGroup, closedLeftGroup, hint);
   return fieldset;
 }
 
@@ -415,16 +471,9 @@ function findConnectedWallTextureFlags(coords) {
     const flags = getFlagData(wall);
     if (!isEnabled(flags.enabled)) continue;
 
-    const wallCoords = getWallCoords(wall);
-    if (!wallCoords) continue;
-
-    const connects =
-      pointsMatch(coords.x1, coords.y1, wallCoords.x1, wallCoords.y1)
-      || pointsMatch(coords.x1, coords.y1, wallCoords.x2, wallCoords.y2)
-      || pointsMatch(coords.x2, coords.y2, wallCoords.x1, wallCoords.y1)
-      || pointsMatch(coords.x2, coords.y2, wallCoords.x2, wallCoords.y2);
-
-    if (connects) return foundry.utils.deepClone(flags);
+    if (wallsConnectForTexture({ c: [coords.x1, coords.y1, coords.x2, coords.y2] }, wall)) {
+      return foundry.utils.deepClone(flags);
+    }
   }
 
   return null;
@@ -439,16 +488,7 @@ function getConnectedTextureWalls(sourceWall) {
   for (const wall of walls) {
     if (wall.id === sourceWall.id || !supportsWallTexture(wall)) continue;
 
-    const coords = getWallCoords(wall);
-    if (!coords) continue;
-
-    const connects =
-      pointsMatch(sourceCoords.x1, sourceCoords.y1, coords.x1, coords.y1)
-      || pointsMatch(sourceCoords.x1, sourceCoords.y1, coords.x2, coords.y2)
-      || pointsMatch(sourceCoords.x2, sourceCoords.y2, coords.x1, coords.y1)
-      || pointsMatch(sourceCoords.x2, sourceCoords.y2, coords.x2, coords.y2);
-
-    if (connects) connected.push(wall);
+    if (wallsConnectForTexture(sourceWall, wall)) connected.push(wall);
   }
   return connected;
 }
@@ -458,21 +498,30 @@ function hasTextureFlags(wall) {
   return Object.keys(flags).length > 0;
 }
 
+function getPropagatedTextureFlags(wall) {
+  const flags = getFlagData(wall);
+  return {
+    enabled: isEnabled(flags.enabled),
+    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE),
+  };
+}
+
 async function copyTextureToConnectedWalls(sourceWall) {
   if (propagatingWalls.has(sourceWall.id)) return;
 
-  const flags = getFlagData(sourceWall);
+  const flags = getPropagatedTextureFlags(sourceWall);
   if (!hasTextureFlags(sourceWall)) return;
-  const serializedFlags = JSON.stringify(flags);
 
   const updates = [];
   for (const wall of getConnectedTextureWalls(sourceWall)) {
-    if (JSON.stringify(getFlagData(wall)) === serializedFlags) continue;
+    const targetFlags = getFlagData(wall);
+    const nextFlags = { ...targetFlags, ...flags };
+    if (JSON.stringify(targetFlags) === JSON.stringify(nextFlags)) continue;
     updates.push({
       _id: wall.id,
       flags: {
         [MODULE_ID]: {
-          [FLAG_ROOT]: foundry.utils.deepClone(flags),
+          [FLAG_ROOT]: foundry.utils.deepClone(nextFlags),
         },
       },
     });
@@ -505,7 +554,10 @@ Hooks.on("preCreateWall", (wall, data) => {
   wall.updateSource({
     flags: {
       [MODULE_ID]: {
-        [FLAG_ROOT]: connectedFlags,
+        [FLAG_ROOT]: {
+          enabled: isEnabled(connectedFlags.enabled),
+          style: normalizeStyleKey(connectedFlags.style || DEFAULT_STYLE),
+        },
       },
     },
   });
@@ -640,8 +692,8 @@ function buildWallEndpointMap(walls) {
     const coords = getWallCoords(wall);
     if (!coords) continue;
     const points = [
-      { x: coords.x1, y: coords.y1, otherX: coords.x2, otherY: coords.y2 },
-      { x: coords.x2, y: coords.y2, otherX: coords.x1, otherY: coords.y1 },
+      { x: coords.x1, y: coords.y1, otherX: coords.x2, otherY: coords.y2, endpoint: "start" },
+      { x: coords.x2, y: coords.y2, otherX: coords.x1, otherY: coords.y1, endpoint: "end" },
     ];
 
     for (const point of points) {
@@ -669,14 +721,22 @@ function getOtherEndpoint(wall, endpointKey) {
 
   const startKey = pointKey(points.start.x, points.start.y);
   const endKey = pointKey(points.end.x, points.end.y);
-  if (endpointKey === startKey) return { key: endKey, point: points.end };
-  if (endpointKey === endKey) return { key: startKey, point: points.start };
+  if (endpointKey === startKey) return { key: endKey, point: points.end, endpoint: "end" };
+  if (endpointKey === endKey) return { key: startKey, point: points.start, endpoint: "start" };
   return null;
 }
 
-function getNextChainWall(endpointMap, endpointKey, visitedWalls) {
+function isWallEndpointClosed(wall, endpoint) {
+  const flags = getFlagData(wall);
+  return isEnabled(endpoint === "start" ? flags.closedLeft : flags.closedRight);
+}
+
+function getNextChainWall(endpointMap, endpointKey, currentWall, currentEndpoint, visitedWalls) {
+  if (isWallEndpointClosed(currentWall, currentEndpoint)) return null;
   const entries = endpointMap.get(endpointKey) ?? [];
-  return entries.find((entry) => !visitedWalls.has(entry.wall.id))?.wall ?? null;
+  return entries.find((entry) => (
+    !visitedWalls.has(entry.wall.id) && !isWallEndpointClosed(entry.wall, entry.endpoint)
+  ))?.wall ?? null;
 }
 
 function getWallTextureStyleKey(wall) {
@@ -699,10 +759,12 @@ function buildWallTextureChains(walls, endpointMap) {
     visitedWalls.add(wall.id);
 
     const extend = (atStart) => {
+      let currentWall = wall;
+      let currentEndpoint = atStart ? "start" : "end";
       while (true) {
         const currentPoint = atStart ? chainPoints[0] : chainPoints[chainPoints.length - 1];
         const currentKey = pointKey(currentPoint.x, currentPoint.y);
-        const nextWall = getNextChainWall(endpointMap, currentKey, visitedWalls);
+        const nextWall = getNextChainWall(endpointMap, currentKey, currentWall, currentEndpoint, visitedWalls);
         if (!nextWall || getWallTextureStyleKey(nextWall) !== styleKey) return;
 
         const other = getOtherEndpoint(nextWall, currentKey);
@@ -711,6 +773,8 @@ function buildWallTextureChains(walls, endpointMap) {
         visitedWalls.add(nextWall.id);
         if (atStart) chainPoints.unshift(other.point);
         else chainPoints.push(other.point);
+        currentWall = nextWall;
+        currentEndpoint = other.endpoint;
       }
     };
 
@@ -747,6 +811,9 @@ function createWallRibbonMesh(style, points) {
 
   const halfWidth = getTargetWallWidth() / 2;
   const period = SOURCE_TEXTURE_SIZE * getTextureScale();
+  const ribbonBounds = style.ribbonBounds ?? DEFAULT_RIBBON_BOUNDS;
+  const ribbonVTop = ribbonBounds.top / SOURCE_TEXTURE_SIZE;
+  const ribbonVBottom = ribbonBounds.bottom / SOURCE_TEXTURE_SIZE;
   const segmentDirections = [];
   const cumulativeLengths = [0];
 
@@ -789,7 +856,7 @@ function createWallRibbonMesh(style, points) {
     const u = cumulativeLengths[index] / period;
 
     positions.push(point.x + offsetX, point.y + offsetY, point.x - offsetX, point.y - offsetY);
-    uvs.push(u, WALL_RIBBON_V_TOP, u, WALL_RIBBON_V_BOTTOM);
+    uvs.push(u, ribbonVTop, u, ribbonVBottom);
 
     if (index < cleanPoints.length - 1) {
       const base = index * 2;

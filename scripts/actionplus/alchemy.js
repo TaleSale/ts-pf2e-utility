@@ -4,6 +4,8 @@ import { getPendingActionPlusOptions, isActionPlusFeatureEnabled, registerAction
 const FEATURE_ID = "alchemy";
 const FLAG_KEY = "alchemyRanges";
 const USE_OPTION = "tsPf2eUtilityAlchemyUse";
+const DESCRIPTION_MARKER = "<!-- ts-pf2e-utility:alchemy -->";
+const creatingDailyItems = new Set();
 
 const uid = () => foundry.utils.randomID();
 const htmlElement = (html) => html instanceof HTMLElement ? html : html?.[0] ?? html?.element ?? null;
@@ -48,6 +50,25 @@ function renderControls({ flags }) {
   return `<div class="ts-alchemy-editor"><p class="hint">При использовании действия создаются насыщенные расходники из подходящего диапазона уровня. Частота действия автоматически устанавливается на 1 раз в день.</p><div class="ts-alchemy-ranges">${ranges.map(renderRange).join("") || '<p class="ts-alchemy-no-ranges">Диапазоны пока не настроены.</p>'}</div><button type="button" class="ts-alchemy-add-range"><i class="fas fa-plus"></i> Добавить диапазон уровней</button></div>`;
 }
 
+function formatFormulaLink(formula) {
+  const name = escapeHtml(formula.name || "Алхимический предмет");
+  const uuid = String(formula.uuid ?? formula.source?._stats?.compendiumSource ?? formula.source?.flags?.core?.sourceId ?? "").trim();
+  return uuid ? `@UUID[${uuid}]{${name}}` : name;
+}
+
+function generatedDescription(ranges) {
+  const rows = ranges.map(normalizeRange)
+    .filter((range) => range.items.length)
+    .map((range) => `<p><strong>${range.start}–${range.end} уровень:</strong> ${range.items.map((formula) => `${formatFormulaLink(formula)} ×${formula.quantity}`).join(", ")}</p>`);
+  return rows.length ? `${DESCRIPTION_MARKER}<h3>Продвинутая алхимия</h3>${rows.join("")}` : "";
+}
+
+function descriptionWithGeneratedAlchemy(item, ranges) {
+  const current = String(item.system?.description?.value ?? "");
+  const manual = current.includes(DESCRIPTION_MARKER) ? current.split(DESCRIPTION_MARKER, 1)[0].trimEnd() : current.trimEnd();
+  return [manual, generatedDescription(ranges)].filter(Boolean).join("\n");
+}
+
 function readEditor(editor, previous) {
   const ranges = (Array.isArray(previous) ? previous : []).map(normalizeRange);
   for (const section of editor.querySelectorAll(".ts-alchemy-range")) {
@@ -62,14 +83,26 @@ function readEditor(editor, previous) {
 }
 
 async function persist(item, ranges) {
-  await item.update({ [`flags.${MODULE_ID}.${FLAG_KEY}`]: ranges.map(normalizeRange) }, { render: false });
+  const normalized = ranges.map(normalizeRange);
+  await item.update({
+    [`flags.${MODULE_ID}.${FLAG_KEY}`]: normalized,
+    "system.description.value": descriptionWithGeneratedAlchemy(item, normalized),
+  }, { render: false });
 }
 
 function activateListeners({ app, html, item, optionIndex }) {
   const root = htmlElement(html);
   const editor = root?.querySelector(`.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"] .ts-alchemy-editor`);
   if (!editor) return;
-  const save = () => persist(item, readEditor(editor, getAlchemyRanges(item)));
+  const currentRanges = getAlchemyRanges(item);
+  const expectedDescription = descriptionWithGeneratedAlchemy(item, currentRanges);
+  if (String(item.system?.description?.value ?? "") !== expectedDescription) {
+    void item.update({ "system.description.value": expectedDescription }, { render: false });
+  }
+  const save = async () => {
+    await persist(item, readEditor(editor, getAlchemyRanges(item)));
+    app.render(false);
+  };
   editor.addEventListener("change", (event) => { if (event.target.closest("input")) void save(); });
   editor.addEventListener("dragover", (event) => event.preventDefault());
   editor.addEventListener("drop", async (event) => {
@@ -94,7 +127,12 @@ function activateListeners({ app, html, item, optionIndex }) {
   });
 }
 
-async function cleanup({ item }) { await item.unsetFlag(MODULE_ID, FLAG_KEY); }
+async function cleanup({ item }) {
+  const current = String(item.system?.description?.value ?? "");
+  const manual = current.includes(DESCRIPTION_MARKER) ? current.split(DESCRIPTION_MARKER, 1)[0].trimEnd() : current;
+  await item.update({ "system.description.value": manual }, { render: false });
+  await item.unsetFlag(MODULE_ID, FLAG_KEY);
+}
 
 function dailyFrequencyUpdate(item, changed) {
   if (!isActionPlusFeatureEnabled(item, FEATURE_ID, changed)) return;
@@ -109,6 +147,10 @@ function dailyFrequencyUpdate(item, changed) {
 
 async function createDailyItems(action) {
   const actor = action.actor; if (!actor) return;
+  const key = action.uuid ?? `${actor.uuid}.${action.id}`;
+  if (creatingDailyItems.has(key)) return;
+  creatingDailyItems.add(key);
+  try {
   const level = actorLevel(actor);
   const range = getAlchemyRanges(action).find((entry) => level >= entry.start && level <= entry.end);
   if (!range?.items.length) return ui.notifications.warn(`Для ${level}-го уровня в «${action.name}» не настроены алхимические предметы.`);
@@ -119,6 +161,9 @@ async function createDailyItems(action) {
   });
   await actor.createEmbeddedDocuments("Item", sources);
   ui.notifications.info(`Созданы насыщенные алхимические предметы: ${range.items.map((entry) => `${entry.name} ×${entry.quantity}`).join(", ")}.`);
+  } finally {
+    creatingDailyItems.delete(key);
+  }
 }
 
 registerActionPlusFeature({ id: FEATURE_ID, label: `${I18N_PREFIX}.ActionPlus.Alchemy.FeatureLabel`, render: renderControls, activateListeners, cleanup });

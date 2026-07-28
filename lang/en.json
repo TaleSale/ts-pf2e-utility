@@ -73,6 +73,10 @@
           "Name": "Spell Set",
           "Hint": "Adds a level-scaled spellcasting set to the Action extra features."
         },
+        "Coven": {
+          "Name": "Coven",
+          "Hint": "Adds coven spells and the Support Coven action to coven members."
+        },
         "Alchemy": {
           "Name": "Alchemy",
           "Hint": "Adds level-scaled advanced alchemy formulas to the Action extra features."
@@ -104,6 +108,8 @@
         "Fieldset": "Wall texture",
         "EnableLabel": "Wall texture",
         "StyleLabel": "Wall style",
+        "ClosedRightLabel": "Closed right edge",
+        "ClosedLeftLabel": "Closed left edge",
         "FieldHint": "Draws the selected texture along this wall segment.",
         "Choices": {
           "BrickGreyDense": "Brick - Dense grey",

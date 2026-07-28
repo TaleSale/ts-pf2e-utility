@@ -19,12 +19,28 @@ const ADJUSTMENT_TYPES = Object.freeze({
 
 const VALUE_MODES = Object.freeze({
   flat: "flat",
+  low: "low",
+  moderate: "moderate",
+  high: "high",
   levelDiv: "levelDiv",
   level: "level",
   levelTimes: "levelTimes",
   levelPlus: "levelPlus",
   levelMinus: "levelMinus",
 });
+
+// GMG Table 2-8: Resistances and Weaknesses. "Moderate" is the midpoint of
+// the published minimum and maximum values, rounded down.
+const resistanceWeaknessTable = {
+  low: [1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13],
+  high: [1, 3, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 23, 24, 25, 26],
+};
+resistanceWeaknessTable.moderate = resistanceWeaknessTable.low.map(
+  (value, index) => Math.floor((value + resistanceWeaknessTable.high[index]) / 2),
+);
+const RESISTANCE_WEAKNESS_TABLE = Object.freeze(
+  Object.fromEntries(Object.entries(resistanceWeaknessTable).map(([key, values]) => [key, Object.freeze(values)])),
+);
 
 function localize(key) {
   return game.i18n.localize(`${I18N_PREFIX}.${key}`);
@@ -195,6 +211,10 @@ function getAdjustmentTypeChoices() {
 
 function buildValueExpression(adjustment) {
   switch (adjustment.valueMode) {
+    case VALUE_MODES.low:
+    case VALUE_MODES.moderate:
+    case VALUE_MODES.high:
+      return buildTableValueExpression(adjustment.valueMode);
     case VALUE_MODES.levelDiv:
       return `floor(@actor.level / ${Math.max(1, adjustment.modifier || 2)})`;
     case VALUE_MODES.level:
@@ -209,6 +229,21 @@ function buildValueExpression(adjustment) {
     default:
       return adjustment.flatValue;
   }
+}
+
+function buildTableValueExpression(quality) {
+  const values = RESISTANCE_WEAKNESS_TABLE[quality];
+  if (!values) return 0;
+
+  // The formula is intentionally actor-based: it remains correct if this item
+  // is moved to another creature or that creature's level changes. Each term
+  // activates at one table level and is capped at 1.
+  return values.slice(1).reduce((formula, value, index) => {
+    const difference = value - values[index];
+    if (!difference) return formula;
+    const level = index;
+    return `${formula} + (${difference} * min(1, max(0, @actor.level - ${level} + 1)))`;
+  }, String(values[0]));
 }
 
 function isConfigured(adjustment) {
@@ -329,6 +364,9 @@ function renderDamageAdjustmentControls({ flags, occurrenceIndex = 0 }) {
   ];
   const valueModeChoices = [
     [VALUE_MODES.flat, localize("ActionPlus.DamageAdjustments.ValueModes.Flat")],
+    [VALUE_MODES.low, localize("ActionPlus.DamageAdjustments.ValueModes.Low")],
+    [VALUE_MODES.moderate, localize("ActionPlus.DamageAdjustments.ValueModes.Moderate")],
+    [VALUE_MODES.high, localize("ActionPlus.DamageAdjustments.ValueModes.High")],
     [VALUE_MODES.levelDiv, localize("ActionPlus.DamageAdjustments.ValueModes.LevelDiv")],
     [VALUE_MODES.level, localize("ActionPlus.DamageAdjustments.ValueModes.Level")],
     [VALUE_MODES.levelTimes, localize("ActionPlus.DamageAdjustments.ValueModes.LevelTimes")],
@@ -338,7 +376,9 @@ function renderDamageAdjustmentControls({ flags, occurrenceIndex = 0 }) {
   const valueDisabled = !adjustment.adjustmentType || adjustment.adjustmentType === ADJUSTMENT_TYPES.immunity;
   const modifierLabel = adjustment.valueMode === VALUE_MODES.flat
     ? localize("ActionPlus.DamageAdjustments.FlatValueLabel")
-    : localize("ActionPlus.DamageAdjustments.ModifierLabel");
+    : [VALUE_MODES.low, VALUE_MODES.moderate, VALUE_MODES.high].includes(adjustment.valueMode)
+      ? localize("ActionPlus.DamageAdjustments.TableValueLabel")
+      : localize("ActionPlus.DamageAdjustments.ModifierLabel");
   const numericValue = adjustment.valueMode === VALUE_MODES.flat ? adjustment.flatValue : adjustment.modifier;
   const numericDisabled = valueDisabled || ![
     VALUE_MODES.flat,

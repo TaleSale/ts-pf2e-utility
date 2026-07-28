@@ -970,7 +970,7 @@ function buildShoulderToShoulderCatalogDescription(source) {
   const legacy = Math.max(1, Number(config?.requiredAllies ?? config) || 1);
   const self = config?.nearSelf !== false ? `рядом с собой — ${Math.max(1, Number(config?.selfRequiredAllies) || legacy)}` : "";
   const target = config?.nearTarget === true ? `рядом с врагом — ${Math.max(1, Number(config?.targetRequiredAllies) || legacy)}` : "";
-  const reach = config?.useReach === true ? `; в досягаемости — ${Math.max(0, Number(config?.reach) || 5)}` : "";
+  const reach = config?.useReach === true ? "; проверка союзников как у «Сговориться» PF2E" : "";
   return `<p><strong>Плечом к плечу:</strong> ${[self, target].filter(Boolean).join("; ") || "условия отключены"}${reach}</p>`;
 }
 
