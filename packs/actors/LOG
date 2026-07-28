@@ -1,38 +1,27 @@
-2026/07/28-07:52:42.256 2b20 Recovering log #125
-2026/07/28-07:52:42.454 2b20 Delete type=0 #125
-2026/07/28-07:52:42.455 2b20 Delete type=3 #123
-2026/07/28-08:54:26.680 286c Level-0 table #133: started
-2026/07/28-08:54:26.882 286c Level-0 table #133: 1748666 bytes OK
-2026/07/28-08:54:26.911 286c Delete type=0 #131
-2026/07/28-08:55:16.706 286c Compacting 1@0 + 2@1 files
-2026/07/28-08:55:16.927 286c Generated table #134@0: 688 keys, 2257062 bytes
-2026/07/28-08:55:17.054 286c Generated table #135@0: 688 keys, 2067675 bytes
-2026/07/28-08:55:17.054 286c Compacted 1@0 + 2@1 files => 4324737 bytes
-2026/07/28-08:55:17.082 286c compacted to: files[ 0 3 0 0 0 0 0 ]
-2026/07/28-08:55:17.082 286c Delete type=2 #127
-2026/07/28-08:55:17.083 286c Delete type=2 #128
-2026/07/28-08:55:17.083 286c Delete type=2 #133
-2026/07/28-08:56:18.902 286c Level-0 table #137: started
-2026/07/28-08:56:19.144 286c Level-0 table #137: 1876086 bytes OK
-2026/07/28-08:56:19.169 286c Delete type=0 #132
-2026/07/28-09:00:42.794 286c Compacting 1@0 + 2@1 files
-2026/07/28-09:00:42.940 286c Generated table #138@0: 688 keys, 2258863 bytes
-2026/07/28-09:00:43.060 286c Generated table #139@0: 708 keys, 2111545 bytes
-2026/07/28-09:00:43.060 286c Compacted 1@0 + 2@1 files => 4370408 bytes
-2026/07/28-09:00:43.089 286c compacted to: files[ 0 3 0 0 0 0 0 ]
-2026/07/28-09:00:43.089 286c Delete type=2 #134
-2026/07/28-09:00:43.089 286c Delete type=2 #135
-2026/07/28-09:00:43.090 286c Delete type=2 #137
-2026/07/28-09:05:56.164 286c Level-0 table #141: started
-2026/07/28-09:05:56.410 286c Level-0 table #141: 1848370 bytes OK
-2026/07/28-09:05:56.447 286c Delete type=0 #136
-2026/07/28-09:06:23.530 286c Compacting 1@0 + 3@1 files
-2026/07/28-09:06:23.678 286c Generated table #142@0: 685 keys, 2250184 bytes
-2026/07/28-09:06:23.791 286c Generated table #143@0: 714 keys, 2115853 bytes
-2026/07/28-09:06:23.870 286c Generated table #144@0: 167 keys, 250468 bytes
-2026/07/28-09:06:23.870 286c Compacted 1@0 + 3@1 files => 4616505 bytes
-2026/07/28-09:06:23.903 286c compacted to: files[ 0 3 0 0 0 0 0 ]
-2026/07/28-09:06:23.903 286c Delete type=2 #129
-2026/07/28-09:06:23.903 286c Delete type=2 #138
-2026/07/28-09:06:23.904 286c Delete type=2 #139
-2026/07/28-09:06:23.904 286c Delete type=2 #141
+2026/07/28-16:00:59.423 2eec Recovering log #140
+2026/07/28-16:00:59.424 2eec Level-0 table #146: started
+2026/07/28-16:00:59.579 2eec Level-0 table #146: 183526 bytes OK
+2026/07/28-16:00:59.831 2eec Delete type=0 #140
+2026/07/28-16:00:59.831 2eec Delete type=3 #130
+2026/07/28-16:01:08.705 25c4 Compacting 1@0 + 3@1 files
+2026/07/28-16:01:08.922 25c4 Generated table #148@0: 686 keys, 2254883 bytes
+2026/07/28-16:01:09.090 25c4 Generated table #149@0: 714 keys, 2115853 bytes
+2026/07/28-16:01:09.179 25c4 Generated table #150@0: 167 keys, 251145 bytes
+2026/07/28-16:01:09.179 25c4 Compacted 1@0 + 3@1 files => 4621881 bytes
+2026/07/28-16:01:09.380 25c4 compacted to: files[ 0 3 0 0 0 0 0 ]
+2026/07/28-16:01:09.380 25c4 Delete type=2 #142
+2026/07/28-16:01:09.381 25c4 Delete type=2 #143
+2026/07/28-16:01:09.381 25c4 Delete type=2 #144
+2026/07/28-16:01:09.381 25c4 Delete type=2 #146
+2026/07/28-18:06:48.792 25c4 Level-0 table #152: started
+2026/07/28-18:06:48.857 25c4 Level-0 table #152: 30303 bytes OK
+2026/07/28-18:06:48.893 25c4 Delete type=0 #147
+2026/07/28-18:06:49.301 25c4 Manual compaction at level-0 from '!actors!1LYLon2SnCfd0XBd' @ 72057594037927935 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at '!actors.items!W6f1rvCXUERiMufk.zBHx2Z3iIGyQ7w17' @ 11042 : 1
+2026/07/28-18:06:49.301 25c4 Compacting 1@0 + 1@1 files
+2026/07/28-18:06:49.473 25c4 Generated table #153@0: 701 keys, 2113064 bytes
+2026/07/28-18:06:49.540 25c4 Generated table #154@0: 3 keys, 164936 bytes
+2026/07/28-18:06:49.540 25c4 Compacted 1@0 + 1@1 files => 2278000 bytes
+2026/07/28-18:06:49.558 25c4 compacted to: files[ 0 4 0 0 0 0 0 ]
+2026/07/28-18:06:49.558 25c4 Delete type=2 #148
+2026/07/28-18:06:49.558 25c4 Delete type=2 #152
+2026/07/28-18:06:49.690 25c4 Manual compaction at level-0 from '!actors.items!W6f1rvCXUERiMufk.zBHx2Z3iIGyQ7w17' @ 11042 : 1 .. '!folders!zQVS7IB8Sp0oS2Bj' @ 0 : 0; will stop at (end)
