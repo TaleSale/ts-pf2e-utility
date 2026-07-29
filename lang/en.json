@@ -59,7 +59,9 @@
         },
         "ShoulderToShoulder": {
           "Name": "Shoulder to Shoulder",
-          "Hint": "Automatically enables an action's toggleable rules while enough allies are adjacent."
+          "Hint": "Automatically enables an action's toggleable rules while enough allies are adjacent.",
+          "AutomationEnabled": "Automation enabled — click to leave this toggle under manual control",
+          "AutomationLocked": "Manual control — click to resume automation"
         },
         "ActorLanguages": {
           "Name": "Languages",
@@ -101,6 +103,46 @@
         "Hint": "Adds a custom thumbnail field to the scene configuration form.",
         "Label": "Thumb Image",
         "FieldHint": "Custom thumbnail used for this scene in the navigation and directory."
+      },
+      "FloorTextures": {
+        "Name": "Enable floor textures",
+        "Hint": "Adds tools for filling closed rooms and drawing textured floor boundaries.",
+        "Control": "Floors",
+        "FillRoom": "Fill room",
+        "DrawBoundary": "Draw boundary",
+        "EraseFloor": "Erase floor",
+        "BaseFloor": "Base floor",
+        "Style": "Floor texture",
+        "InvalidPolygon": "The floor boundary is invalid.",
+        "SelfIntersection": "The floor boundary crosses itself.",
+        "AlreadyFilled": "This area already has a floor.",
+        "NoFloor": "No floor was found here.",
+        "OpenRoom": "No closed room was found here.",
+        "NeedThreePoints": "A floor needs at least three points.",
+        "NoScene": "The scene is not ready.",
+        "BaseFloorCreated": "The base floor covers the whole scene.",
+        "Categories": {
+          "Stone": "Stone",
+          "Caves": "Caves",
+          "Wood": "Wood",
+          "Nature": "Nature",
+          "Paths": "Paths",
+          "Carpets": "Carpets"
+        },
+        "Choices": {
+          "UnevenLimestone": "Uneven limestone",
+          "CaveBrown": "Brown cave floor",
+          "CaveGreyPebbles": "Grey cave pebbles",
+          "FlagstoneGrey": "Grey flagstone",
+          "BrickRed": "Red brick",
+          "WoodWalnut": "Walnut boards",
+          "WoodAlder": "Alder boards",
+          "GrassMeadow": "Meadow grass",
+          "PathDirt": "Dirt path",
+          "PathCobblestone": "Cobblestone path",
+          "CarpetRed": "Red carpet",
+          "CarpetBlue": "Blue carpet"
+        }
       },
       "WallTextures": {
         "Name": "Enable wall textures",
@@ -164,6 +206,10 @@
       "KubokerNoPlayers": "Add at least one participant before the deal."
     },
     "Utility": {
+      "HuntPrey": {
+        "AutomationEnabled": "Automation enabled — click to leave this toggle under manual control",
+        "AutomationLocked": "Manual control — click to resume automation"
+      },
       "ActorSync": {
         "ItemsLabel": "Items",
         "SpellsLabel": "Spells"

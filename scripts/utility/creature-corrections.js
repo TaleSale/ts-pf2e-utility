@@ -1386,7 +1386,7 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
       // feature has actually changed.
       const changes = foundry.utils.diffObject(existing.toObject(), updateSource);
       delete changes._id;
-      if (Object.keys(changes).length) updates.push(updateSource);
+      if (Object.keys(changes).length) updates.push({ _id: existing.id, ...changes });
       continue;
     }
     if (actorHasFeature(actor, feature)) continue;

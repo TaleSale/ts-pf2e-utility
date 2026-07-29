@@ -1,8 +1,9 @@
-import { MODULE_ID } from "../core.js";
+import { I18N_PREFIX, MODULE_ID } from "../core.js";
 
 const HUNT_PREY_SLUG = /hunt(?:ed)?-prey/;
 const HUNT_PREY_DOMAIN = "all";
 const HUNT_PREY_OPTION = "hunted-prey";
+const AUTOMATION_LOCK_FLAG = "huntPreyAutomationLocked";
 const syncStates = new WeakMap();
 
 function getSceneNpcActors() {
@@ -30,7 +31,71 @@ function getHuntPreyEffects(actor) {
   return actor.items.filter((item) => item.type === "effect" && isHuntPreyEffect(item));
 }
 
+function isAutomationLocked(actor) {
+  return actor?.getFlag?.(MODULE_ID, AUTOMATION_LOCK_FLAG) === true;
+}
+
+function getHtmlElement(html) {
+  if (html instanceof HTMLElement) return html;
+  if (html?.[0] instanceof HTMLElement) return html[0];
+  if (html?.element instanceof HTMLElement) return html.element;
+  return null;
+}
+
+function automationTooltip(locked) {
+  return game.i18n.localize(`${I18N_PREFIX}.Utility.HuntPrey.${locked ? "AutomationLocked" : "AutomationEnabled"}`);
+}
+
+function injectAutomationLock(toggle, actor) {
+  if (!(toggle instanceof HTMLElement)) return;
+  toggle.classList.add("ts-automation-toggle-row");
+  let button = toggle.querySelector(":scope > .ts-hunt-prey-lock");
+  if (!(button instanceof HTMLButtonElement)) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.className = "ts-automation-lock ts-hunt-prey-lock";
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.disabled = true;
+      try {
+        const wasLocked = isAutomationLocked(actor);
+        await actor.setFlag(MODULE_ID, AUTOMATION_LOCK_FLAG, !wasLocked);
+        updateAutomationLockButton(button, actor);
+        if (wasLocked) void syncActor(actor);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    toggle.append(button);
+  }
+  updateAutomationLockButton(button, actor);
+}
+
+function updateAutomationLockButton(button, actor) {
+  const locked = isAutomationLocked(actor);
+  button.dataset.tooltip = automationTooltip(locked);
+  const iconClass = locked ? "fa-lock" : "fa-lock-open";
+  const icon = button.querySelector("i");
+  if (icon?.classList.contains(iconClass)) return;
+  button.innerHTML = `<i class="fas fa-fw ${iconClass}"></i>`;
+}
+
+function injectActorSheetLocks(app, html) {
+  const actor = app?.document ?? app?.actor ?? app?.object ?? null;
+  const root = getHtmlElement(html);
+  if (!actor?.isOwner || !root || !getHuntPreyEffects(actor).length) return;
+  const scan = () => {
+    if (!root.isConnected) return;
+    for (const toggle of root.querySelectorAll(`ul[data-option-toggles] li[data-option="${HUNT_PREY_OPTION}"]`)) injectAutomationLock(toggle, actor);
+  };
+  scan();
+  const observer = new MutationObserver(scan);
+  observer.observe(root, { childList: true, subtree: true });
+}
+
 async function applyHuntPreyTargetState(actor) {
+  if (isAutomationLocked(actor)) return;
   const targetUuids = new Set(
     Array.from(game.user?.targets ?? [], (target) => target?.document?.uuid).filter(Boolean),
   );
@@ -87,6 +152,7 @@ function syncSceneNpcActors() {
 Hooks.once("ready", syncSceneNpcActors);
 Hooks.on("targetToken", () => setTimeout(syncSceneNpcActors, 0));
 Hooks.on("canvasReady", syncSceneNpcActors);
+Hooks.on("renderActorSheet", injectActorSheetLocks);
 
 for (const hook of ["createItem", "deleteItem"]) {
   Hooks.on(hook, (item) => {

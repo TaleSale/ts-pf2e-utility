@@ -204,12 +204,11 @@ function injectSelector(app, html) {
   const portrait = actor.type === "character"
     ? root.querySelector('.tab[data-tab="character"] .subsection.details .image-container')
     : root.querySelector(".sidebar .image-container");
-  const fallback = root.querySelector("header.sheet-header, .sheet-header") ?? root;
   if (portrait && actor.type === "character") {
     portrait.style.maxHeight = "none";
     portrait.insertAdjacentHTML("beforeend", markup);
   } else if (portrait) portrait.insertAdjacentHTML("afterend", markup);
-  else fallback.insertAdjacentHTML("afterbegin", markup);
+  else return;
   root.querySelector(".ts-appearance-selector select")?.addEventListener("change", async (event) => {
     event.currentTarget.disabled = true;
     try { await applyAppearance(actor, event.currentTarget.value, appearances); }

@@ -241,7 +241,9 @@
         "NearSelf": "Allies near me",
         "NearTarget": "Allies near the enemy",
         "Reach": "Within reach",
-        "Hint": "Choose one condition: allies near the owner or near the selected enemy. Within reach automatically selects Allies near the enemy, gathers allies the same way as PF2E's Gang Up, and applies the configured count."
+        "Hint": "Choose one condition: allies near the owner or near the selected enemy. Within reach automatically selects Allies near the enemy, gathers allies the same way as PF2E's Gang Up, and applies the configured count.",
+        "AutomationEnabled": "Automation enabled — click to leave this toggle under manual control",
+        "AutomationLocked": "Manual control — click to resume automation"
       },
       "TroopDamage": {
         "FeatureLabel": "Troop Damage",

@@ -3,6 +3,7 @@ import { isActionPlusFeatureEnabled, registerActionPlusFeature } from "./actionp
 
 const FEATURE_ID = "shoulderToShoulder";
 const FLAG_KEY = "shoulderToShoulder";
+const AUTOMATION_LOCK_FLAG = "shoulderToShoulderAutomationLocked";
 const MIN_ALLIES = 1;
 const MAX_ALLIES = 20;
 
@@ -34,6 +35,10 @@ function getConfiguration(item) {
   return normalizeConfiguration(item?.getFlag?.(MODULE_ID, FLAG_KEY));
 }
 
+function isAutomationLocked(item) {
+  return item?.getFlag?.(MODULE_ID, AUTOMATION_LOCK_FLAG) === true;
+}
+
 function hasToggleableRollOption(item) {
   const rules = item?._source?.system?.rules ?? item?.system?.rules ?? [];
   return rules.some((rule) => rule?.key === "RollOption" && rule.toggleable === true);
@@ -43,6 +48,66 @@ function getConfiguredItems(actor) {
   return (actor?.itemTypes?.action ?? []).filter((item) => (
     isActionPlusFeatureEnabled(item, FEATURE_ID) && hasToggleableRollOption(item)
   ));
+}
+
+function getHtmlElement(html) {
+  if (html instanceof HTMLElement) return html;
+  if (html?.[0] instanceof HTMLElement) return html[0];
+  if (html?.element instanceof HTMLElement) return html.element;
+  return null;
+}
+
+function injectAutomationLock(toggle, item) {
+  if (!(toggle instanceof HTMLElement)) return;
+  toggle.classList.add("ts-automation-toggle-row");
+  let button = toggle.querySelector(":scope > .ts-shoulder-to-shoulder-lock");
+  if (!(button instanceof HTMLButtonElement)) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.className = "ts-automation-lock ts-shoulder-to-shoulder-lock";
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.disabled = true;
+      try {
+        const wasLocked = isAutomationLocked(item);
+        await item.setFlag(MODULE_ID, AUTOMATION_LOCK_FLAG, !wasLocked);
+        updateAutomationLockButton(button, item);
+        if (wasLocked) void syncActorRuleValues(item.actor);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    toggle.append(button);
+  }
+
+  updateAutomationLockButton(button, item);
+}
+
+function updateAutomationLockButton(button, item) {
+  const locked = isAutomationLocked(item);
+  button.dataset.tooltip = localize(locked ? "AutomationLocked" : "AutomationEnabled");
+  const iconClass = locked ? "fa-lock" : "fa-lock-open";
+  const icon = button.querySelector("i");
+  if (icon?.classList.contains(iconClass)) return;
+  button.innerHTML = `<i class="fas fa-fw ${iconClass}"></i>`;
+}
+
+function injectActorSheetLocks(app, html) {
+  const actor = app?.document ?? app?.actor ?? app?.object ?? null;
+  const root = getHtmlElement(html);
+  if (!actor?.isOwner || !root) return;
+
+  const scan = () => {
+    if (!root.isConnected) return;
+    for (const item of getConfiguredItems(actor)) {
+      const escapedId = CSS.escape(item.id);
+      for (const toggle of root.querySelectorAll(`ul[data-option-toggles] [data-item-id="${escapedId}"]`)) injectAutomationLock(toggle, item);
+    }
+  };
+  scan();
+  const observer = new MutationObserver(scan);
+  observer.observe(root, { childList: true, subtree: true });
 }
 
 function getConfiguredSceneActors() {
@@ -221,6 +286,7 @@ async function syncActorRuleValues(actor) {
   try {
     for (const item of getConfiguredItems(actor)) {
       if (!item.isOwner) continue;
+      if (isAutomationLocked(item)) continue;
       const active = hasEnoughNearbyAllies(actor, getConfiguration(item));
       const rules = foundry.utils.deepClone(item._source?.system?.rules ?? item.system?.rules ?? []);
       let changed = false;
@@ -270,6 +336,7 @@ Hooks.on("updateToken", (_document, changed) => {
 });
 
 Hooks.on("targetToken", refreshShoulderToShoulder);
+Hooks.on("renderActorSheet", injectActorSheetLocks);
 
 Hooks.on("updateItem", (item, changed) => {
   if (item.type !== "action" || !item.actor) return;

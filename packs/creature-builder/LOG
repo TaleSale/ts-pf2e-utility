@@ -1,22 +1,11 @@
-2026/07/28-16:00:58.752 2eec Recovering log #206
-2026/07/28-16:00:58.755 2eec Level-0 table #208: started
-2026/07/28-16:00:58.941 2eec Level-0 table #208: 688420 bytes OK
-2026/07/28-16:00:59.048 2eec Delete type=0 #206
-2026/07/28-16:00:59.050 2eec Delete type=3 #205
-2026/07/28-17:01:57.932 25c4 Compacting 1@0 + 1@1 files
-2026/07/28-17:01:58.043 25c4 Generated table #210@0: 352 keys, 982654 bytes
-2026/07/28-17:01:58.043 25c4 Compacted 1@0 + 1@1 files => 982654 bytes
-2026/07/28-17:01:58.075 25c4 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/28-17:01:58.076 25c4 Delete type=2 #204
-2026/07/28-17:01:58.076 25c4 Delete type=2 #208
-2026/07/28-18:06:48.894 25c4 Level-0 table #212: started
-2026/07/28-18:06:49.208 25c4 Level-0 table #212: 787465 bytes OK
-2026/07/28-18:06:49.300 25c4 Delete type=0 #209
-2026/07/28-18:06:49.559 25c4 Manual compaction at level-0 from '!folders!0RLjvfWoEo3vypEH' @ 72057594037927935 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at '!items!xjGwis0uaC2305pm' @ 1738 : 1
-2026/07/28-18:06:49.559 25c4 Compacting 1@0 + 1@1 files
-2026/07/28-18:06:49.632 25c4 Generated table #213@0: 360 keys, 1084361 bytes
-2026/07/28-18:06:49.632 25c4 Compacted 1@0 + 1@1 files => 1084361 bytes
-2026/07/28-18:06:49.688 25c4 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/07/28-18:06:49.689 25c4 Delete type=2 #210
-2026/07/28-18:06:49.690 25c4 Delete type=2 #212
-2026/07/28-18:06:49.690 25c4 Manual compaction at level-0 from '!items!xjGwis0uaC2305pm' @ 1738 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at (end)
+2026/07/29-10:53:44.309 2edc Recovering log #215
+2026/07/29-10:53:44.309 2edc Level-0 table #217: started
+2026/07/29-10:53:44.371 2edc Level-0 table #217: 92236 bytes OK
+2026/07/29-10:53:44.527 2edc Delete type=0 #215
+2026/07/29-10:53:44.529 2edc Delete type=3 #214
+2026/07/29-11:37:55.145 2ccc Compacting 1@0 + 1@1 files
+2026/07/29-11:37:55.297 2ccc Generated table #219@0: 363 keys, 1086313 bytes
+2026/07/29-11:37:55.297 2ccc Compacted 1@0 + 1@1 files => 1086313 bytes
+2026/07/29-11:37:55.359 2ccc compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/07/29-11:37:55.359 2ccc Delete type=2 #213
+2026/07/29-11:37:55.359 2ccc Delete type=2 #217

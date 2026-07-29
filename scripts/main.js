@@ -18,6 +18,7 @@ import "./actionplus/actor-extras.js";
 import "./utility/journals/index.js";
 import "./utility/read.js";
 import "./utility/wall-textures.js";
+import "./utility/floor-textures.js";
 import "./utility/scene-eye.js";
 import "./utility/thumb.js";
 import "./utility/spell-at-will.js";

@@ -61,6 +61,7 @@ function normalizeConfig(value) {
   const selected = Array.isArray(source.selected) ? source.selected : [];
   return {
     selected: Array.from(new Set(selected.map((entry) => String(entry ?? "").trim()).filter((entry) => OPTIONS.some((option) => option.value === entry)))),
+    applyToSpellAttackDamage: source.applyToSpellAttackDamage === true,
   };
 }
 
@@ -91,13 +92,17 @@ function optionNoteText(option) {
   return option.summary ?? option.label;
 }
 
-function noteRule(option, { second = false } = {}) {
+function noteRule(option, { second = false, applyToSpellAttackDamage = false } = {}) {
   const prefix = second ? "second-debilitation" : "debilitation";
   const text = optionNoteText(option);
   return {
     key: "Note",
-    selector: "strike-damage",
-    predicate: [`${prefix}:${option.value}`, "target:condition:off-guard"],
+    selector: applyToSpellAttackDamage ? ["strike-damage", "spell-damage"] : "strike-damage",
+    predicate: [
+      `${prefix}:${option.value}`,
+      "target:condition:off-guard",
+      ...(applyToSpellAttackDamage ? [{ or: [{ not: "item:type:spell" }, "item:trait:attack"] }] : []),
+    ],
     text: second
       ? text
       : `<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p><p>${text}</p>`,
@@ -146,8 +151,8 @@ function buildGeneratedRules(config) {
     optionRule("debilitation", suboptions, 9, "Ослабление"),
     optionRule("second-debilitation", secondSuboptions, 15, "Второе ослабление"),
   ];
-  rules.push(...enabled.map((option) => noteRule(option)));
-  rules.push(...enabled.map((option) => noteRule(option, { second: true })));
+  rules.push(...enabled.map((option) => noteRule(option, { applyToSpellAttackDamage: config.applyToSpellAttackDamage })));
+  rules.push(...enabled.map((option) => noteRule(option, { second: true, applyToSpellAttackDamage: config.applyToSpellAttackDamage })));
   rules.push(masterStrikeNoteRule());
   return rules;
 }
@@ -251,6 +256,7 @@ function renderControls({ flags }) {
       <div style="margin: 7px 0;"><strong>${foundry.utils.escapeHTML(group)}</strong>
       ${options.map((option) => `<label class="checkbox" style="display:block; margin:3px 0 0 8px;"><input class="ts-debilitating-strike-option" type="checkbox" value="${option.value}" ${optionEnabled(config, option) ? "checked" : ""}> ${foundry.utils.escapeHTML(option.label)}</label>`).join("")}
       </div>`).join("")}
+    <label class="checkbox" style="display:block; margin:10px 0 0;"><input class="ts-debilitating-strike-spell-attack" type="checkbox" ${config.applyToSpellAttackDamage ? "checked" : ""}> Распространять на урон заклинаний с признаком «Атака»</label>
     <p class="notes" style="margin:8px 0 0;">Ослабляющий удар, Двойное ослабление и Мастерский удар включаются автоматически на 9-м, 15-м и 20-м уровнях.</p>`;
 }
 
@@ -262,9 +268,10 @@ function activateListeners({ html, item, optionIndex }) {
     const config = normalizeConfig(item.getFlag(MODULE_ID, FLAG_KEY));
     config.selected = Array.from(panel.querySelectorAll(".ts-debilitating-strike-option:checked"))
       .map((input) => input.value);
+    config.applyToSpellAttackDamage = panel.querySelector(".ts-debilitating-strike-spell-attack")?.checked === true;
     await item.setFlag(MODULE_ID, FLAG_KEY, config);
   };
-  panel.querySelectorAll(".ts-debilitating-strike-option").forEach((input) => input.addEventListener("change", save));
+  panel.querySelectorAll(".ts-debilitating-strike-option, .ts-debilitating-strike-spell-attack").forEach((input) => input.addEventListener("change", save));
 }
 
 async function cleanup({ item }) {

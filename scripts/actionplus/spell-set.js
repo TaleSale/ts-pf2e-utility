@@ -8,7 +8,7 @@ const GENERATED_FLAG = "spellSetGenerated";
 const TYPE_LABELS = { prepared: "Подготавливаемые", spontaneous: "Спонтанные", innate: "Врождённые", focus: "Фокусировка" };
 const TRADITIONS = { arcane: "Арканный", divine: "Сакральный", occult: "Оккультный", primal: "Природный" };
 const ABILITIES = { int: "Интеллект", wis: "Мудрость", cha: "Харизма" };
-const syncingActors = new Set();
+const syncingActors = new Map();
 
 const uid = () => foundry.utils.randomID();
 const htmlElement = (html) => html instanceof HTMLElement ? html : html?.[0] ?? html?.element ?? null;
@@ -65,6 +65,7 @@ function renderSpell(spell, type) {
 function renderControls({ flags, occurrenceIndex = 0 }) {
   const config = normalizeSet(Array.isArray(flags?.[FLAG_KEY]) ? flags[FLAG_KEY][occurrenceIndex] : null);
   const setLevelRange = ["prepared", "spontaneous"].includes(config.type) ? `<div class="ts-spell-set-level-range"><span>Уровень набора</span><label>с <input class="ts-spell-set-config" data-field="startLevel" type="number" min="1" max="20" value="${config.startLevel}" placeholder="1"></label><label>по <input class="ts-spell-set-config" data-field="endLevel" type="number" min="1" max="20" value="${config.endLevel}" placeholder="20"></label></div>` : "";
+  const canCopyToNextRange = ["prepared", "spontaneous"].includes(config.type) && config.endLevel !== "" && Number(config.endLevel) < 20;
   const editorMaxRank = config.endLevel === "" ? 10 : Math.min(10, Math.ceil(Number(config.endLevel) / 2));
   const spellList = ["prepared", "spontaneous"].includes(config.type)
     ? Array.from({ length: editorMaxRank + 1 }, (_, rank) => `<li class="ts-spell-set-rank" data-drop-rank="${rank}"><h4>${rank === 0 ? "Чары" : `${rank}-й ранг`}</h4><ol>${config.spells.filter((spell) => spell.rank === rank).map((spell) => renderSpell(spell, config.type)).join("") || `<li class="ts-spell-set-empty">Перетащите заклинание сюда</li>`}</ol></li>`).join("")
@@ -80,6 +81,7 @@ function renderControls({ flags, occurrenceIndex = 0 }) {
     ${setLevelRange}
     <p class="hint">Перетащите заклинания из компендиума или листа персонажа. Одинаковое заклинание можно добавить несколько раз.</p>
     <ol class="ts-spell-set-list">${spellList}</ol>
+    ${canCopyToNextRange ? `<button type="button" class="ts-spell-set-copy"><i class="fas fa-copy"></i> Скопировать для следующих уровней</button>` : ""}
   </div>`;
 }
 
@@ -96,6 +98,15 @@ function readPanel(panel, previous) {
 async function persist(item, occurrenceIndex, config) {
   const configs = getConfigs(item); configs[occurrenceIndex] = normalizeSet(config);
   await item.update({ [`flags.${MODULE_ID}.${FLAG_KEY}`]: configs }, { render: false });
+}
+
+function copySetForNextLevels(config) {
+  const copied = foundry.utils.deepClone(config);
+  const previousEnd = Number(config.endLevel);
+  copied.startLevel = Math.min(20, previousEnd + 1);
+  copied.endLevel = 20;
+  copied.spells = copied.spells.map((spell) => ({ ...spell, id: uid() }));
+  return normalizeSet(copied);
 }
 
 function activateListeners({ app, html, item, optionIndex, occurrenceIndex = 0 }) {
@@ -138,6 +149,21 @@ function activateListeners({ app, html, item, optionIndex, occurrenceIndex = 0 }
     targetList?.insertAdjacentHTML("beforeend", renderSpell(addedSpell, config.type));
   });
   panel.addEventListener("click", async (event) => {
+    const copyButton = event.target.closest(".ts-spell-set-copy");
+    if (copyButton && panel.contains(copyButton)) {
+      const config = readPanel(panel, getConfigs(item)[occurrenceIndex]);
+      if (!["prepared", "spontaneous"].includes(config.type) || config.endLevel === "" || Number(config.endLevel) >= 20) return;
+      const configs = getConfigs(item); configs[occurrenceIndex] = config; configs.push(copySetForNextLevels(config));
+      const options = [...getItemActionPlusOptions(item), FEATURE_ID];
+      await item.update({
+        [`flags.${MODULE_ID}.${FLAG_KEY}`]: configs,
+        [`flags.${MODULE_ID}.actionOptions`]: options,
+        [`flags.${MODULE_ID}.actionOption`]: options[0],
+      });
+      app.render(false);
+      return;
+    }
+
     const button = event.target.closest(".ts-spell-set-remove"); if (!button || !panel.contains(button)) return;
     const row = button.closest("[data-spell-id]"); const config = readPanel(panel, getConfigs(item)[occurrenceIndex]); config.spells = config.spells.filter((spell) => spell.id !== row.dataset.spellId); await persist(item, occurrenceIndex, config);
     const list = row.parentElement; row.remove();
@@ -162,14 +188,75 @@ function isSetActive(config, level) {
 }
 
 function spellIdentity(spell) {
-  return String(spell?._stats?.compendiumSource
-    ?? spell?.sourceId
-    ?? spell?.flags?.core?.sourceId
-    ?? spell?.source?._stats?.compendiumSource
-    ?? spell?.source?.flags?.core?.sourceId
-    ?? spell?.uuid
-    ?? spell?.id
-    ?? "");
+  const candidates = [
+    spell?._stats?.compendiumSource,
+    spell?.sourceId,
+    spell?.flags?.core?.sourceId,
+    spell?.source?._stats?.compendiumSource,
+    spell?.source?.flags?.core?.sourceId,
+    spell?.uuid,
+    spell?.id,
+  ];
+  return candidates.map((value) => String(value ?? "").trim()).find(Boolean) ?? "";
+}
+
+function actionUsesSpellSet(action) {
+  return action?.type === "action" && isActionPlusFeatureEnabled(action, FEATURE_ID);
+}
+
+function generatedSpellsForSet(actor, marker) {
+  return actor.itemTypes?.spell?.filter((spell) => {
+    const spellMarker = spell.getFlag(MODULE_ID, GENERATED_FLAG);
+    return spellMarker?.kind === "spell"
+      && spellMarker.actionId === marker.actionId
+      && spellMarker.occurrenceIndex === marker.occurrenceIndex;
+  }) ?? [];
+}
+
+function generatedSpellKey(spell, config) {
+  const marker = spell.getFlag(MODULE_ID, GENERATED_FLAG);
+  const configured = config.spells.find((candidate) => candidate.id === marker?.spellId);
+  return spellIdentity(configured) || String(marker?.spellKey ?? "").trim() || spellIdentity(spell);
+}
+
+function buildPreparedSlots(entry, config, level, generatedSpells) {
+  const slots = foundry.utils.deepClone(entry.system.slots);
+  const spellByKey = new Map(generatedSpells.map((spell) => [generatedSpellKey(spell, config), spell]));
+  const previousExpended = new Map();
+
+  for (const [slotKey, group] of Object.entries(slots)) {
+    for (const slot of group.prepared ?? []) {
+      if (!slot?.id) continue;
+      const key = `${slotKey}:${slot.id}`;
+      const states = previousExpended.get(key) ?? [];
+      states.push(Boolean(slot.expended));
+      previousExpended.set(key, states);
+    }
+
+    const maximum = Math.max(0, Number(group.max) || 0);
+    group.prepared = Array.from({ length: maximum }, () => ({ id: null, expended: false }));
+  }
+
+  const nextIndexByRank = new Map();
+  const selected = activeSpells(config, level).sort((left, right) => left.rank - right.rank);
+  for (const configured of selected) {
+    const rank = Number(configured.rank);
+    const slotKey = `slot${rank}`;
+    const group = slots[slotKey];
+    const index = nextIndexByRank.get(rank) ?? 0;
+    nextIndexByRank.set(rank, index + 1);
+    if (!group || index >= group.prepared.length) continue;
+
+    const generated = spellByKey.get(spellIdentity(configured));
+    if (!generated) continue;
+    const expendedStates = previousExpended.get(`${slotKey}:${generated.id}`) ?? [];
+    group.prepared[index] = {
+      id: generated.id,
+      expended: expendedStates.shift() ?? false,
+    };
+  }
+
+  return slots;
 }
 
 function isFocusCantrip(spell) {
@@ -217,35 +304,46 @@ async function createSetDocuments(actor, action, config, occurrenceIndex) {
   const sources = documentSpells.map((spell, index) => { const source = foundry.utils.deepClone(spell.source); const spellMods = { atWill: spell.atWill, constant: spell.constant, self: spell.self }; source.flags = foundry.utils.mergeObject(source.flags ?? {}, { [MODULE_ID]: { [GENERATED_FLAG]: { ...marker, spellId: spell.id, spellKey: spellIdentity(spell), kind: "spell" }, spellMods } }); source.system ??= {}; const heightenedLevel = config.type === "focus" || spell.rank === 0 ? maxRank : spell.rank; source.system.location = { value: entry.id, heightenedLevel, signature: config.type === "spontaneous" && spell.rank > 0 && spell.signature }; source.sort = (index + 1) * 100000; if (config.type === "innate") { const uses = spell.atWill || spell.constant ? 99 : spell.uses; source.system.location.uses = { value: uses, max: uses }; source.name = applySpellModLabels(source.name, spellMods); } return source; });
   const created = sources.length ? await actor.createEmbeddedDocuments("Item", sources) : [];
   if (config.type === "prepared" && created.length) {
-    const slots = foundry.utils.deepClone(entry.system.slots);
-    const createdBySpell = new Map(documentSpells.map((spell, index) => [spellIdentity(spell), created[index]]));
-    for (const spell of selected) {
-      const group = slots[`slot${spell.rank}`];
-      if (!group) continue;
-      const freeIndex = group.prepared.findIndex((slot) => !slot?.id);
-      if (freeIndex === -1) continue;
-      const createdSpell = createdBySpell.get(spellIdentity(spell));
-      if (!createdSpell) continue;
-      group.prepared[freeIndex] = { id: createdSpell.id, expended: false };
-    }
-    await entry.update({ "system.slots": slots });
+    await entry.update({ "system.slots": buildPreparedSlots(entry, config, level, created) });
   }
 }
 
+async function rebuildActorSpellSets(actor) {
+  const correctionsLocked = areCreatureCorrectionsLocked(actor);
+  const isLockedCorrectionAction = (actionId) => correctionsLocked && isCreatureCorrectionManagedItem(actor.items.get(actionId));
+  const generated = actor.items.filter((item) => {
+    const marker = item.getFlag(MODULE_ID, GENERATED_FLAG);
+    return marker && !isLockedCorrectionAction(marker.actionId);
+  });
+  if (generated.length) await actor.deleteEmbeddedDocuments("Item", generated.map((item) => item.id));
+  const level = actorLevel(actor);
+  for (const action of actor.itemTypes?.action ?? []) { if (isLockedCorrectionAction(action.id) || !isActionPlusFeatureEnabled(action, FEATURE_ID)) continue; const count = getItemActionPlusOptions(action).filter((id) => id === FEATURE_ID).length; const configs = getConfigs(action); for (let index = 0; index < count; index++) { const config = normalizeSet(configs[index]); if (isSetActive(config, level)) await createSetDocuments(actor, action, config, index); } }
+  await updateFocusPool(actor);
+}
+
 async function syncActor(actor) {
-  if (!actor || syncingActors.has(actor.id)) return; syncingActors.add(actor.id);
-  try {
-    const correctionsLocked = areCreatureCorrectionsLocked(actor);
-    const isLockedCorrectionAction = (actionId) => correctionsLocked && isCreatureCorrectionManagedItem(actor.items.get(actionId));
-    const generated = actor.items.filter((item) => {
-      const marker = item.getFlag(MODULE_ID, GENERATED_FLAG);
-      return marker && !isLockedCorrectionAction(marker.actionId);
-    });
-    if (generated.length) await actor.deleteEmbeddedDocuments("Item", generated.map((item) => item.id));
-    const level = actorLevel(actor);
-    for (const action of actor.itemTypes?.action ?? []) { if (isLockedCorrectionAction(action.id) || !isActionPlusFeatureEnabled(action, FEATURE_ID)) continue; const count = getItemActionPlusOptions(action).filter((id) => id === FEATURE_ID).length; const configs = getConfigs(action); for (let index = 0; index < count; index++) { const config = normalizeSet(configs[index]); if (isSetActive(config, level)) await createSetDocuments(actor, action, config, index); } }
-    await updateFocusPool(actor);
-  } finally { syncingActors.delete(actor.id); }
+  if (!actor) return;
+
+  const actorKey = actor.uuid ?? actor.id;
+  const running = syncingActors.get(actorKey);
+  if (running) {
+    running.rerun = true;
+    return running.promise;
+  }
+
+  const state = { rerun: false, promise: null };
+  state.promise = (async () => {
+    try {
+      do {
+        state.rerun = false;
+        await rebuildActorSpellSets(actor);
+      } while (state.rerun);
+    } finally {
+      syncingActors.delete(actorKey);
+    }
+  })();
+  syncingActors.set(actorKey, state);
+  return state.promise;
 }
 
 async function repairPreparedSlots(actor) {
@@ -253,21 +351,24 @@ async function repairPreparedSlots(actor) {
     const marker = entry.getFlag(MODULE_ID, GENERATED_FLAG);
     if (marker?.kind !== "entry" || entry.system.prepared.value !== "prepared") continue;
     const action = actor.items.get(marker.actionId); if (!action) continue; const config = getConfigs(action)[marker.occurrenceIndex]; if (!config) continue;
-    const slots = foundry.utils.deepClone(entry.system.slots); let changed = false;
-    const spells = actor.itemTypes?.spell?.filter((spell) => { const spellMarker = spell.getFlag(MODULE_ID, GENERATED_FLAG); return spellMarker?.actionId === marker.actionId && spellMarker?.occurrenceIndex === marker.occurrenceIndex; }) ?? [];
-    for (const spell of spells) {
-      if (Object.values(slots).some((group) => group.prepared.some((slot) => slot?.id === spell.id))) continue;
-      const spellMarker = spell.getFlag(MODULE_ID, GENERATED_FLAG); const configured = config.spells.find((value) => value.id === spellMarker.spellId); const group = slots[`slot${configured?.rank ?? -1}`]; const freeIndex = group?.prepared.findIndex((slot) => !slot?.id) ?? -1;
-      if (freeIndex < 0) continue; group.prepared[freeIndex] = { id: spell.id, expended: false }; changed = true;
+    const spells = generatedSpellsForSet(actor, marker);
+    const expectedKeys = new Set(activeSpells(config, actorLevel(actor)).map(spellIdentity));
+    const generatedKeys = new Set(spells.map((spell) => generatedSpellKey(spell, config)));
+    if ([...expectedKeys].some((key) => !generatedKeys.has(key))) {
+      await syncActor(actor);
+      return;
     }
-    if (changed) await entry.update({ "system.slots": slots });
+    const slots = buildPreparedSlots(entry, config, actorLevel(actor), spells);
+    if (!foundry.utils.isEmpty(foundry.utils.diffObject(entry.system.slots, slots))) {
+      await entry.update({ "system.slots": slots });
+    }
   }
 }
 
 registerActionPlusFeature({ id: FEATURE_ID, label: `${I18N_PREFIX}.ActionPlus.SpellSet.FeatureLabel`, allowMultiple: true, render: renderControls, activateListeners, cleanup });
-Hooks.on("createItem", (item) => { if (item.type === "action") void syncActor(item.actor); });
+Hooks.on("createItem", (item) => { if (actionUsesSpellSet(item)) void syncActor(item.actor); });
 Hooks.on("updateItem", (item, changed) => { if (item.type === "action" && (foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.${FLAG_KEY}`) || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOptions`) || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOption`))) void syncActor(item.actor); });
-Hooks.on("deleteItem", (item) => { if (item.type === "action") void syncActor(item.actor); });
+Hooks.on("deleteItem", (item) => { if (actionUsesSpellSet(item)) void syncActor(item.actor); });
 Hooks.on("updateActor", (actor, changed) => { if (foundry.utils.hasProperty(changed, "system.details.level.value")) void syncActor(actor); });
 Hooks.on("tsPf2eUtilityCorrectionLockChanged", (actor, locked) => { if (!locked) void syncActor(actor); });
 Hooks.once("ready", () => { if (game.users.activeGM?.id !== game.user.id) return; for (const actor of game.actors) void repairPreparedSlots(actor); });
