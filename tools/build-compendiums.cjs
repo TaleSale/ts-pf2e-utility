@@ -38,6 +38,12 @@ const PACK_CONFIGS = Object.freeze([
       "pack-src/utility/Damage_UtDamage0000001.json",
     ]),
   },
+  {
+    label: "scenes",
+    dbPath: path.join(MODULE_ROOT, ".pack-build", "scenes"),
+    publishPath: path.join(MODULE_ROOT, "packs", "scenes"),
+    sourceFiles: Object.freeze([]),
+  },
 ]);
 
 function getFoundryAppPath() {

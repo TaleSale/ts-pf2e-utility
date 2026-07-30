@@ -1,9 +1,12 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
 
 const SETTING_ENABLE = "enableWallTextures";
+const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
 const I18N_ROOT = "Settings.WallTextures";
+const DOOR_I18N_ROOT = "Settings.DoorTexturePresets";
 const FLAG_ROOT = "wallTexture";
 const DEFAULT_STYLE = "brick-grey-dense";
+const DEFAULT_WINDOW_STYLE = "window-wood";
 const WALL_TEXTURE_STYLE_ALIASES = Object.freeze({
   "grey-brick": DEFAULT_STYLE,
 });
@@ -17,6 +20,10 @@ const SEGMENT_OVERLAY_TRIM_RATIO = 1;
 const SHORT_SEGMENT_OVERLAY_ONLY_GRID_RATIO = 1.25;
 const RIBBON_MITER_LIMIT_RATIO = 2.5;
 const DEFAULT_RIBBON_BOUNDS = Object.freeze({ top: 70, bottom: 130 });
+const DOOR_TEXTURE_ROOT = "canvas/doors";
+// The server-side FilePicker browse API compares against path.extname(), so leading dots are required.
+const DOOR_IMAGE_EXTENSIONS = Object.freeze([".avif", ".jpg", ".jpeg", ".png", ".svg", ".webp"]);
+let doorTextureFilesPromise = null;
 const SEGMENT_SOURCE_FRAMES = Object.freeze({
   straight: Object.freeze({ x: 0, y: 70, width: 100, height: 60 }),
   straightLong: Object.freeze({ x: 0, y: 70, width: 200, height: 60 }),
@@ -54,11 +61,16 @@ const WALL_TEXTURE_STYLES = Object.freeze({
   "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png", 78, 122),
   "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png", 78, 122),
 });
+const WINDOW_TEXTURE_STYLES = Object.freeze({
+  "window-wood": createWallTextureStyle("WindowWood", "Window - Walnut", "window-wood.webp", 70, 130, "Settings.WindowTextures"),
+  "window-iron": createWallTextureStyle("WindowIron", "Window - Iron", "window-iron.webp", 70, 130, "Settings.WindowTextures"),
+  "window-stained": createWallTextureStyle("WindowStained", "Window - Stained glass", "window-stained.webp", 70, 130, "Settings.WindowTextures"),
+});
 
-function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBottom) {
+function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBottom, i18nRoot = I18N_ROOT) {
   const asset = `${TEXTURE_ASSET_BASE}/${filename}`;
   return Object.freeze({
-    labelKey: `${I18N_ROOT}.Choices.${label}`,
+    labelKey: `${i18nRoot}.Choices.${label}`,
     fallback,
     assets: Object.freeze({ straight: asset, straightLong: asset, diag: asset, corner: asset, joint: asset }),
     ribbonBounds: Object.freeze({ top: ribbonTop, bottom: ribbonBottom }),
@@ -77,6 +89,15 @@ Hooks.once("init", () => {
     default: false,
     type: Boolean,
     onChange: () => scheduleWallTextureRedraw(),
+  });
+
+  game.settings.register(MODULE_ID, SETTING_DOOR_PRESETS, {
+    name: i18nKey(`${DOOR_I18N_ROOT}.Name`),
+    hint: i18nKey(`${DOOR_I18N_ROOT}.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
   });
 });
 
@@ -127,19 +148,39 @@ function wallsConnectForTexture(sourceWall, targetWall) {
   ));
 }
 
+function isWindowWall(wall) {
+  const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
+  const proximity = globalThis.CONST?.EDGE_SENSE_TYPES?.PROXIMITY
+    ?? globalThis.CONST?.WALL_SENSE_TYPES?.PROXIMITY
+    ?? 30;
+  return Number(wall?.door ?? noDoor) === noDoor
+    && Number(wall?.light) === proximity
+    && Number(wall?.sight) === proximity;
+}
+
 function supportsWallTexture(wall) {
   const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
   const secretDoor = globalThis.CONST?.WALL_DOOR_TYPES?.SECRET ?? 2;
   const doorType = Number(wall?.door ?? noDoor);
-  return doorType === noDoor || doorType === secretDoor;
+  return doorType === noDoor || doorType === secretDoor || isWindowWall(wall);
 }
 
-function getStyleDefinition(style) {
-  return WALL_TEXTURE_STYLES[normalizeStyleKey(style)] ?? WALL_TEXTURE_STYLES[DEFAULT_STYLE];
+function getStyleDefinitions(wall) {
+  return isWindowWall(wall) ? WINDOW_TEXTURE_STYLES : WALL_TEXTURE_STYLES;
 }
 
-function normalizeStyleKey(style) {
-  return WALL_TEXTURE_STYLE_ALIASES[style] ?? style;
+function getDefaultStyle(wall) {
+  return isWindowWall(wall) ? DEFAULT_WINDOW_STYLE : DEFAULT_STYLE;
+}
+
+function getStyleDefinition(style, wall = null) {
+  const styles = getStyleDefinitions(wall);
+  return styles[normalizeStyleKey(style, wall)] ?? styles[getDefaultStyle(wall)];
+}
+
+function normalizeStyleKey(style, wall = null) {
+  const normalized = WALL_TEXTURE_STYLE_ALIASES[style] ?? style;
+  return getStyleDefinitions(wall)[normalized] ? normalized : getDefaultStyle(wall);
 }
 
 function getWallCoords(wall) {
@@ -361,7 +402,9 @@ function centerDisplayObject(displayObject, width, height) {
 function createWallTextureFieldset(wall) {
   const flags = getFlagData(wall);
   const enabled = isEnabled(flags.enabled);
-  const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE);
+  const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
+  const windowWall = isWindowWall(wall);
+  const styles = getStyleDefinitions(wall);
   const closedLeft = isEnabled(flags.closedLeft);
   const closedRight = isEnabled(flags.closedRight);
 
@@ -369,13 +412,13 @@ function createWallTextureFieldset(wall) {
   fieldset.className = "tsu-wall-texture-config";
 
   const legend = document.createElement("legend");
-  legend.textContent = t(`${I18N_ROOT}.Fieldset`, "Wall texture");
+  legend.textContent = windowWall ? t("Settings.WindowTextures.Fieldset", "Window texture") : t(`${I18N_ROOT}.Fieldset`, "Wall texture");
 
   const enabledGroup = document.createElement("div");
   enabledGroup.className = "form-group";
 
   const enabledLabel = document.createElement("label");
-  enabledLabel.textContent = t(`${I18N_ROOT}.EnableLabel`, "Wall texture");
+  enabledLabel.textContent = windowWall ? t("Settings.WindowTextures.EnableLabel", "Window texture") : t(`${I18N_ROOT}.EnableLabel`, "Wall texture");
 
   const enabledFields = document.createElement("div");
   enabledFields.className = "form-fields";
@@ -392,23 +435,49 @@ function createWallTextureFieldset(wall) {
   styleGroup.className = "form-group tsu-wall-texture-style";
 
   const styleLabel = document.createElement("label");
-  styleLabel.textContent = t(`${I18N_ROOT}.StyleLabel`, "Wall style");
+  styleLabel.textContent = windowWall ? t("Settings.WindowTextures.StyleLabel", "Window style") : t(`${I18N_ROOT}.StyleLabel`, "Wall style");
 
   const styleFields = document.createElement("div");
   styleFields.className = "form-fields";
 
   const styleSelect = document.createElement("select");
   styleSelect.name = `flags.${MODULE_ID}.${FLAG_ROOT}.style`;
+  styleSelect.className = "tsu-wall-texture-native-select";
 
-  for (const [value, definition] of Object.entries(WALL_TEXTURE_STYLES)) {
+  const stylePicker = document.createElement("div");
+  stylePicker.className = "tsu-wall-texture-picker";
+
+  for (const [value, definition] of Object.entries(styles)) {
+    const label = t(definition.labelKey, definition.fallback);
     const option = document.createElement("option");
     option.value = value;
-    option.textContent = t(definition.labelKey, definition.fallback);
+    option.textContent = label;
     option.selected = value === selectedStyle;
     styleSelect.append(option);
+
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.className = "tsu-wall-texture-choice";
+    choice.dataset.style = value;
+    choice.title = label;
+    choice.classList.toggle("selected", value === selectedStyle);
+    const preview = document.createElement("img");
+    preview.src = definition.assets.straightLong;
+    preview.alt = "";
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    choice.append(preview, caption);
+    choice.addEventListener("click", () => {
+      styleSelect.value = value;
+      styleSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      stylePicker.querySelectorAll("[data-style]").forEach((item) => {
+        item.classList.toggle("selected", item.dataset.style === value);
+      });
+    });
+    stylePicker.append(choice);
   }
 
-  styleFields.append(styleSelect);
+  styleFields.append(styleSelect, stylePicker);
   styleGroup.append(styleLabel, styleFields);
 
   const createEdgeGroup = (flag, labelKey, fallback, checked) => {
@@ -432,7 +501,9 @@ function createWallTextureFieldset(wall) {
 
   const hint = document.createElement("p");
   hint.className = "hint";
-  hint.textContent = t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
+  hint.textContent = windowWall
+    ? t("Settings.WindowTextures.FieldHint", "Draws the selected texture along this window segment.")
+    : t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
 
   const updateStyleVisibility = () => {
     styleGroup.hidden = !enabledInput.checked;
@@ -464,10 +535,145 @@ Hooks.on("renderWallConfig", (app, element) => {
   app.setPosition?.({ height: "auto" });
 });
 
-function findConnectedWallTextureFlags(coords) {
+function getFilePickerClass() {
+  return globalThis.CONFIG?.ux?.FilePicker ?? globalThis.FilePicker;
+}
+
+async function browseDoorTextureDirectory(directory) {
+  const FilePickerClass = getFilePickerClass();
+  if (!FilePickerClass?.browse) return [];
+
+  const result = await FilePickerClass.browse("public", directory, {
+    extensions: [...DOOR_IMAGE_EXTENSIONS],
+  });
+  const files = Array.isArray(result?.files) ? result.files : [];
+  const directories = Array.isArray(result?.dirs) ? result.dirs : [];
+  const nestedFiles = await Promise.all(directories.map((path) => browseDoorTextureDirectory(path)));
+  return [...files, ...nestedFiles.flat()];
+}
+
+function getDoorTextureFiles() {
+  doorTextureFilesPromise ??= browseDoorTextureDirectory(DOOR_TEXTURE_ROOT)
+    .then((files) => [...new Set(files)].sort((left, right) => left.localeCompare(right)))
+    .catch((error) => {
+      doorTextureFilesPromise = null;
+      console.warn(`${MODULE_ID} | Failed to browse Foundry door textures`, error);
+      return [];
+    });
+  return doorTextureFilesPromise;
+}
+
+function getDoorTextureName(path) {
+  const filename = String(path ?? "").split("/").pop() ?? "";
+  return decodeURIComponent(filename).replace(/\.[^.]+$/, "").replaceAll("_", " ");
+}
+
+function updateDoorPresetSummary(summary, path) {
+  summary.replaceChildren();
+  if (path) {
+    const image = document.createElement("img");
+    image.src = path;
+    image.alt = "";
+    summary.append(image);
+  }
+  const label = document.createElement("span");
+  label.textContent = path
+    ? getDoorTextureName(path)
+    : t(`${DOOR_I18N_ROOT}.Placeholder`, "Choose a Foundry preset");
+  summary.append(label);
+}
+
+async function createDoorTexturePresetGroup(textureControl) {
+  const group = document.createElement("div");
+  group.className = "form-group tsu-door-texture-presets";
+
+  const label = document.createElement("label");
+  label.textContent = t(`${DOOR_I18N_ROOT}.Label`, "Door preset");
+
+  const fields = document.createElement("div");
+  fields.className = "form-fields";
+  const picker = document.createElement("details");
+  picker.className = "tsu-door-preset-picker";
+  const summary = document.createElement("summary");
+  updateDoorPresetSummary(summary, textureControl.value);
+  const grid = document.createElement("div");
+  grid.className = "tsu-door-preset-grid";
+  grid.setAttribute("role", "listbox");
+  grid.setAttribute("aria-label", label.textContent);
+
+  const files = await getDoorTextureFiles();
+  for (const path of files) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.path = path;
+    button.title = getDoorTextureName(path);
+    button.classList.toggle("selected", textureControl.value === path);
+    const image = document.createElement("img");
+    image.src = path;
+    image.alt = button.title;
+    image.loading = "lazy";
+    button.append(image);
+    button.addEventListener("click", () => {
+      textureControl.value = path;
+      // Foundry v14's <file-picker> setter emits both events itself. Keep the fallback for older plain inputs.
+      if (textureControl instanceof HTMLInputElement) {
+        textureControl.dispatchEvent(new Event("input", { bubbles: true }));
+        textureControl.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      grid.querySelector(".selected")?.classList.remove("selected");
+      button.classList.add("selected");
+      updateDoorPresetSummary(summary, path);
+      picker.open = false;
+    });
+    grid.append(button);
+  }
+
+  if (!files.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = t(`${DOOR_I18N_ROOT}.Empty`, "Foundry door presets were not found.");
+    grid.append(empty);
+  }
+
+  textureControl.addEventListener("change", () => updateDoorPresetSummary(summary, textureControl.value));
+  picker.append(summary, grid);
+  fields.append(picker);
+  group.append(label, fields);
+  return group;
+}
+
+Hooks.on("renderWallConfig", async (app, element) => {
+  if (!game.settings.get(MODULE_ID, SETTING_DOOR_PRESETS)) return;
+
+  const root = getElement(element);
+  if (!root || root.querySelector(".tsu-door-texture-presets")) return;
+  const textureControl = root.querySelector('[name="animation.texture"]');
+  if (!(textureControl instanceof HTMLElement) || !("value" in textureControl)) return;
+
+  const placeholder = document.createElement("div");
+  placeholder.className = "form-group tsu-door-texture-presets";
+  const loadingLabel = document.createElement("label");
+  loadingLabel.textContent = t(`${DOOR_I18N_ROOT}.Label`, "Door preset");
+  const loading = document.createElement("p");
+  loading.className = "hint";
+  loading.textContent = t(`${DOOR_I18N_ROOT}.Loading`, "Loading Foundry presets...");
+  placeholder.append(loadingLabel, loading);
+  textureControl.closest(".form-group")?.after(placeholder);
+  app.setPosition?.({ height: "auto" });
+
+  const group = await createDoorTexturePresetGroup(textureControl);
+  if (!textureControl.isConnected || !placeholder.isConnected) return;
+  placeholder.replaceWith(group);
+  app.setPosition?.({ height: "auto" });
+});
+
+function findConnectedWallTextureFlags(sourceWall) {
+  const coords = getWallCoords(sourceWall);
+  if (!coords) return null;
   const walls = canvas?.scene?.walls ?? [];
   for (const wall of walls) {
     if (!supportsWallTexture(wall)) continue;
+    if (isWindowWall(wall) !== isWindowWall(sourceWall)) continue;
     const flags = getFlagData(wall);
     if (!isEnabled(flags.enabled)) continue;
 
@@ -487,6 +693,7 @@ function getConnectedTextureWalls(sourceWall) {
   const connected = [];
   for (const wall of walls) {
     if (wall.id === sourceWall.id || !supportsWallTexture(wall)) continue;
+    if (isWindowWall(wall) !== isWindowWall(sourceWall)) continue;
 
     if (wallsConnectForTexture(sourceWall, wall)) connected.push(wall);
   }
@@ -502,7 +709,7 @@ function getPropagatedTextureFlags(wall) {
   const flags = getFlagData(wall);
   return {
     enabled: isEnabled(flags.enabled),
-    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE),
+    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall),
   };
 }
 
@@ -548,7 +755,7 @@ Hooks.on("preCreateWall", (wall, data) => {
   const coords = getWallCoords(data);
   if (!coords) return;
 
-  const connectedFlags = findConnectedWallTextureFlags(coords);
+  const connectedFlags = findConnectedWallTextureFlags(data);
   if (!connectedFlags) return;
 
   wall.updateSource({
@@ -556,7 +763,7 @@ Hooks.on("preCreateWall", (wall, data) => {
       [MODULE_ID]: {
         [FLAG_ROOT]: {
           enabled: isEnabled(connectedFlags.enabled),
-          style: normalizeStyleKey(connectedFlags.style || DEFAULT_STYLE),
+          style: normalizeStyleKey(connectedFlags.style || getDefaultStyle(data), data),
         },
       },
     },
@@ -639,7 +846,7 @@ function createWallSprite(wall, endpointMap = null) {
   const flags = getFlagData(wall);
   if (!isEnabled(flags.enabled)) return null;
 
-  const style = getStyleDefinition(flags.style);
+  const style = getStyleDefinition(flags.style, wall);
   const coords = getWallCoords(wall);
   if (!coords) return null;
 
@@ -674,6 +881,34 @@ function createWallSprite(wall, endpointMap = null) {
   sprite.position.set((visibleX1 + visibleX2) / 2, (visibleY1 + visibleY2) / 2);
   sprite.rotation = Math.atan2(dy, dx);
 
+  return sprite;
+}
+
+function createWindowSprite(wall) {
+  if (!isWindowWall(wall)) return null;
+
+  const flags = getFlagData(wall);
+  if (!isEnabled(flags.enabled)) return null;
+
+  const coords = getWallCoords(wall);
+  if (!coords) return null;
+
+  const { x1, y1, x2, y2 } = coords;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy);
+  if (!Number.isFinite(length) || length <= 0) return null;
+
+  const style = getStyleDefinition(flags.style, wall);
+  const sprite = createSprite(
+    style.assets.straightLong,
+    length,
+    getTargetWallWidth(),
+    SEGMENT_SOURCE_FRAMES.straightLong,
+  );
+  sprite.name = `${WALL_TEXTURE_CONTAINER}-window-${wall.id ?? ""}`;
+  sprite.position.set((x1 + x2) / 2, (y1 + y2) / 2);
+  sprite.rotation = Math.atan2(dy, dx);
   return sprite;
 }
 
@@ -741,7 +976,7 @@ function getNextChainWall(endpointMap, endpointKey, currentWall, currentEndpoint
 
 function getWallTextureStyleKey(wall) {
   const flags = getFlagData(wall);
-  return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : DEFAULT_STYLE);
+  return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
 }
 
 function buildWallTextureChains(walls, endpointMap) {
@@ -780,7 +1015,7 @@ function buildWallTextureChains(walls, endpointMap) {
 
     extend(true);
     extend(false);
-    chains.push({ styleKey, points: chainPoints });
+    chains.push({ styleKey, wall, points: chainPoints });
   }
 
   return chains;
@@ -900,7 +1135,7 @@ function getEndpointAngles(entries) {
 
 function getEndpointStyle(entries) {
   const flags = getFlagData(entries[0]?.wall);
-  return getStyleDefinition(flags.style);
+  return getStyleDefinition(flags.style, entries[0]?.wall);
 }
 
 function getEndpointOverlayCandidates(style, entries) {
@@ -1030,13 +1265,20 @@ function redrawWallTextures() {
 
   container.removeChildren().forEach((child) => child.destroy());
   const texturedWalls = getTexturedWalls();
-  const endpointMap = buildWallEndpointMap(texturedWalls);
-  const chains = buildWallTextureChains(texturedWalls, endpointMap);
+  const windows = texturedWalls.filter(isWindowWall);
+  const walls = texturedWalls.filter((wall) => !isWindowWall(wall));
+  const endpointMap = buildWallEndpointMap(walls);
+  const chains = buildWallTextureChains(walls, endpointMap);
 
   for (const chain of chains) {
-    const style = getStyleDefinition(chain.styleKey);
+    const style = getStyleDefinition(chain.styleKey, chain.wall);
     const mesh = createWallRibbonMesh(style, chain.points);
     if (mesh) container.addChild(mesh);
+  }
+
+  for (const wall of windows) {
+    const sprite = createWindowSprite(wall);
+    if (sprite) container.addChild(sprite);
   }
 }
 

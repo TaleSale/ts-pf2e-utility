@@ -102,7 +102,17 @@ function additionalDamageRow() {
     <div class="tsu-damage-component tsu-damage-extra">
       <input name="formula" type="text" value="1d6" placeholder="Например: 1d6" autocomplete="off" aria-label="Формула дополнительного урона">
       <select name="damageType" aria-label="Тип дополнительного урона">${damageTypeOptions()}</select>
+      ${damageKindToggles()}
       <button type="button" class="tsu-damage-icon-button" data-action="remove-damage" data-tooltip="Удалить компонент урона"><i class="fas fa-minus"></i></button>
+    </div>
+  `;
+}
+
+function damageKindToggles() {
+  return `
+    <div class="tsu-damage-kinds">
+      <label data-tooltip="Продолжительный урон"><input name="persistent" type="checkbox"> <span>Прод.</span></label>
+      <label data-tooltip="Урон брызгами"><input name="splash" type="checkbox"> <span>Брызги</span></label>
     </div>
   `;
 }
@@ -113,7 +123,7 @@ function buildContent() {
     <style>
       #tsu-damage-dialog { display:grid; gap:10px; font-size:13px; }
       #tsu-damage-dialog .tsu-damage-main { display:grid; gap:6px; }
-      #tsu-damage-dialog .tsu-damage-labels, #tsu-damage-dialog .tsu-damage-component { display:grid; grid-template-columns:minmax(160px,1fr) minmax(150px,1fr) 32px; gap:8px; align-items:center; }
+      #tsu-damage-dialog .tsu-damage-labels, #tsu-damage-dialog .tsu-damage-component { display:grid; grid-template-columns:minmax(130px,1fr) minmax(130px,1fr) 150px 32px; gap:8px; align-items:center; }
       #tsu-damage-dialog .tsu-damage-labels { font-weight:600; }
       #tsu-damage-dialog .tsu-damage-field { display:grid; gap:4px; }
       #tsu-damage-dialog .tsu-damage-field > span { font-weight:600; }
@@ -122,6 +132,9 @@ function buildContent() {
       #tsu-damage-dialog .tsu-damage-icon-button { width:32px; min-width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
       #tsu-damage-dialog .tsu-damage-toggle { display:flex; gap:8px; align-items:center; min-height:32px; }
       #tsu-damage-dialog .tsu-damage-toggle input { width:auto; }
+      #tsu-damage-dialog .tsu-damage-kinds { display:flex; gap:8px; align-items:center; white-space:nowrap; }
+      #tsu-damage-dialog .tsu-damage-kinds label { display:flex; gap:3px; align-items:center; cursor:pointer; }
+      #tsu-damage-dialog .tsu-damage-kinds input { width:auto; margin:0; }
       #tsu-damage-dialog fieldset { border:1px solid var(--color-border-light-primary); border-radius:5px; padding:7px; margin:0; }
       #tsu-damage-dialog legend { font-weight:700; padding:0 5px; }
       #tsu-damage-dialog .hint { margin:2px 0 0; color:var(--color-text-subtle); font-size:11px; }
@@ -129,18 +142,15 @@ function buildContent() {
     </style>
     <form id="tsu-damage-dialog">
       <div class="tsu-damage-main">
-        <div class="tsu-damage-labels"><span>Формула урона</span><span>Тип урона</span><span></span></div>
+        <div class="tsu-damage-labels"><span>Формула урона</span><span>Тип урона</span><span>Особый урон</span><span></span></div>
         <div class="tsu-damage-component">
           <input name="formula" type="text" value="1d6" placeholder="Например: 2d6+3" autocomplete="off">
           <select name="damageType">${damageTypeOptions()}</select>
+          ${damageKindToggles()}
           <button type="button" class="tsu-damage-icon-button" data-action="add-damage" data-tooltip="Добавить тип урона"><i class="fas fa-plus"></i></button>
         </div>
         <div class="tsu-damage-extra-list"></div>
       </div>
-      <label class="tsu-damage-toggle">
-        <input name="persistent" type="checkbox">
-        <span>Продолжительный урон</span>
-      </label>
       <fieldset>
         <legend>Признаки</legend>
         <input name="traits" type="hidden" value="">
@@ -158,16 +168,17 @@ function buildContent() {
 }
 
 function readDamage(root) {
-  const persistent = Boolean(root.querySelector('[name="persistent"]')?.checked);
   const materials = splitValues(root.querySelector('[name="materials"]')?.value);
   const traits = splitValues(root.querySelector('[name="traits"]')?.value);
   const components = Array.from(root.querySelectorAll(".tsu-damage-component")).map((row) => ({
     formula: String(row.querySelector('[name="formula"]')?.value ?? "").trim(),
     damageType: String(row.querySelector('[name="damageType"]')?.value ?? "untyped"),
+    persistent: Boolean(row.querySelector('[name="persistent"]')?.checked),
+    splash: Boolean(row.querySelector('[name="splash"]')?.checked),
   })).filter((component) => component.formula);
   const formula = components.map((component) => component.formula).join(" + ");
   const instances = components.map((component) => {
-    const flavors = [component.damageType, persistent ? "persistent" : null, ...materials].filter(Boolean);
+    const flavors = [component.damageType, component.persistent ? "persistent" : null, component.splash ? "splash" : null, ...materials].filter(Boolean);
     return `(${component.formula})[${flavors.join(",")}]`;
   });
   const damageFormula = instances.length > 1 ? `{${instances.join(",")}}` : instances[0] ?? "";
@@ -300,7 +311,7 @@ export function openDamageDialog() {
         });
       });
     },
-  }, { width: 500 });
+  }, { width: 620 });
   dialog.render(true);
   return dialog;
 }

@@ -186,12 +186,17 @@ function renderStyleSelect(element) {
   trigger.className = "tsu-floor-style-trigger";
   const updateTrigger = () => {
     const style = FLOOR_STYLES[selectedStyle] ?? FLOOR_STYLES[DEFAULT_STYLE];
-    trigger.textContent = t(style.labelKey, style.fallback);
+    trigger.replaceChildren();
+    const preview = document.createElement("img");
+    preview.src = style.src;
+    preview.alt = "";
+    const label = document.createElement("span");
+    label.textContent = t(style.labelKey, style.fallback);
+    trigger.append(preview, label, icon);
   };
-  updateTrigger();
   const icon = document.createElement("i");
   icon.className = "fa-solid fa-chevron-down";
-  trigger.append(icon);
+  updateTrigger();
   trigger.addEventListener("click", (event) => {
     event.stopPropagation();
     wrapper.classList.toggle("open");
@@ -215,14 +220,19 @@ function renderStyleSelect(element) {
       const choice = document.createElement("button");
       choice.type = "button";
       choice.dataset.style = styleKey;
-      choice.textContent = t(style.labelKey, style.fallback);
+      choice.title = t(style.labelKey, style.fallback);
+      const preview = document.createElement("img");
+      preview.src = style.src;
+      preview.alt = "";
+      const label = document.createElement("span");
+      label.textContent = t(style.labelKey, style.fallback);
+      choice.append(preview, label);
       choice.classList.toggle("selected", styleKey === selectedStyle);
       choice.addEventListener("click", (event) => {
         event.stopPropagation();
         selectedStyle = styleKey;
         wrapper.querySelectorAll("[data-style]").forEach((item) => item.classList.toggle("selected", item.dataset.style === styleKey));
         updateTrigger();
-        trigger.append(icon);
         wrapper.classList.remove("open");
       });
       submenu.append(choice);

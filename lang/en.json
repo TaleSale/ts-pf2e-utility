@@ -63,6 +63,10 @@
           "AutomationEnabled": "Automation enabled — click to leave this toggle under manual control",
           "AutomationLocked": "Manual control — click to resume automation"
         },
+        "MountedCombat": {
+          "Name": "Mounted Combat",
+          "Hint": "Adds mount selection, linked movement, the system mounted effect, a shared footprint, and lesser cover."
+        },
         "ActorLanguages": {
           "Name": "Languages",
           "Hint": "Adds an Action extra feature for showing selected languages on the character sheet."
@@ -144,9 +148,45 @@
           "CarpetBlue": "Blue carpet"
         }
       },
+      "SceneAssets": {
+        "Name": "Enable scene assets",
+        "Hint": "Adds a categorized library for placing scalable and rotatable map assets, including linked light sources.",
+        "Control": "Assets",
+        "Place": "Place asset",
+        "Select": "Select and transform tiles",
+        "Erase": "Erase asset",
+        "Reset": "Reset transform",
+        "Library": "Asset library",
+        "Layer": "Layer",
+        "Light": "Light",
+        "LightColor": "Color",
+        "BrightRadius": "Bright (ft)",
+        "DimRadius": "Dim (ft)",
+        "NothingToErase": "No asset was found here.",
+        "Help": "Move: 0.1 grid · Ctrl+wheel: size · Shift+wheel: rotate 15° · R: rotate · F: flip · Delete: remove selection",
+        "LightAngle": "Angle",
+        "LightKind": "Kind",
+        "PositiveLight": "Light",
+        "NegativeLight": "Darkness",
+        "Layers": { "Ground": "Ground", "Object": "Object", "Overhead": "Overhead" },
+        "SaveSet": "Save selected tiles as set",
+        "NoTilesSelected": "Select one or more tiles first.",
+        "SetSaved": "Asset set saved.",
+        "SetName": "Name",
+        "Set": "Set",
+        "Sets": "Saved sets",
+        "DeleteSet": "Delete set", "GoldPile": "Pile of gold",
+        "CabinetSide": "Narrow cabinet", "BookshelfSide": "Narrow bookshelf", "ShortStairsUp": "Short stairs up", "ShortStairsDown": "Short stairs down",
+        "Categories": { "Furniture": "Furniture", "Household": "Household", "TempleStage": "Temple & stage", "Lighting": "Lighting", "Nature": "Nature", "Outdoors": "Outdoors", "Dock": "Docks", "Water": "Water", "Transitions": "Transitions", "Ruins": "Ruins", "Decor": "Decor", "Traces": "Traces", "Remains": "Remains" },
+        "Choices": { "Table": "Table", "Chair": "Chair", "Bed": "Bed", "Cabinet": "Cabinet", "Tree": "Tree", "Ruins": "Ruins", "Corpse": "Corpse", "Blood": "Blood pool", "Torch": "Torch", "Brazier": "Brazier", "RoundTable": "Round table", "Stool": "Stool", "Chest": "Chest", "Bookshelf": "Bookshelf", "Barrel": "Barrel", "Crate": "Crate", "Sacks": "Sacks", "Tub": "Tub", "Cauldron": "Cauldron", "Candle": "Candle", "Lantern": "Lantern", "PineTree": "Pine tree", "DeadTree": "Dead tree", "Bush": "Bush", "Stump": "Stump", "Rocks": "Rocks", "Logs": "Logs", "Bridge": "Bridge", "Well": "Well", "Pond": "Pond", "Lake": "Lake", "BrokenBoards": "Broken boards", "FallenColumn": "Fallen column", "Skeleton": "Skeleton", "RedRug": "Red rug", "BooksScrolls": "Books and scrolls", "Mud": "Mud", "WaterPuddle": "Water puddle", "Ash": "Ash", "Footprints": "Footprints", "LongTable": "Long table", "BanquetTable": "Banquet table", "Bench": "Bench", "Pew": "Temple pew", "Desk": "Writing desk", "Throne": "Throne", "Altar": "Altar", "Lectern": "Lectern", "Statue": "Statue", "StandingColumn": "Standing column", "RitualCircle": "Ritual circle", "Ladder": "Horizontal ladder", "LadderVertical": "Vertical ladder", "Trapdoor": "Trapdoor", "StairsUp": "Stairs up", "StairsDown": "Stairs down", "DockStraight": "Straight dock", "DockCorner": "Corner dock", "Rowboat": "Rowboat", "Fountain": "Fountain", "MooringPosts": "Mooring posts" }
+      },
+      "SceneDecorator": {
+        "Name": "Enable area decorator", "Hint": "Fills rooms and polygons with semantic scenery presets.", "Control": "Decorator", "Title": "Area decorator", "Room": "Use walled room", "Floor": "Use floor polygon", "Polygon": "Draw polygon", "Undo": "Undo last fill", "Preset": "Preset", "Density": "Density", "Seed": "Seed", "Dark": "Dark location", "Sparse": "Sparse", "Normal": "Normal", "Dense": "Dense", "Reroll": "Another", "Apply": "Apply", "Help": "Choose an area, inspect the preview, then apply.", "NoArea": "No suitable area was found.", "Empty": "Nothing could be placed in this area.", "Applied": "Placed {count} assets.", "NothingToUndo": "There is no recent fill to undo.", "NoPresets": "No presets — create one with the gear button", "ManagePresets": "Manage presets", "Uncategorized": "Uncategorized", "EditPreset": "Preset", "Category": "Category", "PresetName": "Name", "Environment": "Environment", "Indoor": "Indoor", "Outdoor": "Outdoor", "Asset": "Asset", "Minimum": "Min", "Maximum": "Max", "Placement": "Placement", "AtWall": "At wall", "AtCenter": "Center", "Free": "Free", "Cluster": "Cluster", "TableSeats": "Seats at table", "SeatType": "Type", "AddObject": "Add object", "NewPreset": "New preset", "SavePreset": "Save", "PresetIncomplete": "Enter a name and add at least one object.",
+        "Presets": { "Forest": "Forest", "Woodland": "Woodland", "Swamp": "Swamp", "Shore": "Shore", "Yard": "Abandoned yard", "Camp": "Camp", "OutdoorRuins": "Outdoor ruins", "Tavern": "Tavern", "Bedroom": "Bedroom", "Library": "Study / library", "Warehouse": "Warehouse", "Barracks": "Barracks", "Temple": "Temple", "DiningHall": "Dining hall", "AbandonedRoom": "Abandoned room" }
+      },
       "WallTextures": {
         "Name": "Enable wall textures",
-        "Hint": "Adds wall texture controls to ordinary walls and secret doors.",
+        "Hint": "Adds texture controls to ordinary walls, windows, and secret doors.",
         "Fieldset": "Wall texture",
         "EnableLabel": "Wall texture",
         "StyleLabel": "Wall style",
@@ -160,6 +200,25 @@
           "MetalIron": "Metal - Iron",
           "WoodNut": "Wood - Walnut",
           "WoodAlder": "Wood - Alder"
+        }
+      },
+      "DoorTexturePresets": {
+        "Name": "Enable quick door texture presets",
+        "Hint": "Adds a thumbnail picker for Foundry's built-in door textures to the wall configuration.",
+        "Label": "Door preset",
+        "Placeholder": "Choose a Foundry preset",
+        "Loading": "Loading Foundry presets...",
+        "Empty": "Foundry door presets were not found."
+      },
+      "WindowTextures": {
+        "Fieldset": "Window texture",
+        "EnableLabel": "Window texture",
+        "StyleLabel": "Window style",
+        "FieldHint": "Draws the selected texture along this window segment.",
+        "Choices": {
+          "WindowWood": "Window - Walnut",
+          "WindowIron": "Window - Iron",
+          "WindowStained": "Window - Stained glass"
         }
       },
       "SpellAtWill": {

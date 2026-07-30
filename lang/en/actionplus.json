@@ -245,6 +245,19 @@
         "AutomationEnabled": "Automation enabled — click to leave this toggle under manual control",
         "AutomationLocked": "Manual control — click to resume automation"
       },
+      "MountedCombat": {
+        "FeatureLabel": "Mounted Combat",
+        "MountUuid": "Mount UUID",
+        "MountUuidHint": "Enter an actor UUID or the UUID of a specific token on a scene.",
+        "DropHint": "Drop the mount actor or token here",
+        "SelectedMount": "Mount: {name}",
+        "RidingLabel": "Mounted [{name}]",
+        "UnknownMount": "no mount selected",
+        "InvalidMount": "The UUID must refer to an actor or token.",
+        "MountNotOnScene": "The mount and rider were not found on the same scene. Riding will engage automatically when they are together.",
+        "MissingEffect": "The system's mounted effect could not be loaded.",
+        "LesserCover": "Lesser cover from mount"
+      },
       "TroopDamage": {
         "FeatureLabel": "Troop Damage",
         "Hint": "The description and rules update automatically when settings change. Manual text before the generated block is preserved.",

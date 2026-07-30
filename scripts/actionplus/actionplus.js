@@ -261,6 +261,7 @@ Hooks.once("init", () => {
     ["coven", "Coven"],
     ["alchemy", "Alchemy"],
     ["appearances", "Appearances"],
+    ["mountedCombat", "MountedCombat"],
   ]) {
     game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey(featureId), {
       name: i18nKey(`${SETTINGS_ROOT}.${i18nRoot}.Name`),
@@ -288,7 +289,14 @@ Hooks.on("renderItemSheet", (app, html) => {
   const flags = item.flags?.[FLAG_SCOPE] ?? {};
   const currentOptions = getActionPlusOptionsFromFlags(flags);
   const selectableOptions = currentOptions.length > 0 ? currentOptions : [""];
-  const visibleFeatureEntries = Object.entries(config.actionOptions).filter(([value]) => value && isFeatureVisible(value));
+  const compareFeatureEntries = ([, leftLabel], [, rightLabel]) => localizeConfigLabel(leftLabel).localeCompare(
+    localizeConfigLabel(rightLabel),
+    game.i18n.lang,
+    { sensitivity: "base" },
+  );
+  const visibleFeatureEntries = Object.entries(config.actionOptions)
+    .filter(([value]) => value && isFeatureVisible(value))
+    .sort(compareFeatureEntries);
   const featureEntries = Object.entries(config.actionOptions).filter(([value]) => value);
   const canAddFeature = visibleFeatureEntries.some(([value]) => featureAllowsMultiple(value) || !currentOptions.includes(value));
 
@@ -301,12 +309,16 @@ Hooks.on("renderItemSheet", (app, html) => {
       ? featureEntries.find(([value]) => value === selectedValue) ?? null
       : null;
 
-    return [
-      ["", config.actionOptions[""]],
+    const availableEntries = [
       ...(selectedEntry && !isFeatureVisible(selectedValue) ? [selectedEntry] : []),
       ...visibleFeatureEntries.filter(([value]) => (
         value === selectedValue || featureAllowsMultiple(value) || !usedByOthers.has(value)
       )),
+    ].sort(compareFeatureEntries);
+
+    return [
+      ["", config.actionOptions[""]],
+      ...availableEntries,
     ]
       .map(([value, label]) => {
         const optionLabel = localizeConfigLabel(label);
