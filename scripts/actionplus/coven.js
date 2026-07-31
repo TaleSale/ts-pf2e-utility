@@ -1,10 +1,10 @@
 import { areCreatureCorrectionsLocked, escapeHtml, I18N_PREFIX, isCreatureCorrectionManagedItem, MODULE_ID } from "../core.js";
 import { getItemActionPlusOptions, isActionPlusFeatureEnabled, registerActionPlusFeature } from "./actionplus.js";
-import { applySpellModLabels } from "../utility/spell-at-will.js";
 
 const FEATURE_ID = "coven";
 const FLAG_KEY = "coven";
 const GENERATED_FLAG = "covenGenerated";
+const SUPPORT_FLAG = "covenSupportTemplate";
 const ICON = "systems/pf2e/icons/spells/cackle.webp";
 const BASE_SPELL_SLUGS = [
   "cursed-metamorphosis", "augury", "charm", "clairaudience", "clairvoyance",
@@ -51,7 +51,7 @@ function renderControls({ flags }) {
       <label>Маг. обычай <select data-field="tradition">${options({ arcane: "Арканный", divine: "Сакральный", occult: "Оккультный", primal: "Природный" }, config.tradition)}</select></label>
       <label>Ключевой атрибут <select data-field="ability">${options({ int: "Интеллект", wis: "Мудрость", cha: "Харизма" }, config.ability)}</select></label>
     </div>
-    <p class="hint">Базовые заклинания ковена добавляются автоматически и не удаляются. Все заклинания доступны по желанию и считаются коронными.</p>
+    <p class="hint">Базовые заклинания ковена добавляются автоматически и не удаляются. Заклинания создаются врождёнными: их минимальный ранг — 5-й, а использования доступны, пока на сцене ковен поддерживают хотя бы две участницы.</p>
     <div class="ts-coven-base"><b>Базовые:</b> Проклятая метаморфоза, Предзнаменование, Очаровать, Яснослышание, Ясновидение, Послание во сне, Иллюзорная маскировка, Иллюзорная сцена, Зоркий глаз, Говорящий труп.</div>
     <div class="ts-coven-title"><b>Дополнительные заклинания</b></div>
     <p class="hint">Перетащите сюда заклинания, которые участницы добавляют в ковен.</p>
@@ -95,11 +95,11 @@ async function baseSpellSources() {
 }
 
 function marker(actionId, kind) { return { actionId, kind }; }
-function effectSource() { return { name: "Поддержка ковена", type: "effect", img: ICON, system: { description: { value: "Вы поддерживаете общую магию ковена." }, duration: { value: 1, unit: "rounds", expiry: "turn-end", sustained: false }, tokenIcon: { show: true }, unidentified: false, start: { value: 0, initiative: null }, badge: null, traits: { value: [] }, rules: [], slug: "coven-support" }, flags: { [MODULE_ID]: { covenSupportTemplate: true } } }; }
+function effectSource() { return { name: "Поддержка ковена", type: "effect", img: ICON, system: { description: { value: "Вы поддерживаете общую магию ковена." }, duration: { value: 1, unit: "rounds", expiry: "turn-end", sustained: false }, tokenIcon: { show: true }, unidentified: false, start: { value: 0, initiative: null }, badge: null, traits: { value: [] }, rules: [], slug: "coven-support" }, flags: { [MODULE_ID]: { [SUPPORT_FLAG]: true } } }; }
 function actionSource(action, effect) { return { name: "Поддержать Ковен", type: "action", img: ICON, system: { description: { value: "<p>Вы сосредотачиваетесь на общей магии ковена и до конца раунда считаетесь поддерживающей его. Если ковен поддерживают как минимум две участницы, третья может сотворять заклинания ковена.</p>" }, actionType: { value: "action" }, actions: { value: 1 }, category: "interaction", traits: { value: ["concentrate"] }, selfEffect: { uuid: effect.uuid, name: effect.name }, rules: [], slug: "support-coven" }, flags: { [MODULE_ID]: { [GENERATED_FLAG]: marker(action.id, "action") } } }; }
 
 async function supportEffect() {
-  const existing = game.items.find((item) => item.getFlag(MODULE_ID, "covenSupportTemplate"));
+  const existing = game.items.find((item) => item.getFlag(MODULE_ID, SUPPORT_FLAG));
   if (existing) return existing;
   supportEffectPromise ??= Item.createDocuments([effectSource()]).then(([created]) => created).finally(() => { supportEffectPromise = null; });
   return supportEffectPromise;
@@ -108,19 +108,87 @@ async function supportEffect() {
 async function createDocuments(actor, action, config) {
   const correction = actor.getFlag(MODULE_ID, "creatureCorrectionApplication")?.spellcasting;
   const actorLevel = Math.max(-1, Math.min(24, Number(actor.level ?? actor.system?.details?.level?.value) || 0));
-  const maxRank = Math.min(10, Math.ceil(Math.max(1, actorLevel) / 2));
-  const slots = {};
-  for (let rank = 0; rank <= 10; rank += 1) slots[`slot${rank}`] = { prepared: [], value: rank > 0 && rank <= maxRank ? 99 : 0, max: rank > 0 && rank <= maxRank ? 99 : 0 };
-  const system = { ability: { value: config.ability }, tradition: { value: config.tradition }, prepared: { value: "spontaneous" }, proficiency: { value: 1 }, showSlotlessLevels: { value: true }, slots };
+  const system = { ability: { value: config.ability }, tradition: { value: config.tradition }, prepared: { value: "innate" }, proficiency: { value: 1 }, showSlotlessLevels: { value: true } };
   const dc = correction?.dc != null ? Number(correction.dc) : HIGH_DCS[actorLevel];
   system.spelldc = { dc, value: dc - 8 };
   const [entry] = await actor.createEmbeddedDocuments("Item", [{ name: config.name, type: "spellcastingEntry", system, flags: { [MODULE_ID]: { [GENERATED_FLAG]: marker(action.id, "entry") } } }]);
   const base = await baseSpellSources(); const contributed = config.spells.map((spell) => ({ source: foundry.utils.deepClone(spell.source), uuid: spell.uuid }));
   const unique = [...base, ...contributed].filter((spell, index, all) => all.findIndex((other) => (other.uuid || other.source?.system?.slug) === (spell.uuid || spell.source?.system?.slug)) === index);
-  const spells = unique.map(({ source }, index) => { source.flags = foundry.utils.mergeObject(source.flags ?? {}, { [MODULE_ID]: { [GENERATED_FLAG]: marker(action.id, "spell"), spellMods: { atWill: true } } }); source.system.location = { value: entry.id, heightenedLevel: source.system?.traits?.value?.includes("cantrip") ? maxRank : Number(source.system?.level?.value) || 1, signature: true, uses: { value: 99, max: 99 } }; source.name = applySpellModLabels(source.name, { atWill: true }); source.sort = (index + 1) * 100000; return source; });
+  const available = hasEnoughSupporters();
+  const spells = unique.map(({ source }, index) => {
+    const rank = Math.max(5, Number(source.system?.level?.value) || 0);
+    source.flags = foundry.utils.mergeObject(source.flags ?? {}, { [MODULE_ID]: { [GENERATED_FLAG]: marker(action.id, "spell") } });
+    source.system.location = { value: entry.id, heightenedLevel: rank, signature: false, uses: { value: available ? 1 : 0, max: 1 } };
+    source.sort = (index + 1) * 100000;
+    return source;
+  });
   if (spells.length) await actor.createEmbeddedDocuments("Item", spells);
   const effect = await supportEffect();
   await actor.createEmbeddedDocuments("Item", [actionSource(action, effect)]);
+}
+
+function sceneActors() {
+  const actors = new Map();
+  for (const token of canvas.scene?.tokens ?? []) {
+    const actor = token.actor;
+    if (actor) actors.set(actor.uuid, actor);
+  }
+  return [...actors.values()];
+}
+
+function hasEnoughSupporters() {
+  let supporters = 0;
+  for (const token of canvas.scene?.tokens ?? []) {
+    if (token.actor?.itemTypes?.effect?.some((effect) => effect.getFlag(MODULE_ID, SUPPORT_FLAG))) supporters += 1;
+    if (supporters >= 2) return true;
+  }
+  return false;
+}
+
+async function refreshSceneCovenSpells() {
+  if (!game.user.isGM || !canvas.ready) return;
+  const value = hasEnoughSupporters() ? 1 : 0;
+  for (const actor of sceneActors()) {
+    const updates = (actor.itemTypes?.spell ?? [])
+      .filter((spell) => spell.getFlag(MODULE_ID, GENERATED_FLAG)?.kind === "spell")
+      .filter((spell) => spell.system.location?.uses?.max === 1 && spell.system.location.uses.value !== value)
+      .map((spell) => ({ _id: spell.id, "system.location.uses.value": value }));
+    if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  }
+}
+
+async function setSceneCovenSpellUses(value) {
+  for (const actor of sceneActors()) {
+    const updates = (actor.itemTypes?.spell ?? [])
+      .filter((spell) => spell.getFlag(MODULE_ID, GENERATED_FLAG)?.kind === "spell")
+      .filter((spell) => spell.system.location?.uses?.max === 1 && spell.system.location.uses.value !== value)
+      .map((spell) => ({ _id: spell.id, "system.location.uses.value": value }));
+    if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  }
+}
+
+async function consumeCovenSupportFromMessage(message) {
+  if (!game.user.isGM || message.getFlag(MODULE_ID, "covenSupportConsumed")) return;
+  const spell = message.item;
+  if (spell?.type !== "spell" || spell.getFlag(MODULE_ID, GENERATED_FLAG)?.kind !== "spell") return;
+
+  for (const actor of sceneActors()) {
+    const effects = (actor.itemTypes?.effect ?? []).filter((effect) => effect.getFlag(MODULE_ID, SUPPORT_FLAG));
+    if (effects.length) await actor.deleteEmbeddedDocuments("Item", effects.map((effect) => effect.id));
+  }
+  await setSceneCovenSpellUses(0);
+  await message.setFlag(MODULE_ID, "covenSupportConsumed", true);
+}
+
+async function migrateSceneCovens() {
+  if (!game.user.isGM || !canvas.ready) return;
+  for (const actor of sceneActors()) {
+    const legacyEntry = (actor.itemTypes?.spellcastingEntry ?? []).some((entry) => (
+      entry.getFlag(MODULE_ID, GENERATED_FLAG)?.kind === "entry" && entry.system.prepared?.value !== "innate"
+    ));
+    if (legacyEntry) await syncActor(actor);
+  }
+  await refreshSceneCovenSpells();
 }
 
 async function syncActor(actor) {
@@ -153,7 +221,7 @@ async function applySupportEffectFromMessage(message) {
     roll: null,
   };
   source.system.traits = { value: action.system.traits.value.filter((trait) => trait === "concentrate") };
-  const previous = actor.itemTypes?.effect?.filter((item) => item.getFlag(MODULE_ID, "covenSupportTemplate")) ?? [];
+  const previous = actor.itemTypes?.effect?.filter((item) => item.getFlag(MODULE_ID, SUPPORT_FLAG)) ?? [];
   if (previous.length) await actor.deleteEmbeddedDocuments("Item", previous.map((item) => item.id));
   await actor.createEmbeddedDocuments("Item", [source]);
   const container = document.createElement("div");
@@ -165,15 +233,19 @@ async function applySupportEffectFromMessage(message) {
 
 registerActionPlusFeature({ id: FEATURE_ID, label: `${I18N_PREFIX}.ActionPlus.Coven.FeatureLabel`, render: renderControls, activateListeners, cleanup });
 Hooks.on("preUpdateItem", (item, changed) => {
-  if (item.type !== "spellcastingEntry" || item.getFlag(MODULE_ID, GENERATED_FLAG)?.kind !== "entry") return;
-  for (let rank = 1; rank <= 10; rank += 1) {
-    const path = `system.slots.slot${rank}.value`;
-    if (foundry.utils.getProperty(changed, path) !== undefined && Number(item.system.slots[`slot${rank}`]?.max) > 0) foundry.utils.setProperty(changed, path, 99);
-  }
+  if (item.type !== "spell" || item.getFlag(MODULE_ID, GENERATED_FLAG)?.kind !== "spell") return;
+  const path = "system.location.uses.value";
+  if (foundry.utils.getProperty(changed, path) !== undefined && hasEnoughSupporters()) foundry.utils.setProperty(changed, path, 1);
 });
 Hooks.on("createItem", (item) => { if (item.type === "action") void syncActor(item.actor); });
 Hooks.on("updateItem", (item, changed) => { if (item.type === "action" && (foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.${FLAG_KEY}`) || foundry.utils.hasProperty(changed, `flags.${MODULE_ID}.actionOptions`))) void syncActor(item.actor); });
 Hooks.on("deleteItem", (item) => { if (item.type === "action") void syncActor(item.actor); });
 Hooks.on("updateActor", (actor, changed) => { if (foundry.utils.hasProperty(changed, "system.details.level.value")) void syncActor(actor); });
 Hooks.on("tsPf2eUtilityCorrectionLockChanged", (actor, locked) => { if (!locked) void syncActor(actor); });
-Hooks.on("createChatMessage", (message) => { void applySupportEffectFromMessage(message); });
+Hooks.on("createChatMessage", (message) => {
+  void applySupportEffectFromMessage(message);
+  void consumeCovenSupportFromMessage(message);
+});
+Hooks.on("createItem", (item) => { if (item.type === "effect" && item.getFlag(MODULE_ID, SUPPORT_FLAG)) void refreshSceneCovenSpells(); });
+Hooks.on("deleteItem", (item) => { if (item.type === "effect" && item.getFlag(MODULE_ID, SUPPORT_FLAG)) void refreshSceneCovenSpells(); });
+Hooks.on("canvasReady", () => { void migrateSceneCovens(); });
