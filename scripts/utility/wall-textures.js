@@ -7,6 +7,7 @@ const DOOR_I18N_ROOT = "Settings.DoorTexturePresets";
 const FLAG_ROOT = "wallTexture";
 const DEFAULT_STYLE = "brick-grey-dense";
 const DEFAULT_WINDOW_STYLE = "window-wood";
+const DEFAULT_BORDER_STYLE = "border-wood-stone";
 const WALL_TEXTURE_STYLE_ALIASES = Object.freeze({
   "grey-brick": DEFAULT_STYLE,
 });
@@ -28,6 +29,7 @@ const SEGMENT_SOURCE_FRAMES = Object.freeze({
   straight: Object.freeze({ x: 0, y: 70, width: 100, height: 60 }),
   straightLong: Object.freeze({ x: 0, y: 70, width: 200, height: 60 }),
 });
+const WINDOW_FRAME_HORIZONTAL_INSET = 5;
 const OVERLAY_SOURCE_FRAMES = Object.freeze({
   corner: Object.freeze({
     frame: Object.freeze({ x: 69, y: 70, width: 131, height: 130 }),
@@ -60,20 +62,30 @@ const WALL_TEXTURE_STYLES = Object.freeze({
   "metal-iron": createWallTextureStyle("MetalIron", "Metal - Iron", "metal-iron.png", 80, 121),
   "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png", 78, 122),
   "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png", 78, 122),
+  "border-wood-stone": createWallTextureStyle("BorderWoodStone", "Border - Wood and stone", "border-wood-stone-v2.webp", 80, 120, I18N_ROOT, { borderOnly: true, widthRatio: 0.12 }),
+  "border-green-fog": createWallTextureStyle("BorderGreenFog", "Border - Green fog", "border-green-fog.webp", 71, 129, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, smooth: true }),
+  "hedge-maze": createWallTextureStyle("HedgeMaze", "Maze hedge", "hedge-maze.webp", 72, 128),
+  "cliff-coastal": createWallTextureStyle("CliffCoastal", "Uneven coastal cliff", "cliff-coastal-stone-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.14, periodScale: 1.5, smooth: true, textureSize: 200 }),
+  "cliff-limestone": createWallTextureStyle("CliffLimestone", "Limestone coast cliff", "cliff-limestone.webp", 78, 122, I18N_ROOT, { borderOnly: true, widthRatio: 0.06, smooth: true }),
+  "cliff-sandy": createWallTextureStyle("CliffSandy", "Sandy coast cliff", "cliff-sandy-v2.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.12, periodScale: 1.5, smooth: true, textureSize: 200 }),
+  "cliff-volcanic": createWallTextureStyle("CliffVolcanic", "Volcanic coast cliff", "cliff-volcanic-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.09, periodScale: 1, smooth: true, textureSize: 200 }),
 });
 const WINDOW_TEXTURE_STYLES = Object.freeze({
   "window-wood": createWallTextureStyle("WindowWood", "Window - Walnut", "window-wood.webp", 70, 130, "Settings.WindowTextures"),
   "window-iron": createWallTextureStyle("WindowIron", "Window - Iron", "window-iron.webp", 70, 130, "Settings.WindowTextures"),
   "window-stained": createWallTextureStyle("WindowStained", "Window - Stained glass", "window-stained.webp", 70, 130, "Settings.WindowTextures"),
+  "arrow-slit-straight": createWallTextureStyle("ArrowSlitStraight", "Arrow slit - straight", "arrow-slit-straight-v4.svg", 82, 118, "Settings.WindowTextures", { arrowSlit: "straight" }),
+  "arrow-slit-cross": createWallTextureStyle("ArrowSlitCross", "Arrow slit - splayed", "arrow-slit-splayed-v4.svg", 82, 118, "Settings.WindowTextures", { arrowSlit: "splayed" }),
 });
 
-function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBottom, i18nRoot = I18N_ROOT) {
+function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBottom, i18nRoot = I18N_ROOT, options = {}) {
   const asset = `${TEXTURE_ASSET_BASE}/${filename}`;
   return Object.freeze({
     labelKey: `${i18nRoot}.Choices.${label}`,
     fallback,
     assets: Object.freeze({ straight: asset, straightLong: asset, diag: asset, corner: asset, joint: asset }),
     ribbonBounds: Object.freeze({ top: ribbonTop, bottom: ribbonBottom }),
+    ...options,
   });
 }
 
@@ -166,11 +178,27 @@ function supportsWallTexture(wall) {
 }
 
 function getStyleDefinitions(wall) {
-  return isWindowWall(wall) ? WINDOW_TEXTURE_STYLES : WALL_TEXTURE_STYLES;
+  if (isWindowWall(wall)) return WINDOW_TEXTURE_STYLES;
+  const borderMode = isBorderEligibleWall(wall);
+  return Object.fromEntries(Object.entries(WALL_TEXTURE_STYLES).filter(([, style]) => Boolean(style.borderOnly) === borderMode));
+}
+
+function isBorderEligibleWall(wall) {
+  if (!wall) return false;
+  const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
+  const noRestriction = globalThis.CONST?.WALL_SENSE_TYPES?.NONE ?? 0;
+  return Number(wall?.door ?? noDoor) === noDoor
+    && ["move", "sight", "light", "sound"].every((key) => Number(wall?.[key] ?? noRestriction) === noRestriction);
 }
 
 function getDefaultStyle(wall) {
-  return isWindowWall(wall) ? DEFAULT_WINDOW_STYLE : DEFAULT_STYLE;
+  if (isWindowWall(wall)) return DEFAULT_WINDOW_STYLE;
+  return isBorderEligibleWall(wall) ? DEFAULT_BORDER_STYLE : DEFAULT_STYLE;
+}
+
+function getTextureMode(wall) {
+  if (isWindowWall(wall)) return "window";
+  return isBorderEligibleWall(wall) ? "border" : "wall";
 }
 
 function getStyleDefinition(style, wall = null) {
@@ -201,6 +229,11 @@ function getTargetWallWidth() {
 
 function getTextureScale() {
   return getTargetWallWidth() / SOURCE_WALL_WIDTH;
+}
+
+function getStyleTargetWidth(style) {
+  const widthRatio = Number(style?.widthRatio ?? WALL_WIDTH_GRID_RATIO);
+  return Math.max(2, getGridSize() * widthRatio);
 }
 
 function pointKey(x, y) {
@@ -247,6 +280,16 @@ function setNearestScaleMode(texture) {
     if (scaleMode == null) return;
     if (texture.baseTexture) texture.baseTexture.scaleMode = scaleMode;
     if (texture.source?.style) texture.source.style.scaleMode = "nearest";
+  } catch (_error) {
+    // PIXI 7 and 8 expose texture scale mode differently.
+  }
+}
+
+function setLinearScaleMode(texture) {
+  try {
+    const scaleMode = PIXI.SCALE_MODES?.LINEAR;
+    if (scaleMode != null && texture.baseTexture) texture.baseTexture.scaleMode = scaleMode;
+    if (texture.source?.style) texture.source.style.scaleMode = "linear";
   } catch (_error) {
     // PIXI 7 and 8 expose texture scale mode differently.
   }
@@ -404,21 +447,32 @@ function createWallTextureFieldset(wall) {
   const enabled = isEnabled(flags.enabled);
   const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
   const windowWall = isWindowWall(wall);
+  const borderWall = isBorderEligibleWall(wall);
   const styles = getStyleDefinitions(wall);
   const closedLeft = isEnabled(flags.closedLeft);
   const closedRight = isEnabled(flags.closedRight);
+  const flipped = isEnabled(flags.flipX);
+  const flippedVertical = isEnabled(flags.flipY);
 
   const fieldset = document.createElement("fieldset");
   fieldset.className = "tsu-wall-texture-config";
 
   const legend = document.createElement("legend");
-  legend.textContent = windowWall ? t("Settings.WindowTextures.Fieldset", "Window texture") : t(`${I18N_ROOT}.Fieldset`, "Wall texture");
+  legend.textContent = windowWall
+    ? t("Settings.WindowTextures.Fieldset", "Window texture")
+    : borderWall
+      ? t(`${I18N_ROOT}.BorderFieldset`, "Border texture")
+      : t(`${I18N_ROOT}.Fieldset`, "Wall texture");
 
   const enabledGroup = document.createElement("div");
   enabledGroup.className = "form-group";
 
   const enabledLabel = document.createElement("label");
-  enabledLabel.textContent = windowWall ? t("Settings.WindowTextures.EnableLabel", "Window texture") : t(`${I18N_ROOT}.EnableLabel`, "Wall texture");
+  enabledLabel.textContent = windowWall
+    ? t("Settings.WindowTextures.EnableLabel", "Window texture")
+    : borderWall
+      ? t(`${I18N_ROOT}.BorderEnableLabel`, "Border texture")
+      : t(`${I18N_ROOT}.EnableLabel`, "Wall texture");
 
   const enabledFields = document.createElement("div");
   enabledFields.className = "form-fields";
@@ -435,7 +489,11 @@ function createWallTextureFieldset(wall) {
   styleGroup.className = "form-group tsu-wall-texture-style";
 
   const styleLabel = document.createElement("label");
-  styleLabel.textContent = windowWall ? t("Settings.WindowTextures.StyleLabel", "Window style") : t(`${I18N_ROOT}.StyleLabel`, "Wall style");
+  styleLabel.textContent = windowWall
+    ? t("Settings.WindowTextures.StyleLabel", "Window style")
+    : borderWall
+      ? t(`${I18N_ROOT}.BorderStyleLabel`, "Border style")
+      : t(`${I18N_ROOT}.StyleLabel`, "Wall style");
 
   const styleFields = document.createElement("div");
   styleFields.className = "form-fields";
@@ -498,22 +556,28 @@ function createWallTextureFieldset(wall) {
 
   const closedRightGroup = createEdgeGroup("closedRight", "ClosedRightLabel", "Closed right edge", closedRight);
   const closedLeftGroup = createEdgeGroup("closedLeft", "ClosedLeftLabel", "Closed left edge", closedLeft);
+  const flipGroup = createEdgeGroup("flipX", "FlipHorizontalLabel", "Flip horizontally", flipped);
+  const flipVerticalGroup = createEdgeGroup("flipY", "FlipVerticalLabel", "Flip vertically", flippedVertical);
 
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = windowWall
     ? t("Settings.WindowTextures.FieldHint", "Draws the selected texture along this window segment.")
-    : t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
+    : borderWall
+      ? t(`${I18N_ROOT}.BorderFieldHint`, "Draws the selected border texture along this unrestricted segment.")
+      : t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
 
   const updateStyleVisibility = () => {
     styleGroup.hidden = !enabledInput.checked;
     closedRightGroup.hidden = !enabledInput.checked;
     closedLeftGroup.hidden = !enabledInput.checked;
+    flipGroup.hidden = !enabledInput.checked;
+    flipVerticalGroup.hidden = !enabledInput.checked;
   };
   enabledInput.addEventListener("change", updateStyleVisibility);
   updateStyleVisibility();
 
-  fieldset.append(legend, enabledGroup, styleGroup, closedRightGroup, closedLeftGroup, hint);
+  fieldset.append(legend, enabledGroup, styleGroup, flipGroup, flipVerticalGroup, closedRightGroup, closedLeftGroup, hint);
   return fieldset;
 }
 
@@ -673,7 +737,7 @@ function findConnectedWallTextureFlags(sourceWall) {
   const walls = canvas?.scene?.walls ?? [];
   for (const wall of walls) {
     if (!supportsWallTexture(wall)) continue;
-    if (isWindowWall(wall) !== isWindowWall(sourceWall)) continue;
+    if (getTextureMode(wall) !== getTextureMode(sourceWall)) continue;
     const flags = getFlagData(wall);
     if (!isEnabled(flags.enabled)) continue;
 
@@ -693,7 +757,7 @@ function getConnectedTextureWalls(sourceWall) {
   const connected = [];
   for (const wall of walls) {
     if (wall.id === sourceWall.id || !supportsWallTexture(wall)) continue;
-    if (isWindowWall(wall) !== isWindowWall(sourceWall)) continue;
+    if (getTextureMode(wall) !== getTextureMode(sourceWall)) continue;
 
     if (wallsConnectForTexture(sourceWall, wall)) connected.push(wall);
   }
@@ -710,6 +774,8 @@ function getPropagatedTextureFlags(wall) {
   return {
     enabled: isEnabled(flags.enabled),
     style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall),
+    flipX: isEnabled(flags.flipX),
+    flipY: isEnabled(flags.flipY),
   };
 }
 
@@ -764,6 +830,8 @@ Hooks.on("preCreateWall", (wall, data) => {
         [FLAG_ROOT]: {
           enabled: isEnabled(connectedFlags.enabled),
           style: normalizeStyleKey(connectedFlags.style || getDefaultStyle(data), data),
+          flipX: isEnabled(connectedFlags.flipX),
+          flipY: isEnabled(connectedFlags.flipY),
         },
       },
     },
@@ -780,7 +848,20 @@ function getTextureContainer() {
     container.name = WALL_TEXTURE_CONTAINER;
     container.eventMode = "none";
     container.interactive = false;
+    parent.sortableChildren = true;
     parent.addChild(container);
+  }
+  if (parent === canvas?.primary) {
+    const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
+    // PrimaryCanvasGroup compares elevation and sortLayer before zIndex.
+    // Keep textured walls above every native Tile asset, but below Drawings and Tokens.
+    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
+    container.sortLayer = Number(sortLayers.TILES ?? 500) + 1;
+    container.sort = 0;
+    container.zIndex = 0;
+    parent.sortDirty = true;
+  } else {
+    container.zIndex = 10000;
   }
   return container;
 }
@@ -880,6 +961,10 @@ function createWallSprite(wall, endpointMap = null) {
   sprite.name = `${WALL_TEXTURE_CONTAINER}-${wall.id ?? ""}`;
   sprite.position.set((visibleX1 + visibleX2) / 2, (visibleY1 + visibleY2) / 2);
   sprite.rotation = Math.atan2(dy, dx);
+  if (isEnabled(flags.flipX)) sprite.scale.x *= -1;
+  if (isEnabled(flags.flipY)) sprite.scale.y *= -1;
+  const targetWidth = getStyleTargetWidth(style);
+  if (targetWidth !== getTargetWallWidth()) sprite.scale.y *= targetWidth / getTargetWallWidth();
 
   return sprite;
 }
@@ -900,16 +985,72 @@ function createWindowSprite(wall) {
   if (!Number.isFinite(length) || length <= 0) return null;
 
   const style = getStyleDefinition(flags.style, wall);
+  if (style.arrowSlit) return createArrowSlitWindow(wall, style, { x1, y1, x2, y2, dx, dy, length, flipped: flags.flipX, flippedVertical: flags.flipY });
+  const frame = SEGMENT_SOURCE_FRAMES.straightLong;
+  const visibleSourceWidth = frame.width - WINDOW_FRAME_HORIZONTAL_INSET * 2;
+  const renderedLength = length * frame.width / visibleSourceWidth;
   const sprite = createSprite(
     style.assets.straightLong,
-    length,
+    renderedLength,
     getTargetWallWidth(),
-    SEGMENT_SOURCE_FRAMES.straightLong,
+    frame,
   );
   sprite.name = `${WALL_TEXTURE_CONTAINER}-window-${wall.id ?? ""}`;
   sprite.position.set((x1 + x2) / 2, (y1 + y2) / 2);
   sprite.rotation = Math.atan2(dy, dx);
+  if (isEnabled(flags.flipX)) sprite.scale.x *= -1;
+  if (isEnabled(flags.flipY)) sprite.scale.y *= -1;
   return sprite;
+}
+
+function createArrowSlitWindow(wall, style, geometry) {
+  const { x1, y1, x2, y2, dx, dy, length, flipped, flippedVertical } = geometry;
+  const wallWidth = getTargetWallWidth();
+  const overlap = Math.max(2, wallWidth * 0.12);
+  const renderedLength = length + overlap * 2;
+  const inheritedStyle = getAdjacentWallStyle(wall) ?? WALL_TEXTURE_STYLES[DEFAULT_STYLE];
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  container.name = `${WALL_TEXTURE_CONTAINER}-arrow-slit-${wall.id ?? ""}`;
+  container.position.set((x1 + x2) / 2, (y1 + y2) / 2);
+  container.rotation = Math.atan2(dy, dx);
+
+  const inheritedWall = createWallRibbonMesh(inheritedStyle, [
+    { x: -renderedLength / 2, y: 0 },
+    { x: renderedLength / 2, y: 0 },
+  ]);
+  if (inheritedWall) container.addChild(inheritedWall);
+
+  const opening = createSprite(style.assets.straightLong, renderedLength, wallWidth);
+  opening.position.set(0, 0);
+  container.addChild(opening);
+
+  if (isEnabled(flipped)) container.scale.x *= -1;
+  if (isEnabled(flippedVertical)) container.scale.y *= -1;
+  return container;
+}
+
+function getAdjacentWallStyle(windowWall) {
+  const windowCoords = getWallCoords(windowWall);
+  if (!windowCoords) return null;
+  const endpoints = [
+    { x: windowCoords.x1, y: windowCoords.y1 },
+    { x: windowCoords.x2, y: windowCoords.y2 },
+  ];
+  const candidates = Array.from(canvas?.scene?.walls ?? []).filter((candidate) => {
+    if (candidate.id === windowWall.id || isWindowWall(candidate)) return false;
+    const coords = getWallCoords(candidate);
+    if (!coords) return false;
+    return endpoints.some((endpoint) => (
+      pointsMatch(endpoint.x, endpoint.y, coords.x1, coords.y1)
+      || pointsMatch(endpoint.x, endpoint.y, coords.x2, coords.y2)
+    ));
+  });
+  const textured = candidates.find((candidate) => isEnabled(getFlagData(candidate).enabled)) ?? candidates[0];
+  if (!textured) return null;
+  const flags = getFlagData(textured);
+  return getStyleDefinition(flags.style || DEFAULT_STYLE, textured);
 }
 
 function getTexturedWalls() {
@@ -979,6 +1120,11 @@ function getWallTextureStyleKey(wall) {
   return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
 }
 
+function getWallTextureChainKey(wall) {
+  const flags = getFlagData(wall);
+  return `${getWallTextureStyleKey(wall)}:${isEnabled(flags.flipX) ? "flip-x" : "normal-x"}:${isEnabled(flags.flipY) ? "flip-y" : "normal-y"}`;
+}
+
 function buildWallTextureChains(walls, endpointMap) {
   const chains = [];
   const visitedWalls = new Set();
@@ -990,6 +1136,7 @@ function buildWallTextureChains(walls, endpointMap) {
     if (!points) continue;
 
     const styleKey = getWallTextureStyleKey(wall);
+    const chainKey = getWallTextureChainKey(wall);
     const chainPoints = [points.start, points.end];
     visitedWalls.add(wall.id);
 
@@ -1000,7 +1147,7 @@ function buildWallTextureChains(walls, endpointMap) {
         const currentPoint = atStart ? chainPoints[0] : chainPoints[chainPoints.length - 1];
         const currentKey = pointKey(currentPoint.x, currentPoint.y);
         const nextWall = getNextChainWall(endpointMap, currentKey, currentWall, currentEndpoint, visitedWalls);
-        if (!nextWall || getWallTextureStyleKey(nextWall) !== styleKey) return;
+        if (!nextWall || getWallTextureChainKey(nextWall) !== chainKey) return;
 
         const other = getOtherEndpoint(nextWall, currentKey);
         if (!other) return;
@@ -1027,7 +1174,7 @@ function normalizeVector(x, y) {
   return { x: x / length, y: y / length, length };
 }
 
-function createWallRibbonMesh(style, points) {
+function createWallRibbonMesh(style, points, flags = {}) {
   const cleanPoints = points.filter((point, index) => {
     if (index === 0) return true;
     const previous = points[index - 1];
@@ -1041,14 +1188,19 @@ function createWallRibbonMesh(style, points) {
     && pointsMatch(firstPoint.x, firstPoint.y, lastPoint.x, lastPoint.y);
 
   const texture = PIXI.Texture.from(style.assets.straightLong);
-  setNearestScaleMode(texture);
+  if (style.smooth) setLinearScaleMode(texture);
+  else setNearestScaleMode(texture);
   setRepeatWrapMode(texture);
 
-  const halfWidth = getTargetWallWidth() / 2;
-  const period = SOURCE_TEXTURE_SIZE * getTextureScale();
+  const halfWidth = getStyleTargetWidth(style) / 2;
+  const periodScale = Math.max(0.1, Number(style.periodScale ?? 1));
+  const period = SOURCE_TEXTURE_SIZE * getTextureScale() * periodScale;
   const ribbonBounds = style.ribbonBounds ?? DEFAULT_RIBBON_BOUNDS;
-  const ribbonVTop = ribbonBounds.top / SOURCE_TEXTURE_SIZE;
-  const ribbonVBottom = ribbonBounds.bottom / SOURCE_TEXTURE_SIZE;
+  const textureSize = Math.max(1, Number(style.textureSize ?? SOURCE_TEXTURE_SIZE));
+  const normalVTop = ribbonBounds.top / textureSize;
+  const normalVBottom = ribbonBounds.bottom / textureSize;
+  const ribbonVTop = isEnabled(flags.flipY) ? normalVBottom : normalVTop;
+  const ribbonVBottom = isEnabled(flags.flipY) ? normalVTop : normalVBottom;
   const segmentDirections = [];
   const cumulativeLengths = [0];
 
@@ -1088,7 +1240,7 @@ function createWallRibbonMesh(style, points) {
     );
     const offsetX = miter.x * miterLength;
     const offsetY = miter.y * miterLength;
-    const u = cumulativeLengths[index] / period;
+    const u = cumulativeLengths[index] / period * (isEnabled(flags.flipX) ? -1 : 1);
 
     positions.push(point.x + offsetX, point.y + offsetY, point.x - offsetX, point.y - offsetY);
     uvs.push(u, ribbonVTop, u, ribbonVBottom);
@@ -1240,6 +1392,9 @@ function createEndpointSprite(key, entries) {
   container.interactive = false;
 
   const sprite = createPivotSprite(overlay.src, overlay.frame, overlay.pivot, getTextureScale());
+  const flags = getFlagData(entries[0]?.wall);
+  if (isEnabled(flags.flipX)) sprite.scale.x *= -1;
+  if (isEnabled(flags.flipY)) sprite.scale.y *= -1;
   sprite.rotation = overlay.rotation;
 
   container.addChild(sprite);
@@ -1272,7 +1427,7 @@ function redrawWallTextures() {
 
   for (const chain of chains) {
     const style = getStyleDefinition(chain.styleKey, chain.wall);
-    const mesh = createWallRibbonMesh(style, chain.points);
+    const mesh = createWallRibbonMesh(style, chain.points, getFlagData(chain.wall));
     if (mesh) container.addChild(mesh);
   }
 

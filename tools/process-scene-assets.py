@@ -13,6 +13,8 @@ SIZES = {
     "bed": 1024,
     "cabinet": 1024,
     "tree": 1536,
+    "forest-deciduous-simple": 512,
+    "forest-pine-simple": 512,
     "ruins": 1536,
     "corpse": 1024,
     "blood": 1024,

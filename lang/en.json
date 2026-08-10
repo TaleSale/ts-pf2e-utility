@@ -12,7 +12,14 @@
         "ActionPlus": "Action Extra Features",
         "Spells": "Spells",
         "Journals": "Journals",
+        "Campaigns": "CAMPAIGNS",
         "Other": "Other"
+      },
+      "Campaigns": {
+        "Bastardhall": {
+          "Name": "Bastardhall sheet",
+          "Hint": "Adds the Bastardhall campaign sheet to the Actor Directory, including Soulhearts, collections, research, phantoms, climate, mementos, and area unlocking."
+        }
       },
       "Other": {
         "DamageSave": {
@@ -115,6 +122,8 @@
         "FillRoom": "Fill room",
         "DrawBoundary": "Draw boundary",
         "EraseFloor": "Erase floor",
+        "ChangeFloorLevel": "Change floor level",
+        "FloorLevelChanged": "Floor level changed.",
         "BaseFloor": "Base floor",
         "Style": "Floor texture",
         "InvalidPolygon": "The floor boundary is invalid.",
@@ -125,13 +134,29 @@
         "NeedThreePoints": "A floor needs at least three points.",
         "NoScene": "The scene is not ready.",
         "BaseFloorCreated": "The base floor covers the whole scene.",
+        "CurrentLevel": "Current map level",
+        "CurrentLevelHint": "This level and uncovered lower floors are visible.",
+        "NativeLevelName": "Map level {level}",
+        "NativeLevelCreated": "Created Foundry map level {level}.",
+        "FloorLevel": "Floor level",
+        "FloorLevelHint": "New floors and the change-level tool use this value.",
         "Categories": {
           "Stone": "Stone",
           "Caves": "Caves",
           "Wood": "Wood",
+          "Stairs": "Stairs",
           "Nature": "Nature",
+          "Gardens": "Gardens",
+          "Seas": "Seas",
+          "Roofs": "Roofs",
           "Paths": "Paths",
           "Carpets": "Carpets"
+        },
+        "Directions": {
+          "VerticalUp": "Vertical stairs ↑",
+          "VerticalDown": "Vertical stairs ↓",
+          "HorizontalRight": "Horizontal stairs →",
+          "HorizontalLeft": "Horizontal stairs ←"
         },
         "Choices": {
           "UnevenLimestone": "Uneven limestone",
@@ -141,11 +166,27 @@
           "BrickRed": "Red brick",
           "WoodWalnut": "Walnut boards",
           "WoodAlder": "Alder boards",
+          "WoodOutdoor": "Outdoor boards",
           "GrassMeadow": "Meadow grass",
           "PathDirt": "Dirt path",
           "PathCobblestone": "Cobblestone path",
           "CarpetRed": "Red carpet",
-          "CarpetBlue": "Blue carpet"
+          "CarpetBlue": "Blue carpet",
+          "CarpetRedOrnate": "Ornate red carpet",
+          "CarpetBlueHeraldic": "Ornate blue carpet",
+          "CarpetGreenGold": "Green and gold carpet",
+          "GardenCabbage": "Cabbage beds",
+          "GardenCarrot": "Carrot beds",
+          "GardenHerbs": "Herb beds",
+          "ForestDeciduous": "Deciduous forest",
+          "ForestPine": "Pine forest",
+          "ForestMixed": "Mixed forest",
+          "SeaShallow": "Shallow sea",
+          "SeaDeep": "Deep sea",
+          "SeaStormy": "Stormy sea",
+          "RoofThatch": "Thatched roof",
+          "RoofShingles": "Wooden shingle roof",
+          "RoofTiles": "Clay tile roof"
         }
       },
       "SceneAssets": {
@@ -176,12 +217,15 @@
         "Set": "Set",
         "Sets": "Saved sets",
         "DeleteSet": "Delete set", "GoldPile": "Pile of gold",
+        "StonehengeTrilithon": "Trilithon circle", "StonehengeCircle": "Stone circle", "StonehengeFangs": "Stone fangs",
+        "StandingStoneBroad": "Broad standing stone", "StandingStoneNarrow": "Narrow standing stone", "StandingStoneCrooked": "Crooked standing stone",
         "CabinetSide": "Narrow cabinet", "BookshelfSide": "Narrow bookshelf", "ShortStairsUp": "Short stairs up", "ShortStairsDown": "Short stairs down",
         "Categories": { "Furniture": "Furniture", "Household": "Household", "TempleStage": "Temple & stage", "Lighting": "Lighting", "Nature": "Nature", "Outdoors": "Outdoors", "Dock": "Docks", "Water": "Water", "Transitions": "Transitions", "Ruins": "Ruins", "Decor": "Decor", "Traces": "Traces", "Remains": "Remains" },
         "Choices": { "Table": "Table", "Chair": "Chair", "Bed": "Bed", "Cabinet": "Cabinet", "Tree": "Tree", "Ruins": "Ruins", "Corpse": "Corpse", "Blood": "Blood pool", "Torch": "Torch", "Brazier": "Brazier", "RoundTable": "Round table", "Stool": "Stool", "Chest": "Chest", "Bookshelf": "Bookshelf", "Barrel": "Barrel", "Crate": "Crate", "Sacks": "Sacks", "Tub": "Tub", "Cauldron": "Cauldron", "Candle": "Candle", "Lantern": "Lantern", "PineTree": "Pine tree", "DeadTree": "Dead tree", "Bush": "Bush", "Stump": "Stump", "Rocks": "Rocks", "Logs": "Logs", "Bridge": "Bridge", "Well": "Well", "Pond": "Pond", "Lake": "Lake", "BrokenBoards": "Broken boards", "FallenColumn": "Fallen column", "Skeleton": "Skeleton", "RedRug": "Red rug", "BooksScrolls": "Books and scrolls", "Mud": "Mud", "WaterPuddle": "Water puddle", "Ash": "Ash", "Footprints": "Footprints", "LongTable": "Long table", "BanquetTable": "Banquet table", "Bench": "Bench", "Pew": "Temple pew", "Desk": "Writing desk", "Throne": "Throne", "Altar": "Altar", "Lectern": "Lectern", "Statue": "Statue", "StandingColumn": "Standing column", "RitualCircle": "Ritual circle", "Ladder": "Horizontal ladder", "LadderVertical": "Vertical ladder", "Trapdoor": "Trapdoor", "StairsUp": "Stairs up", "StairsDown": "Stairs down", "DockStraight": "Straight dock", "DockCorner": "Corner dock", "Rowboat": "Rowboat", "Fountain": "Fountain", "MooringPosts": "Mooring posts" }
       },
       "SceneDecorator": {
         "Name": "Enable area decorator", "Hint": "Fills rooms and polygons with semantic scenery presets.", "Control": "Decorator", "Title": "Area decorator", "Room": "Use walled room", "Floor": "Use floor polygon", "Polygon": "Draw polygon", "Undo": "Undo last fill", "Preset": "Preset", "Density": "Density", "Seed": "Seed", "Dark": "Dark location", "Sparse": "Sparse", "Normal": "Normal", "Dense": "Dense", "Reroll": "Another", "Apply": "Apply", "Help": "Choose an area, inspect the preview, then apply.", "NoArea": "No suitable area was found.", "Empty": "Nothing could be placed in this area.", "Applied": "Placed {count} assets.", "NothingToUndo": "There is no recent fill to undo.", "NoPresets": "No presets — create one with the gear button", "ManagePresets": "Manage presets", "Uncategorized": "Uncategorized", "EditPreset": "Preset", "Category": "Category", "PresetName": "Name", "Environment": "Environment", "Indoor": "Indoor", "Outdoor": "Outdoor", "Asset": "Asset", "Minimum": "Min", "Maximum": "Max", "Placement": "Placement", "AtWall": "At wall", "AtCenter": "Center", "Free": "Free", "Cluster": "Cluster", "TableSeats": "Seats at table", "SeatType": "Type", "AddObject": "Add object", "NewPreset": "New preset", "SavePreset": "Save", "PresetIncomplete": "Enter a name and add at least one object.",
+        "LevelChanged": "The map level changed. Select the area again.",
         "Presets": { "Forest": "Forest", "Woodland": "Woodland", "Swamp": "Swamp", "Shore": "Shore", "Yard": "Abandoned yard", "Camp": "Camp", "OutdoorRuins": "Outdoor ruins", "Tavern": "Tavern", "Bedroom": "Bedroom", "Library": "Study / library", "Warehouse": "Warehouse", "Barracks": "Barracks", "Temple": "Temple", "DiningHall": "Dining hall", "AbandonedRoom": "Abandoned room" }
       },
       "WallTextures": {
@@ -190,8 +234,14 @@
         "Fieldset": "Wall texture",
         "EnableLabel": "Wall texture",
         "StyleLabel": "Wall style",
+        "BorderFieldset": "Border texture",
+        "BorderEnableLabel": "Border texture",
+        "BorderStyleLabel": "Border style",
+        "BorderFieldHint": "Draws the selected border texture along this unrestricted segment.",
         "ClosedRightLabel": "Closed right edge",
         "ClosedLeftLabel": "Closed left edge",
+        "FlipHorizontalLabel": "Flip horizontally",
+        "FlipVerticalLabel": "Flip vertically",
         "FieldHint": "Draws the selected texture along this wall segment.",
         "Choices": {
           "BrickGreyDense": "Brick - Dense grey",
@@ -199,7 +249,16 @@
           "BrickRed": "Brick - Red",
           "MetalIron": "Metal - Iron",
           "WoodNut": "Wood - Walnut",
-          "WoodAlder": "Wood - Alder"
+          "WoodAlder": "Wood - Alder",
+          "BorderWoodStone": "Thin wood and stone border",
+          "BorderGreenFog": "Green fog border",
+          "BattlementStone": "Stone arrow slits",
+          "BattlementBrick": "Brick arrow slits",
+          "HedgeMaze": "Maze hedge",
+          "CliffCoastal": "Uneven coastal cliff",
+          "CliffLimestone": "Limestone coast cliff",
+          "CliffSandy": "Sandy coast cliff",
+          "CliffVolcanic": "Volcanic coast cliff"
         }
       },
       "DoorTexturePresets": {
@@ -218,6 +277,8 @@
         "Choices": {
           "WindowWood": "Window - Walnut",
           "WindowIron": "Window - Iron",
+          "ArrowSlitStraight": "Straight arrow slit",
+          "ArrowSlitCross": "Splayed arrow slit",
           "WindowStained": "Window - Stained glass"
         }
       },
@@ -232,6 +293,7 @@
           "Choices": {
             "Default": "Default",
             "AoA": "Эпоха Пепла",
+            "BoB": "Бастион Богохульства",
             "CC": "Зов Занавеса",
             "HR": "Адские Мятежники",
             "SoG": "Сезон Призраков",

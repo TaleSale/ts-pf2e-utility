@@ -6,14 +6,40 @@ function isImageSectionsEnabled() {
   return Boolean(game.settings.get(MODULE_ID, SETTING_ENABLE_IMAGE_SECTIONS));
 }
 
-function appendStyleField(form) {
+function appendImageSectionFields(form) {
   if (!(form instanceof HTMLFormElement)) return null;
-  if (form.elements.imageSectionClass) return form.elements.imageSectionClass;
   const documentRef = form.ownerDocument;
   if (!documentRef) return null;
 
   const sourceGroup = form.querySelector("[name='src']")?.closest(".form-group");
   if (!(sourceGroup instanceof HTMLElement)) return null;
+
+  let captionInput = form.elements.caption;
+  if (!(captionInput instanceof HTMLInputElement)) {
+    const captionGroup = documentRef.createElement("div");
+    captionGroup.className = "form-group";
+
+    const captionLabel = documentRef.createElement("label");
+    captionLabel.htmlFor = "tsu-journal-image-section-caption";
+    captionLabel.textContent = "Подпись изображения";
+
+    const captionFields = documentRef.createElement("div");
+    captionFields.className = "form-fields";
+
+    captionInput = documentRef.createElement("input");
+    captionInput.type = "text";
+    captionInput.id = "tsu-journal-image-section-caption";
+    captionInput.name = "imageSectionCaption";
+
+    captionFields.append(captionInput);
+    captionGroup.append(captionLabel, captionFields);
+    sourceGroup.after(captionGroup);
+  } else {
+    const captionLabel = captionInput.closest(".form-group")?.querySelector("label");
+    if (captionLabel) captionLabel.textContent = "Подпись изображения";
+  }
+
+  if (form.elements.imageSectionClass) return form.elements.imageSectionClass;
 
   const formGroup = documentRef.createElement("div");
   formGroup.className = "form-group";
@@ -33,7 +59,7 @@ function appendStyleField(form) {
 
   fields.append(input);
   formGroup.append(label, fields);
-  sourceGroup.after(formGroup);
+  (captionInput.closest(".form-group") ?? sourceGroup).after(formGroup);
   return input;
 }
 
@@ -53,7 +79,13 @@ function buildWrappedImageHtml(form) {
   if (Number.isFinite(width) && width > 0) attributes.push(`width="${width}"`);
   if (Number.isFinite(height) && height > 0) attributes.push(`height="${height}"`);
 
-  return `<section class="${escapeHtml(className)}"><img ${attributes.join(" ")}></section>`;
+  const caption = String(form.elements.caption?.value ?? form.elements.imageSectionCaption?.value ?? "").trim();
+  const imageHtml = `<img ${attributes.join(" ")}>`;
+  const content = caption
+    ? `<figure class="tsu-image-section-figure">${imageHtml}<figcaption class="tsu-image-section-caption">${escapeHtml(caption)}</figcaption></figure>`
+    : imageHtml;
+
+  return `<section class="${escapeHtml(className)}">${content}</section>`;
 }
 
 function patchProseMirrorImagePrompt() {
@@ -110,7 +142,7 @@ function patchProseMirrorImagePrompt() {
     const form = dialog.querySelector("form");
     if (!(form instanceof HTMLFormElement)) return;
 
-    appendStyleField(form);
+    appendImageSectionFields(form);
 
     form.elements.save.addEventListener("click", () => {
       const src = String(form.elements.src?.value ?? "").trim();

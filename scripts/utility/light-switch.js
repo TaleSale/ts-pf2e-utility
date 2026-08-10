@@ -164,12 +164,26 @@ function localBox(element, ancestor) {
     top += current.offsetTop;
     current = current.offsetParent;
   }
-  if (current !== ancestor) return null;
-  return {
+  if (current === ancestor) return {
     left,
     top,
     width: element.offsetWidth,
     height: element.offsetHeight,
+  };
+
+  const elementRect = element.getBoundingClientRect();
+  const ancestorRect = ancestor.getBoundingClientRect();
+  const scaleX = ancestorRect.width > 0 && ancestor.offsetWidth > 0
+    ? ancestorRect.width / ancestor.offsetWidth
+    : 1;
+  const scaleY = ancestorRect.height > 0 && ancestor.offsetHeight > 0
+    ? ancestorRect.height / ancestor.offsetHeight
+    : 1;
+  return {
+    left: (elementRect.left - ancestorRect.left) / scaleX,
+    top: (elementRect.top - ancestorRect.top) / scaleY,
+    width: elementRect.width / scaleX,
+    height: elementRect.height / scaleY,
   };
 }
 
@@ -193,10 +207,16 @@ function positionButton(button) {
   const box = localBox(anchor, actionBar);
   if (!box || box.width < 1 || box.height < 1) return;
   let left = box.left + box.width + 4;
-  if (!rebellionSlot) {
-    const controls = hotbar.querySelector("#hotbar-page-controls, .hotbar-page-controls");
-    const controlsBox = controls instanceof HTMLElement ? localBox(controls, actionBar) : null;
-    if (controlsBox) left = Math.max(left, controlsBox.left + controlsBox.width + 4);
+  const controls = [...hotbar.querySelectorAll("button, li[data-slot], [role=button]")]
+    .filter((element) => element instanceof HTMLElement && element !== button)
+    .filter((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    });
+  for (const control of controls) {
+    const controlBox = localBox(control, actionBar);
+    if (controlBox) left = Math.max(left, controlBox.left + controlBox.width + 4);
   }
   button.style.left = `${Math.round(left + (game.user?.isGM ? 0 : 10))}px`;
   button.style.top = `${Math.round(box.top)}px`;

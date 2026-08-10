@@ -1,4 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -17,16 +18,23 @@ const MIN_SIZE_CELLS = 0.2;
 const MAX_SIZE_CELLS = 6;
 
 export const LIGHT_PRESETS = Object.freeze({
-  torch: Object.freeze({ bright: 20, dim: 40, color: "#ff9b45", alpha: 0.38, angle: 360, negative: false, animation: { type: "torch", speed: 5, intensity: 5 } }),
-  brazier: Object.freeze({ bright: 20, dim: 40, color: "#ff8a32", alpha: 0.42, angle: 360, negative: false, animation: { type: "flame", speed: 4, intensity: 6 } }),
-  candle: Object.freeze({ bright: 0, dim: 10, color: "#ffd08a", alpha: 0.28, angle: 360, negative: false, animation: { type: "flame", speed: 2, intensity: 2 } }),
-  lantern: Object.freeze({ bright: 20, dim: 40, color: "#ffc56d", alpha: 0.32, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
+  torch: Object.freeze({ bright: 20, dim: 40, color: "#ff9b45", alpha: 0.1, angle: 360, negative: false, animation: { type: "torch", speed: 5, intensity: 5 } }),
+  brazier: Object.freeze({ bright: 20, dim: 40, color: "#ff8a32", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 4, intensity: 6 } }),
+  candle: Object.freeze({ bright: 0, dim: 10, color: "#ffd08a", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 2, intensity: 2 } }),
+  lantern: Object.freeze({ bright: 20, dim: 40, color: "#ffc56d", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
 });
 
 export const ASSETS = Object.freeze({
   table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1024 / 677),
   chair: asset("Furniture", "Chair", "chair.webp", 0.5, "object", 437 / 512),
   bed: asset("Furniture", "Bed", "bed.webp", 1.8, "object", 521 / 1024),
+  bedOak: asset("Furniture", "BedOak", "bed-oak.webp", 1.8, "object", 0.454),
+  bedBlue: asset("Furniture", "BedBlue", "bed-blue.webp", 1.8, "object", 0.496),
+  bedFur: asset("Furniture", "BedFur", "bed-fur.webp", 1.8, "object", 0.49),
+  bedMessyBlue: asset("Furniture", "Unmade bed — blue", "bed-messy-blue.webp", 1.8, "object", 0.619, null, 0, "Choices.BedMessyBlue"),
+  bedMessyBrown: asset("Furniture", "Unmade bed — brown", "bed-messy-brown.webp", 1.8, "object", 0.545, null, 0, "Choices.BedMessyBrown"),
+  doubleBedRed: asset("Furniture", "DoubleBedRed", "double-bed-red.webp", 2, "object", 0.709),
+  doubleBedLinen: asset("Furniture", "DoubleBedLinen", "double-bed-linen.webp", 2, "object", 0.774),
   cabinet: asset("Furniture", "Cabinet", "cabinet.webp", 1.25, "object", 1024 / 362),
   cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow.webp", 0.44, "object", 658 / 693, null, 0, "CabinetSide"),
   tree: asset("Nature", "Tree", "tree.webp", 2, "overhead", 1142 / 1140),
@@ -34,6 +42,8 @@ export const ASSETS = Object.freeze({
   corpse: asset("Remains", "Corpse", "corpse.webp", 1.5, "object", 863 / 1024),
   blood: asset("Traces", "Blood", "blood.webp", 1, "ground", 1024 / 775),
   torch: asset("Lighting", "Torch", "torch.webp", 0.3, "object", 512 / 462, "torch"),
+  wallTorchIron: asset("Lighting", "WallTorchIron", "wall-torch-iron.webp", 0.65, "object", 0.475, "torch"),
+  wallTorchBracket: asset("Lighting", "WallTorchBracket", "wall-torch-bracket.webp", 0.65, "object", 0.696, "torch"),
   brazier: asset("Lighting", "Brazier", "brazier.webp", 0.7, "object", 998 / 1017, "brazier"),
   roundTable: asset("Furniture", "RoundTable", "round-table.webp", 1, "object", 968 / 1024),
   stool: asset("Furniture", "Stool", "stool.webp", 0.4, "object", 436 / 512),
@@ -44,6 +54,13 @@ export const ASSETS = Object.freeze({
   crate: asset("Household", "Crate", "crate.webp", 0.6, "object", 747 / 768),
   sacks: asset("Household", "Sacks", "sacks.webp", 0.9, "object", 1024 / 995),
   tub: asset("Household", "Tub", "tub.webp", 1.1, "object", 1024 / 666),
+  bathtubWood: asset("Household", "BathtubWood", "bathtub-wood.webp", 1.5, "object", 0.488),
+  bathtubCopper: asset("Household", "BathtubCopper", "bathtub-copper.webp", 1.5, "object", 0.676),
+  sinkWood: asset("Household", "SinkWood", "sink-wood.webp", 0.8, "object", 0.691),
+  sinkStone: asset("Household", "SinkStone", "sink-stone.webp", 0.8, "object", 0.704),
+  toiletBoardOak: asset("Household", "ToiletBoardOak", "toilet-board-oak.webp", 0.8, "object", 0.614),
+  toiletBoardAlder: asset("Household", "ToiletBoardAlder", "toilet-board-alder.webp", 0.8, "object", 0.614),
+  toiletBoardWalnut: asset("Household", "ToiletBoardWalnut", "toilet-board-walnut.webp", 0.8, "object", 0.617),
   cauldron: asset("Household", "Cauldron", "cauldron.webp", 0.7, "object", 741 / 768),
   candle: asset("Lighting", "Candle", "candle.webp", 0.2, "object", 512 / 445, "candle"),
   lantern: asset("Lighting", "Lantern", "lantern.webp", 0.3, "object", 315 / 512, "lantern"),
@@ -53,6 +70,11 @@ export const ASSETS = Object.freeze({
   stump: asset("Nature", "Stump", "stump.webp", 0.8, "object", 768 / 738),
   rocks: asset("Nature", "Rocks", "rocks.webp", 1.1, "object", 1024 / 915),
   logs: asset("Nature", "Logs", "logs.webp", 1.4, "object", 1015 / 863),
+  campfireStones: asset("Outdoors", "CampfireStones", "campfire-stones.webp", 1, "object", 0.97, "brazier"),
+  campfireEmbers: asset("Outdoors", "CampfireEmbers", "campfire-embers.webp", 1, "object", 1.087, "brazier"),
+  bedrollGreen: asset("Outdoors", "BedrollGreen", "bedroll-green.webp", 1.5, "object", 0.621),
+  bedrollFur: asset("Outdoors", "BedrollFur", "bedroll-fur.webp", 1.5, "object", 0.585),
+  bedrollBlue: asset("Outdoors", "BedrollBlue", "bedroll-blue.webp", 1.5, "object", 0.568),
   bridge: asset("Outdoors", "Bridge", "bridge.webp", 3, "object", 1536 / 534),
   well: asset("Outdoors", "Well", "well.webp", 1.5, "object", 952 / 1144),
   pond: asset("Water", "Pond", "pond.webp", 3, "ground", 1110 / 954),
@@ -80,6 +102,12 @@ export const ASSETS = Object.freeze({
   ritualCircle: asset("TempleStage", "RitualCircle", "ritual-circle.webp", 1.8, "ground", 1024 / 1016),
   ladder: asset("Transitions", "Ladder", "ladder.webp", 1.5, "ground", 1024 / 271),
   ladderVertical: asset("Transitions", "LadderVertical", "ladder-vertical.webp", 1.5, "ground", 234 / 1024),
+  stairsWoodStraight: asset("Transitions", "StairsWoodStraight", "stairs-wood-straight.webp", 1, "ground", 1),
+  stairsWoodRustic: asset("Transitions", "StairsWoodRustic", "stairs-wood-rustic.webp", 1, "ground", 1),
+  stairsWoodSquare: asset("Transitions", "Wooden stairs — 1×1", "stairs-wood-square.webp", 1, "ground", 1, null, 0, "Choices.StairsWoodSquare"),
+  stairsStoneSquare: asset("Transitions", "Stone stairs — 1×1", "stairs-stone-square.webp", 1, "ground", 1, null, 0, "Choices.StairsStoneSquare"),
+  fireplaceStone: asset("Household", "FireplaceStone", "fireplace-stone.webp", 1.5, "object", 1.05, "brazier"),
+  fireplaceBrick: asset("Household", "FireplaceBrick", "fireplace-brick.webp", 1.5, "object", 1.047, "brazier"),
   trapdoor: asset("Transitions", "Trapdoor", "trapdoor.webp", 0.8, "ground", 744 / 768),
   stairsUp: asset("Transitions", "StairsUp", "stairs-up.webp", 2, "ground", 444 / 1024),
   stairsDown: asset("Transitions", "StairsDown", "stairs-down.webp", 2, "ground", 410 / 1024),
@@ -90,6 +118,12 @@ export const ASSETS = Object.freeze({
   rowboat: asset("Dock", "Rowboat", "rowboat.webp", 2.2, "object", 516 / 1440),
   fountain: asset("Outdoors", "Fountain", "fountain.webp", 1.5, "object", 980 / 996),
   mooringPosts: asset("Dock", "MooringPosts", "mooring-posts.webp", 0.7, "object", 768 / 288),
+  stonehengeTrilithon: asset("Ruins", "StonehengeTrilithon", "stonehenge-trilithon-circle-v2.webp", 2.4, "object", 0.916, null, 0, "StonehengeTrilithon"),
+  stonehengeCircle: asset("Ruins", "StonehengeCircle", "stonehenge-circle.webp", 2.6, "object", 1, null, 0, "StonehengeCircle"),
+  stonehengeFangs: asset("Ruins", "StonehengeFangs", "stonehenge-fangs.webp", 2.2, "object", 1, null, 0, "StonehengeFangs"),
+  standingStoneBroad: asset("Ruins", "StandingStoneBroad", "standing-stone-broad.webp", 0.65, "object", 1.28, null, 0, "StandingStoneBroad"),
+  standingStoneNarrow: asset("Ruins", "StandingStoneNarrow", "standing-stone-narrow.webp", 0.7, "object", 0.3, null, 0, "StandingStoneNarrow"),
+  standingStoneCrooked: asset("Ruins", "StandingStoneCrooked", "standing-stone-crooked.webp", 0.7, "object", 0.494, null, 0, "StandingStoneCrooked"),
 });
 
 const CATEGORIES = Object.freeze(["Furniture", "Household", "TempleStage", "Lighting", "Nature", "Outdoors", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
@@ -179,6 +213,15 @@ function enabled() {
 
 function localize(key, fallback) {
   return t(`Settings.SceneAssets.${key}`, fallback);
+}
+
+export function getAssetPlacementLevelData() {
+  const nativeLevel = canvas?.level;
+  return {
+    level: nativeLevel ? getFloorNumberForNativeLevel(nativeLevel) : getCurrentFloorLevel(),
+    levels: nativeLevel?.id ? [nativeLevel.id] : [],
+    elevation: Number(nativeLevel?.elevation?.base ?? 0),
+  };
 }
 
 function htmlEscape(value) {
@@ -648,7 +691,7 @@ function selectTilesInRectangle(start, end, additive) {
     top: Math.min(start.y, end.y), bottom: Math.max(start.y, end.y),
   };
   const hits = [...(canvas?.tiles?.placeables ?? [])].filter((tile) => {
-    if (tile.document?.hidden) return false;
+    if (!isAssetDocumentVisible(tile.document)) return false;
     const bounds = tile.bounds;
     if (bounds && Number.isFinite(bounds.x) && Number.isFinite(bounds.y)) {
       const right = Number(bounds.right ?? (bounds.x + bounds.width));
@@ -700,7 +743,7 @@ function selectTileAt(point, event) {
   if (!point || !canvas?.tiles) return;
   const additive = Boolean(event?.ctrlKey || event?.metaKey || event?.nativeEvent?.ctrlKey || event?.nativeEvent?.metaKey);
   const hit = [...(canvas.tiles.placeables ?? [])]
-    .filter((tile) => !tile.document?.hidden && tileContainsPoint(tile, point))
+    .filter((tile) => isAssetDocumentVisible(tile.document) && tileContainsPoint(tile, point))
     .sort((a,b) => Number(b.document?.sort ?? 0) - Number(a.document?.sort ?? 0))[0];
   event.stopPropagation?.();
   if (!hit) {
@@ -952,7 +995,7 @@ async function eraseAssetAt(point) {
   const scene = canvas?.scene;
   if (!scene) return;
   const hit = [...scene.tiles]
-    .filter((tile) => tile.flags?.[MODULE_ID]?.[FLAG_ROOT] && tile.shape?.testPoint?.(point))
+    .filter((tile) => tile.flags?.[MODULE_ID]?.[FLAG_ROOT] && isAssetDocumentVisible(tile) && tile.shape?.testPoint?.(point))
     .sort((a, b) => Number(b.sort ?? 0) - Number(a.sort ?? 0))[0];
   if (!hit) return ui.notifications.warn(localize("NothingToErase", "No asset was found here."));
   await scene.deleteEmbeddedDocuments("Tile", [hit.id]);
@@ -963,6 +1006,7 @@ async function placeAsset(point) {
   const definition = ASSETS[selectedKey];
   if (!scene || !definition) return;
   const size = dimensions(definition);
+  const placementLevel = getAssetPlacementLevelData();
   const tileData = {
     name: t(definition.labelKey, definition.fallback),
     texture: { src: definition.src, anchorX: 0.5, anchorY: 0.5, scaleX: flipped ? -1 : 1, scaleY: 1 },
@@ -971,10 +1015,11 @@ async function placeAsset(point) {
     width: size.width,
     height: size.height,
     rotation,
-    elevation: 0,
+    elevation: placementLevel.elevation,
+    levels: placementLevel.levels,
     sort: LAYERS[selectedLayer] ?? 0,
     restrictions: { light: false, weather: false },
-    flags: { [MODULE_ID]: { [FLAG_ROOT]: { key: selectedKey, layer: selectedLayer, lightId: null } } },
+    flags: { [MODULE_ID]: { [FLAG_ROOT]: { key: selectedKey, layer: selectedLayer, level: placementLevel.level, lightId: null } } },
   };
   const [tile] = await scene.createEmbeddedDocuments("Tile", [tileData]);
   if (tile && definition.light) await createLinkedLight(tile, definition.light);
@@ -985,12 +1030,19 @@ async function placeSet(point) {
   const set = getSets().find((candidate) => candidate.id === selectedSetId);
   if (!scene || !set) return;
   const grid = Number(canvas?.dimensions?.size ?? 100);
+  const placementLevel = getAssetPlacementLevelData();
   const batchId = foundry.utils.randomID?.() ?? crypto.randomUUID();
   const data = set.items.map((item) => {
     const offset = transformOffset(item.cx * grid, item.cy * grid);
     const flags = foundry.utils.deepClone(item.flags ?? {});
     flags[MODULE_ID] ??= {};
-    flags[MODULE_ID][FLAG_ROOT] = { ...(flags[MODULE_ID][FLAG_ROOT] ?? {}), lightId: null, setId: set.id, batchId };
+    flags[MODULE_ID][FLAG_ROOT] = {
+      ...(flags[MODULE_ID][FLAG_ROOT] ?? {}),
+      level: placementLevel.level,
+      lightId: null,
+      setId: set.id,
+      batchId,
+    };
     return {
       name: item.name,
       texture: {
@@ -1002,7 +1054,8 @@ async function placeSet(point) {
       width: Math.max(1, Math.round(item.width * grid * scale)),
       height: Math.max(1, Math.round(item.height * grid * scale)),
       rotation: (rotation + (flipped ? -Number(item.rotation ?? 0) : Number(item.rotation ?? 0)) + 360) % 360,
-      elevation: item.elevation ?? 0,
+      elevation: placementLevel.elevation,
+      levels: placementLevel.levels,
       sort: item.sort ?? 0,
       alpha: item.alpha ?? 1,
       hidden: Boolean(item.hidden),
@@ -1081,6 +1134,7 @@ export async function createLinkedLight(tile, presetKey, override = null) {
     x: center.x,
     y: center.y,
     elevation: tile.elevation ?? 0,
+    levels: [...(tile.levels ?? [])],
     walls: true,
     vision: false,
     config: { ...preset, darkness: { min: 0, max: 1 } },
@@ -1097,13 +1151,26 @@ function tileCenter(tile) {
   };
 }
 
+function isAssetDocumentVisible(tile) {
+  if (!tile || tile.hidden) return false;
+  const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+  if (!flag) return true;
+  return tile.includedInLevel?.(canvas?.level) !== false;
+}
+
 Hooks.on("updateTile", (tile, change) => {
   const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
-  if (!flag?.lightId || !tile.parent || !["x", "y", "width", "height", "elevation", "hidden"].some((key) => key in change)) return;
+  if (!flag?.lightId || !tile.parent || !["x", "y", "width", "height", "elevation", "levels", "hidden"].some((key) => key in change)) return;
   const light = tile.parent.lights?.get(flag.lightId);
   if (!light) return;
   const center = tileCenter(tile);
-  void light.update({ x: center.x, y: center.y, elevation: tile.elevation ?? 0, hidden: Boolean(tile.hidden) });
+  void light.update({
+    x: center.x,
+    y: center.y,
+    elevation: tile.elevation ?? 0,
+    levels: [...(tile.levels ?? [])],
+    hidden: Boolean(tile.hidden),
+  });
 });
 
 Hooks.on("preUpdateTile", (tile, change) => {
@@ -1145,7 +1212,11 @@ Hooks.on("deleteAmbientLight", (light) => {
   if (tile) void tile.update({ [`flags.${MODULE_ID}.${FLAG_ROOT}.lightId`]: null });
 });
 
-Hooks.on("canvasReady", () => { if (active) bindStage(); void normalizeTrapdoorLayer(); });
+Hooks.on("canvasReady", () => {
+  if (active) bindStage();
+  void normalizeTrapdoorLayer();
+  void normalizeAssetLevels();
+});
 Hooks.on("canvasTearDown", () => { clearPreview(); selectedTileIds.clear(); drawSelection(); unbindStage(); });
 
 async function normalizeTrapdoorLayer() {
@@ -1155,4 +1226,34 @@ async function normalizeTrapdoorLayer() {
     return flag?.key==="trapdoor"&&(flag.layer!=="ground"||Number(tile.sort)!==LAYERS.ground);
   }).map((tile)=>({_id:tile.id,sort:LAYERS.ground,[`flags.${MODULE_ID}.${FLAG_ROOT}.layer`]:"ground"}));
   if(updates.length)await scene.updateEmbeddedDocuments("Tile",updates);
+}
+
+async function normalizeAssetLevels() {
+  const scene = canvas?.scene;
+  if (!scene || !game.user?.isGM) return;
+  const nativeLevels = scene.levels?.sorted ?? [];
+  if (!nativeLevels.length) return;
+  const updates = [];
+  for (const tile of scene.tiles) {
+    const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+    if (!flag) continue;
+    const existingLevelId = tile.levels?.first?.() ?? [...(tile.levels ?? [])][0];
+    const requestedIndex = Number(flag.level ?? 0);
+    const nativeLevel = scene.levels.get(existingLevelId)
+      ?? nativeLevels.find((level) => getFloorNumberForNativeLevel(level) === requestedIndex)
+      ?? nativeLevels[0];
+    const update = { _id: tile.id };
+    let changed = false;
+    if (!tile.levels?.size) {
+      update.levels = [nativeLevel.id];
+      changed = true;
+    }
+    const nativeFloorNumber = getFloorNumberForNativeLevel(nativeLevel);
+    if (Number(flag.level) !== nativeFloorNumber) {
+      update[`flags.${MODULE_ID}.${FLAG_ROOT}.level`] = nativeFloorNumber;
+      changed = true;
+    }
+    if (changed) updates.push(update);
+  }
+  if (updates.length) await scene.updateEmbeddedDocuments("Tile", updates);
 }

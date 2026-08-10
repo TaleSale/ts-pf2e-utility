@@ -977,6 +977,7 @@ async function syncModuleMacroCompendiumDocuments(config) {
 
 export function buildModuleApi() {
   return {
+    ...(game.modules?.get(MODULE_ID)?.api ?? {}),
     openGame: openGameForEveryone,
     getGameState,
     requestGameAction,
@@ -1032,7 +1033,16 @@ export function initializeModuleRuntime() {
     localizeSectionHeader("actionPlusShowRegeneration", `===${t("Settings.Sections.ActionPlus", "Action Extra Features")}===`);
     localizeSectionHeader("enableSpellAtWill", `===${t("Settings.Sections.Spells", "Spells")}===`);
     localizeSectionHeader("defaultJournalStyle", `===${t("Settings.Sections.Journals", "Journals")}===`);
+    localizeSectionHeader("enableBastardhallSheet", `===${t("Settings.Sections.Campaigns", "Campaigns")}===`);
     localizeSectionHeader("enableTempHealing", `===${t("Settings.Sections.Other", "Other")}===`);
+
+    const campaignGroup = root.querySelector(`[name="${MODULE_ID}.enableBastardhallSheet"]`)?.closest(".form-group");
+    const campaignHeader = campaignGroup?.previousElementSibling;
+    const otherGroup = root.querySelector(`[name="${MODULE_ID}.enableTempHealing"]`)?.closest(".form-group");
+    const otherHeader = otherGroup?.previousElementSibling;
+    if (campaignGroup instanceof HTMLElement && campaignHeader instanceof HTMLHeadingElement && otherHeader instanceof HTMLHeadingElement) {
+      otherHeader.before(campaignHeader, campaignGroup);
+    }
 
     const journalHeader = root.querySelector(`[name="${MODULE_ID}.defaultJournalStyle"]`)?.closest(".form-group")?.previousElementSibling;
     if (journalHeader instanceof HTMLHeadingElement) {

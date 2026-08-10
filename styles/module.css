@@ -1,3 +1,5 @@
+@import url("./campaigns/bastardhall.css");
+
 .tsu-window .window-content {
   padding: 0;
   overflow: hidden;
@@ -4704,6 +4706,18 @@
   color: var(--color-light-1, #f0f0e0);
 }
 .tsu-floor-style-picker.hidden { display: none; }
+.tsu-floor-level {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  background: var(--color-cool-5-90, rgba(20, 24, 31, .96));
+}
+.tsu-floor-level input { width: 62px; }
 .tsu-floor-style-trigger,
 .tsu-floor-style-menu,
 .tsu-floor-style-submenu {
@@ -4772,7 +4786,9 @@
   position: absolute;
   top: -5px;
   left: 100%;
-  width: 190px;
+  width: 240px;
+  max-height: min(70vh, 620px);
+  overflow-y: auto;
   padding: 4px;
 }
 .tsu-floor-style-category:hover > .tsu-floor-style-submenu,
@@ -5046,3 +5062,9 @@ ul[data-option-toggles] > li.ts-automation-toggle-row > .ts-automation-lock > i 
 .tsu-door-preset-grid button.selected { border-color: var(--color-border-highlight, #c9a45c); background: rgba(255,255,255,.14); }
 .tsu-door-preset-grid img { display: block; width: 100%; height: 58px; object-fit: contain; pointer-events: none; }
 .tsu-door-preset-grid > .hint { grid-column: 1 / -1; margin: 6px; }
+.actor.sheet.character .ts-appearance-column {
+  display: flex;
+  flex-direction: column;
+  grid-area: img;
+  min-width: 0;
+}

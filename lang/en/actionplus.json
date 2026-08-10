@@ -258,6 +258,15 @@
         "MissingEffect": "The system's mounted effect could not be loaded.",
         "LesserCover": "Lesser cover from mount"
       },
+      "FamiliarOwner": {
+        "FeatureLabel": "Familiar Owner",
+        "FamiliarUuid": "Familiar UUID",
+        "FamiliarUuidHint": "Enter the UUID of a familiar actor from the Actors directory.",
+        "DropHint": "Drop the familiar actor here",
+        "SelectedFamiliar": "Familiar: {name}",
+        "InvalidFamiliar": "The UUID must refer to a world actor of the Familiar type.",
+        "NoPermission": "You do not have permission to update this familiar."
+      },
       "TroopDamage": {
         "FeatureLabel": "Troop Damage",
         "Hint": "The description and rules update automatically when settings change. Manual text before the generated block is preserved.",

@@ -1,0 +1,289 @@
+<div class="bh-sheet">
+  <header class="bh-header">
+    <div class="bh-title-lock"><i class="fa-solid fa-castle"></i></div>
+    <div>
+      <p class="bh-kicker">Проклятый бастион богохульства</p>
+      <h1>Бастардхолл</h1>
+    </div>
+    <div class="bh-header-actions">
+      {{#if isGM}}
+        <button type="button" class="bh-settings-button bh-reset-button" data-action="reset-sheet" title="Сбросить Лист Бастардхолла">
+          <i class="fa-solid fa-arrow-rotate-left"></i>
+        </button>
+        <button type="button" class="bh-settings-button" data-action="{{#if showConfig}}close-settings{{else}}open-settings{{/if}}" title="{{#if showConfig}}Вернуться к листу{{else}}Настройки Бастардхолла{{/if}}">
+          <i class="fa-solid {{#if showConfig}}fa-arrow-left{{else}}fa-gear{{/if}}"></i>
+        </button>
+      {{/if}}
+      <div class="bh-climate-badge {{#unless daytime}}is-night{{/unless}}">
+        <i class="fa-solid {{#if daytime}}fa-sun{{else}}fa-moon{{/if}}"></i>
+        <span>{{climateLabel}}</span>
+        <small>{{currentTime}}</small>
+      </div>
+    </div>
+  </header>
+
+  {{#unless showConfig}}
+    <nav class="bh-view-tabs">
+      <button type="button" class="{{#if showMain}}active{{/if}}" data-view="main"><i class="fa-solid fa-landmark"></i> Главная</button>
+      <button type="button" class="{{#if showInventory}}active{{/if}}" data-view="inventory"><i class="fa-solid fa-box-archive"></i> Инвентарь</button>
+    </nav>
+  {{/unless}}
+
+  <section class="bh-body">
+    {{#if showMain}}
+    <div class="bh-tracker-tab">
+      <div class="bh-column">
+        <section class="bh-panel bh-climate-panel">
+          <h2><i class="fa-solid fa-cloud-moon"></i> Климат</h2>
+          <div class="bh-climate-stage"><span>Этап</span><strong>{{climateStage.label}}</strong></div>
+          <p class="bh-climate-description">{{climateStage.description}}</p>
+          <div class="bh-day-range"><span>Восход — закат</span><strong>{{climateStage.sunriseLabel}} — {{climateStage.sunsetLabel}}</strong></div>
+          <div class="bh-day-length"><span>День: {{climateStage.dayDurationLabel}} ч.</span><span>Ночь: {{climateStage.nightDurationLabel}} ч.</span></div>
+          <div class="bh-weather-status"><i class="fa-solid {{#if daytime}}fa-sun{{else}}fa-moon{{/if}}"></i><span>Сейчас: <strong>{{climateLabel}}</strong></span></div>
+          {{#if data.climate.stormActive}}
+            <div class="bh-storm-info"><i class="fa-solid fa-cloud-bolt"></i><div><strong>Шторм</strong>{{#if data.climate.storm.description}}<p>{{data.climate.storm.description}}</p>{{/if}}</div></div>
+          {{/if}}
+        </section>
+
+        <section class="bh-panel">
+          <h2><i class="fa-solid fa-map-location-dot"></i> Доступные зоны</h2>
+          <div class="bh-area-grid">
+            {{#each areas}}
+              <div class="bh-area {{#if wide}}is-wide{{/if}} {{#if unlocked}}is-unlocked{{/if}}"><i class="fa-solid {{#if unlocked}}fa-square-check{{else}}fa-square{{/if}}"></i><span>{{name}}</span></div>
+            {{/each}}
+          </div>
+        </section>
+
+        <section class="bh-panel bh-research-panel">
+          <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Изыскания</h2>
+          <div class="bh-research-grid">
+            {{#each research}}
+              <div class="bh-research-row">
+                <span title="{{#if ../isGM}}{{name}}{{else}}{{displayName}}{{/if}}">{{displayName}}</span>
+                {{#if ../isGM}}<button type="button" data-research-step="-1" data-index="{{index}}"><i class="fa-solid fa-caret-down"></i></button>{{/if}}
+                <strong>{{pointsLabel}}</strong>
+                {{#if ../isGM}}<button type="button" data-research-step="1" data-index="{{index}}"><i class="fa-solid fa-caret-up"></i></button>{{/if}}
+              </div>
+            {{/each}}
+          </div>
+        </section>
+      </div>
+
+      <div class="bh-column">
+        <section class="bh-panel bh-phantom-panel">
+          <h2><i class="fa-solid fa-ghost"></i> Фантомы Майсерин</h2>
+          <div class="bh-phantom-list">
+            {{#each visiblePhantoms}}
+              <article class="bh-phantom">
+                <header>
+                  <div><strong>{{name}}</strong><small>{{role}}</small></div>
+                  <div class="bh-phantom-status">
+                    {{#if found}}<b>Ранг {{rank}}</b>{{else}}<b class="is-missing">Не найден</b>{{/if}}
+                    {{#if ../isGM}}<button type="button" data-action="toggle-phantom" data-index="{{phantomIndex}}" title="{{#if found}}Отметить ненайденным{{else}}Разблокировать фантома{{/if}}"><i class="fa-solid {{#if found}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>{{/if}}
+                  </div>
+                </header>
+                {{#if canAronDrinks}}
+                  <div class="bh-phantom-actions">
+                    <button type="button" data-phantom-action="aron-drinks" data-phantom="{{id}}" title="Получить до {{aronDrinkLimit}} напитков Арона в день"><i class="fa-solid fa-mug-hot"></i><span>Напитки ×{{aronDrinkLimit}}</span></button>
+                    {{#if canAronCounteract}}<button type="button" data-phantom-action="aron-counteract" data-phantom="{{id}}" title="Проверка противодействия со средним модификатором группы"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Противодействие</span></button>{{/if}}
+                  </div>
+                {{/if}}
+                {{#if canAuskenBlessing}}
+                  <div class="bh-phantom-actions">
+                    <button type="button" data-phantom-action="ausken-blessing" data-phantom="{{id}}" title="Выдать Благословение шерифа на 24 часа; целей: {{auskenBlessingTargets}}"><i class="fa-solid fa-star"></i><span>Благословение ×{{auskenBlessingTargets}}</span></button>
+                    {{#if canAuskenRunes}}<button type="button" data-phantom-action="ausken-runes" data-phantom="{{id}}" title="Получить до {{auskenRuneLimit}} рун Аускена в день"><i class="fa-solid fa-hammer"></i><span>Руны ×{{auskenRuneLimit}}</span></button>{{/if}}
+                  </div>
+                {{/if}}
+                {{#if canEsmiraBooks}}
+                  <div class="bh-phantom-actions">
+                    <button type="button" data-phantom-action="esmira-books" data-phantom="{{id}}" title="Взять один переносной комплект книг Эсмиры"><i class="fa-solid fa-books"></i><span>Книги Эсмиры</span></button>
+                  </div>
+                {{/if}}
+                <div class="bh-rank-list">
+                  {{#each rankRows}}
+                    <div class="bh-rank {{#if achieved}}is-achieved{{/if}} {{#if current}}is-current{{/if}}">
+                      <span class="bh-rank-number">{{rank}}</span>
+                      {{#if achieved}}<span class="bh-rank-heart {{tier}}">{{#if img}}<img src="{{img}}" alt="">{{/if}}</span>{{/if}}
+                      <p>{{#if bonus}}{{bonus}}{{else}}—{{/if}}</p>
+                    </div>
+                  {{/each}}
+                </div>
+              </article>
+            {{else}}
+              <p class="bh-empty">Фантомы Майсерин ещё не найдены.</p>
+            {{/each}}
+          </div>
+        </section>
+      </div>
+    </div>
+
+    {{else}}
+      {{#if showInventory}}
+      <div class="bh-inventory-view">
+        <section class="bh-inventory-drop">
+          <i class="fa-solid fa-hand-holding-heart"></i>
+          <div><strong>Инвентарь Бастардхолла</strong><span>Бросьте предмет в любую область листа. Возвращённые вещи нельзя забрать обратно.</span></div>
+        </section>
+        <div class="bh-inventory-layout">
+          <div class="bh-column">
+            <section class="bh-panel">
+              <h2><i class="fa-solid fa-heart-pulse"></i> Сердечники Душ</h2>
+              <div class="bh-hp-total"><span>Получено ОЗ</span><strong>+{{bonusHp}}</strong><small>к максимальным ОЗ персонажей игроков</small></div>
+              <div class="bh-heart-list">
+                {{#each hearts}}
+                  <div class="bh-heart-row"><div class="bh-heart-shape {{shape}}">{{#if img}}<img src="{{img}}" alt="">{{/if}}</div><span>Собрано {{label}}:</span><strong>{{count}}</strong><small>+{{hp}} ОЗ</small></div>
+                {{/each}}
+              </div>
+            </section>
+
+            <section class="bh-panel">
+              <h2><i class="fa-solid fa-gem"></i> Коллекции</h2>
+              <div class="bh-collection-list">{{#each collections}}<div><span>{{label}}</span><strong>{{count}}</strong></div>{{/each}}</div>
+            </section>
+
+            <section class="bh-panel bh-memento-panel">
+              <h2><i class="fa-solid fa-box-open"></i> Памятные вещи</h2>
+              <div class="bh-memento-list">
+                {{#each collectedMementos}}
+                  <article class="bh-memento is-collected"><i class="fa-solid fa-circle-check"></i><div><strong>{{name}}</strong><small>Найдено: {{foundArea}}. Разблокирует: {{area}}.</small>{{#if displayBonus}}<p>{{displayBonus}}</p>{{/if}}</div></article>
+                {{else}}
+                  <p class="bh-empty">Памятные вещи ещё не возвращены.</p>
+                {{/each}}
+              </div>
+            </section>
+          </div>
+
+          <section class="bh-panel bh-loot-panel">
+            <h2><i class="fa-solid fa-box-archive"></i> Возвращённые предметы</h2>
+            {{#if inventory.length}}
+              <div class="bh-loot-list">
+                {{#each inventory}}
+                  <button type="button" class="bh-loot-item" data-action="open-inventory-item" data-uuid="{{uuid}}" title="Открыть {{name}}">
+                    <img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>{{slug}}</small><em>{{category}}</em></span><b>×{{quantity}}</b>
+                  </button>
+                {{/each}}
+              </div>
+            {{else}}
+              <p class="bh-empty">Инвентарь пока пуст.</p>
+            {{/if}}
+          </section>
+        </div>
+      </div>
+      {{else}}
+      <div class="bh-config-view">
+        <form class="bh-config-form">
+          <section class="bh-panel bh-climate-config">
+            <h2><i class="fa-solid fa-clock"></i> Климат и карты</h2>
+            <p class="bh-note">Этап выбирается автоматически: начало кампании → найдены все 6 фантомов → возвращён предмет <code>jinniveres-riding-crop</code>.</p>
+            <div class="bh-climate-stage-settings">
+              <fieldset>
+                <legend>Береговая Линия</legend>
+                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.initial.sunrise" value="{{data.climate.stages.initial.sunrise}}"></label>
+                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.initial.sunset" value="{{data.climate.stages.initial.sunset}}"></label>
+                <label><span>Описание</span><textarea rows="5" name="climate.stages.initial.description">{{data.climate.stages.initial.description}}</textarea></label>
+              </fieldset>
+              <fieldset>
+                <legend>Замковые Территории</legend>
+                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.phantoms.sunrise" value="{{data.climate.stages.phantoms.sunrise}}"></label>
+                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.phantoms.sunset" value="{{data.climate.stages.phantoms.sunset}}"></label>
+                <label><span>Описание</span><textarea rows="5" name="climate.stages.phantoms.description">{{data.climate.stages.phantoms.description}}</textarea></label>
+              </fieldset>
+              <fieldset>
+                <legend>Подвал</legend>
+                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.jinnivere.sunrise" value="{{data.climate.stages.jinnivere.sunrise}}"></label>
+                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.jinnivere.sunset" value="{{data.climate.stages.jinnivere.sunset}}"></label>
+                <label><span>Описание</span><textarea rows="5" name="climate.stages.jinnivere.description">{{data.climate.stages.jinnivere.description}}</textarea></label>
+              </fieldset>
+            </div>
+            <div class="bh-document-drop" data-drop-kind="scene">
+              <i class="fa-solid fa-map"></i>
+              <div><strong>Сцены Бастардхолла</strong><span>Перетащите сюда сцену из навигации.</span></div>
+            </div>
+            <div class="bh-document-list">
+              {{#each sceneRefs}}
+                <div>{{#if img}}<img src="{{img}}" alt="">{{else}}<i class="fa-solid fa-map"></i>{{/if}}<span>{{name}}</span><button type="button" data-action="remove-scene" data-index="{{index}}" title="Удалить сцену"><i class="fa-solid fa-xmark"></i></button></div>
+              {{else}}
+                <p class="bh-empty">Сцены пока не добавлены.</p>
+              {{/each}}
+            </div>
+            <label class="bh-manual-field"><span>UUID сцен вручную</span><textarea name="climate.sceneRefs" rows="2" placeholder="UUID, ID или точное имя сцены; по одному на строку">{{data.climate.sceneRefs}}</textarea><small>На этих сценах ночью включается указанная темнота.</small></label>
+            <label><span>Исключённые NPC / фантомы</span><textarea name="climate.excludedNpcRefs" rows="3" placeholder="Actor UUID, ID или точное имя">{{data.climate.excludedNpcRefs}}</textarea></label>
+            <label class="bh-config-storm"><span><input type="checkbox" name="stormActive" {{#if data.climate.stormActive}}checked{{/if}}> Шторм активен</span><textarea rows="3" name="climate.storm.description" placeholder="Описание шторма для игроков">{{data.climate.storm.description}}</textarea></label>
+            <div class="bh-rule-grid">
+              <label><span>Темнота ночью</span><input type="number" min="0" max="1" step="0.05" name="climate.night.darkness" value="{{data.climate.night.darkness}}"></label>
+              <label><span>Темнота в шторм</span><input type="number" min="0" max="1" step="0.05" name="climate.storm.darkness" value="{{data.climate.storm.darkness}}" placeholder="не менять"></label>
+              <label class="bh-rule-drop" data-rule-path="climate.night.npcRules"><span>Ночь — Rule Elements для NPC <em>перетащите Effect</em></span><textarea class="code" name="climate.night.npcRules" rows="9">{{data.climate.night.npcRules}}</textarea></label>
+              <label class="bh-rule-drop" data-rule-path="climate.night.pcRules"><span>Ночь — Rule Elements для ПИ <em>перетащите Effect</em></span><textarea class="code" name="climate.night.pcRules" rows="9">{{data.climate.night.pcRules}}</textarea></label>
+              <label class="bh-rule-drop" data-rule-path="climate.storm.npcRules"><span>Шторм — Rule Elements для NPC <em>перетащите Effect</em></span><textarea class="code" name="climate.storm.npcRules" rows="7">{{data.climate.storm.npcRules}}</textarea></label>
+              <label class="bh-rule-drop" data-rule-path="climate.storm.pcRules"><span>Шторм — Rule Elements для ПИ <em>перетащите Effect</em></span><textarea class="code" name="climate.storm.pcRules" rows="7">{{data.climate.storm.pcRules}}</textarea></label>
+            </div>
+          </section>
+
+          <section class="bh-panel">
+            <h2><i class="fa-solid fa-heart-pulse"></i> Slug Сердечников Душ</h2>
+            <div class="bh-config-grid three">
+              {{#each hearts}}
+                <label><span>{{label}}</span><input type="text" name="soulhearts.slugs.{{key}}" value="{{lookup ../data.soulhearts.slugs key}}"></label>
+              {{/each}}
+            </div>
+          </section>
+
+          <section class="bh-panel">
+            <h2><i class="fa-solid fa-magnifying-glass-chart"></i> 18 тем изысканий</h2>
+            <div class="bh-config-research">
+              {{#each research}}
+                <label><b>{{displayIndex}}.</b><input type="text" name="research.{{index}}.name" value="{{name}}"><input type="number" min="-1" name="research.{{index}}.points" value="{{points}}"></label>
+              {{/each}}
+            </div>
+          </section>
+
+          <section class="bh-panel">
+            <h2><i class="fa-solid fa-ghost"></i> Фантомы и блага рангов</h2>
+            <div class="bh-config-phantoms">
+              {{#each phantoms}}
+                <article class="bh-phantom-drop" data-drop-kind="phantom" data-index="{{phantomIndex}}">
+                  <header><strong>{{name}}, {{role}}</strong><div class="bh-phantom-config-state"><label class="bh-found-toggle"><input type="hidden" name="phantoms.{{phantomIndex}}.found" value="false"><input type="checkbox" name="phantoms.{{phantomIndex}}.found" value="true" {{#if found}}checked{{/if}}><span>Найден</span></label><label>Ранг <input type="number" min="0" max="3" name="phantoms.{{phantomIndex}}.rank" value="{{rank}}"></label></div></header>
+                  <div class="bh-actor-link">
+                    {{#if linkedActorName}}
+                      {{#if linkedActorImg}}<img src="{{linkedActorImg}}" alt="">{{/if}}<span><b>{{linkedActorName}}</b><small>{{actorUuid}}</small></span><button type="button" data-action="clear-phantom-actor" data-index="{{phantomIndex}}" title="Отвязать актёра"><i class="fa-solid fa-xmark"></i></button>
+                    {{else}}
+                      <i class="fa-solid fa-ghost"></i><span><b>Перетащите сюда актёра-фантома</b><small>Фантом автоматически будет отмечен найденным.</small></span>
+                    {{/if}}
+                  </div>
+                  <label class="bh-manual-field"><span>Actor UUID вручную</span><input type="text" name="phantoms.{{phantomIndex}}.actorUuid" value="{{actorUuid}}"></label>
+                  {{#each rankRows}}<label><span>Ранг {{rank}}</span><textarea rows="2" name="phantoms.{{../phantomIndex}}.bonuses.{{rank}}">{{bonus}}</textarea></label>{{/each}}
+                </article>
+              {{/each}}
+            </div>
+          </section>
+
+          <section class="bh-panel">
+            <h2><i class="fa-solid fa-box-open"></i> Памятные вещи, зоны и стены</h2>
+            <p class="bh-note">В «Списке бордюров» указываются UUID стен вида <code>Scene.ID.Wall.ID</code>. После возврата вещи модуль отключит у них текстуру стены.</p>
+            <div class="bh-config-mementos">
+              {{#each mementos}}
+                <article>
+                  <header><b>{{displayIndex}}</b><input type="text" name="mementos.{{index}}.name" value="{{name}}" aria-label="Название"><span class="{{#if collected}}collected{{/if}}">{{#if collected}}Возвращена{{else}}Не найдена{{/if}}</span></header>
+                  <div class="bh-config-grid three">
+                    <label><span>Slug</span><input type="text" name="mementos.{{index}}.slug" value="{{slug}}"></label>
+                    <label><span>Где найдено</span><input type="text" name="mementos.{{index}}.foundArea" value="{{foundArea}}"></label>
+                    <label><span>Открывает зону</span><input type="text" name="mementos.{{index}}.area" value="{{area}}"></label>
+                  </div>
+                  <label><span>Постоянное благо</span><textarea rows="3" name="mementos.{{index}}.bonus">{{bonus}}</textarea></label>
+                  <label class="bh-rule-drop" data-rule-path="mementos.{{index}}.rules"><span>PF2e Rule Elements для ПИ <em>перетащите Effect</em></span><textarea class="code" rows="5" name="mementos.{{index}}.rules">{{rules}}</textarea></label>
+                  {{#if isMedallion}}
+                    <label class="bh-medallion-homebrew"><input type="hidden" name="homebrew.medallionUnarmed" value="false"><span><input type="checkbox" name="homebrew.medallionUnarmed" value="true" {{#if @root.data.homebrew.medallionUnarmed}}checked{{/if}}> Хоумбрю: дополнительный духовный урон действует и на безоружные атаки</span></label>
+                  {{/if}}
+                  <label><span>Список бордюров — зелёный туман</span><textarea rows="3" name="mementos.{{index}}.wallUuids">{{wallUuids}}</textarea></label>
+                </article>
+              {{/each}}
+            </div>
+          </section>
+
+          <button type="submit" class="bh-save"><i class="fa-solid fa-floppy-disk"></i> Сохранить настройки Бастардхолла</button>
+        </form>
+      </div>
+      {{/if}}
+    {{/if}}
+  </section>
+</div>

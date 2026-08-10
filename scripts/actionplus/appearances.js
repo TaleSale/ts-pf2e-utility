@@ -205,8 +205,11 @@ function injectSelector(app, html) {
     ? root.querySelector('.tab[data-tab="character"] .subsection.details .image-container')
     : root.querySelector(".sidebar .image-container");
   if (portrait && actor.type === "character") {
-    portrait.style.maxHeight = "none";
-    portrait.insertAdjacentHTML("beforeend", markup);
+    const column = document.createElement("div");
+    column.className = "ts-appearance-column";
+    portrait.before(column);
+    column.append(portrait);
+    column.insertAdjacentHTML("beforeend", markup);
   } else if (portrait) portrait.insertAdjacentHTML("afterend", markup);
   else return;
   root.querySelector(".ts-appearance-selector select")?.addEventListener("change", async (event) => {

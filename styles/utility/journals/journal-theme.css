@@ -249,6 +249,41 @@ form.ts-journal-sheet {
   -webkit-text-fill-color: black !important;
 }
 
+.ts-journal-sheet .journal-page-content .tsu-image-section-figure,
+.ts-journal-sheet .journal-entry-page .tsu-image-section-figure,
+.ts-journal-sheet .journal-page-content section > figure,
+.ts-journal-sheet .journal-entry-page section > figure {
+  position: relative;
+  margin: 0;
+}
+
+.ts-journal-sheet .journal-page-content .tsu-image-section-caption,
+.ts-journal-sheet .journal-entry-page .tsu-image-section-caption,
+.ts-journal-sheet .journal-page-content section > figure > figcaption,
+.ts-journal-sheet .journal-entry-page section > figure > figcaption {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  margin: -10px auto 0;
+  padding: 5px 10px;
+  overflow: hidden;
+  color: black;
+  font-family: Manuskript, Georgia, serif;
+  font-size: 0.9em;
+  font-weight: bold;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--tsj-insite-image) no-repeat center center;
+  background-size: cover;
+  border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+}
+
 
 .ts-journal-sheet .journal-entry-page .БлокСтат {
   clear: both;

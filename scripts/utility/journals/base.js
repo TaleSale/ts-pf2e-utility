@@ -17,7 +17,7 @@ function setThemeVariables(element, variables) {
 }
 
 function clearPreviousThemeClasses(root, activeClassName) {
-  for (const className of ["AoA", "CC", "HR", "SoG", "SDoS"]) {
+  for (const className of ["AoA", "BoB", "CC", "HR", "SoG", "SDoS"]) {
     if (className !== activeClassName) root.classList.remove(className);
   }
 }

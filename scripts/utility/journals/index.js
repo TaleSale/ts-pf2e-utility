@@ -2,6 +2,7 @@ import { MODULE_ID } from "../../core.js";
 import "./autoformat.js";
 import "./image-sections.js";
 import { AoAJournalSheet } from "./AoA.js";
+import { BoBJournalSheet } from "./BoB.js";
 import { CCJournalSheet } from "./CC.js";
 import { HRJournalSheet } from "./HR.js";
 import { SoGJournalSheet } from "./SoG.js";
@@ -11,6 +12,8 @@ const SETTING_DEFAULT_JOURNAL_STYLE = "defaultJournalStyle";
 const JOURNAL_STYLE_DEFAULT = "default";
 const AOA_STYLE_KEY = "aoa";
 const AOA_SHEET_ID = `${MODULE_ID}.AoAJournalSheet`;
+const JOURNAL_STYLE_BOB = "bob";
+const BOB_SHEET_ID = `${MODULE_ID}.BoBJournalSheet`;
 const JOURNAL_STYLE_CC = "cc";
 const CC_SHEET_ID = `${MODULE_ID}.CCJournalSheet`;
 const CORE_DEFAULT_JOURNAL_SHEET_ID = "core.JournalEntrySheet";
@@ -42,6 +45,7 @@ function getJournalStyleChoices() {
   return {
     [JOURNAL_STYLE_DEFAULT]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.Default"),
     [AOA_STYLE_KEY]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.AoA"),
+    [JOURNAL_STYLE_BOB]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.BoB"),
     [JOURNAL_STYLE_CC]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.CC"),
     [JOURNAL_STYLE_HR]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.HR"),
     [JOURNAL_STYLE_SOG]: game.i18n.localize("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.SoG"),
@@ -53,6 +57,8 @@ function getSheetIdForJournalStyle(style) {
   switch (style) {
     case AOA_STYLE_KEY:
       return AOA_SHEET_ID;
+    case JOURNAL_STYLE_BOB:
+      return BOB_SHEET_ID;
     case JOURNAL_STYLE_CC:
       return CC_SHEET_ID;
     case JOURNAL_STYLE_HR:
@@ -73,6 +79,7 @@ function getCurrentCoreJournalSheetId() {
 function getJournalStyleFromCoreSetting() {
   const currentSheetId = getCurrentCoreJournalSheetId();
   if (currentSheetId === AOA_SHEET_ID) return AOA_STYLE_KEY;
+  if (currentSheetId === BOB_SHEET_ID) return JOURNAL_STYLE_BOB;
   if (currentSheetId === CC_SHEET_ID) return JOURNAL_STYLE_CC;
   if (currentSheetId === HR_SHEET_ID) return JOURNAL_STYLE_HR;
   if (currentSheetId === SOG_SHEET_ID) return JOURNAL_STYLE_SOG;
@@ -118,6 +125,17 @@ function registerJournalSheets() {
     AoAJournalSheet,
     {
       label: localizeSheetLabel("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.AoA"),
+      canBeDefault: true,
+      canConfigure: true,
+      themes: DEFAULT_SHEET_THEMES,
+    },
+  );
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(
+    getDocumentClass("JournalEntry"),
+    MODULE_ID,
+    BoBJournalSheet,
+    {
+      label: localizeSheetLabel("TS_PF2E_UTILITY.Settings.Journals.DefaultStyle.Choices.BoB"),
       canBeDefault: true,
       canConfigure: true,
       themes: DEFAULT_SHEET_THEMES,

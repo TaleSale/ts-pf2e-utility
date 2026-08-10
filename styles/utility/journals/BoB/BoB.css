@@ -1,0 +1,28 @@
+.BoB {
+  --content-link-background: rgb(218 214 190 / 92%);
+  --content-link-border-color: rgb(184 140 41 / 70%);
+  --content-link-icon-color: rgb(23 107 104);
+  --content-link-text-color: rgb(15 86 84);
+  --tsj-header-image: url("/modules/ts-pf2e-utility/layout/BoB/back2.png");
+  --tsj-title-image: url("/modules/ts-pf2e-utility/layout/BoB/back2.png");
+  --tsj-insite-image: url("/modules/ts-pf2e-utility/layout/BoB/back1.jpg");
+  --tsj-sidebar-image: url("/modules/ts-pf2e-utility/layout/BoB/back.png");
+}
+
+.BoB .journal-sidebar {
+  background: none !important;
+  isolation: isolate;
+}
+
+.BoB .journal-sidebar::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -15px;
+  bottom: 0;
+  left: -16px;
+  background: var(--tsj-sidebar-image) no-repeat center center;
+  background-size: 100% 100%;
+  pointer-events: none;
+  z-index: -1;
+}
