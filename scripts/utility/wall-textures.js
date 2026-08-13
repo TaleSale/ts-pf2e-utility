@@ -1,4 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260813-bastion-grass2";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
@@ -12,6 +13,12 @@ const WALL_TEXTURE_STYLE_ALIASES = Object.freeze({
   "grey-brick": DEFAULT_STYLE,
 });
 const WALL_TEXTURE_CONTAINER = "tsu-wall-textures";
+const BORDER_TEXTURE_CONTAINER = "tsu-border-textures";
+const DOOR_SWING_INDICATOR_CONTAINER = "tsu-door-swing-indicators";
+const DOOR_SWING_INDICATOR_COLOR = 0xffffff;
+const DOOR_SWING_INDICATOR_ALPHA = 0.2;
+const DOOR_SWING_INDICATOR_OUTLINE_ALPHA = 0.75;
+const DOOR_SWING_INDICATOR_LENGTH_RATIO = 0.4;
 const TEXTURE_ASSET_BASE = `modules/${MODULE_ID}/images/scene-walls`;
 const SOURCE_TEXTURE_SIZE = 200;
 const SOURCE_WALL_WIDTH = 60;
@@ -49,11 +56,11 @@ const WALL_TEXTURE_STYLES = Object.freeze({
     labelKey: `${I18N_ROOT}.Choices.BrickGreyDense`,
     fallback: "Brick - Dense grey",
     assets: Object.freeze({
-      straight: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
-      straightLong: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
-      diag: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
-      corner: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
-      joint: `${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`,
+      get straight() { return resolvePresetTexture(`${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`); },
+      get straightLong() { return resolvePresetTexture(`${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`); },
+      get diag() { return resolvePresetTexture(`${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`); },
+      get corner() { return resolvePresetTexture(`${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`); },
+      get joint() { return resolvePresetTexture(`${TEXTURE_ASSET_BASE}/brick-grey-dense.webp`); },
     }),
     ribbonBounds: DEFAULT_RIBBON_BOUNDS,
   },
@@ -64,6 +71,9 @@ const WALL_TEXTURE_STYLES = Object.freeze({
   "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png", 78, 122),
   "border-wood-stone": createWallTextureStyle("BorderWoodStone", "Border - Wood and stone", "border-wood-stone-v2.webp", 80, 120, I18N_ROOT, { borderOnly: true, widthRatio: 0.12 }),
   "border-green-fog": createWallTextureStyle("BorderGreenFog", "Border - Green fog", "border-green-fog.webp", 71, 129, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, smooth: true }),
+  "border-curtain-red": createWallTextureStyle("BorderCurtainRed", "Curtain - dark red", "border-curtain-red.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
+  "border-curtain-blue": createWallTextureStyle("BorderCurtainBlue", "Curtain - muted blue", "border-curtain-blue.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
+  "border-curtain-gold": createWallTextureStyle("BorderCurtainGold", "Curtain - ochre", "border-curtain-gold.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
   "hedge-maze": createWallTextureStyle("HedgeMaze", "Maze hedge", "hedge-maze.webp", 72, 128),
   "cliff-coastal": createWallTextureStyle("CliffCoastal", "Uneven coastal cliff", "cliff-coastal-stone-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.14, periodScale: 1.5, smooth: true, textureSize: 200 }),
   "cliff-limestone": createWallTextureStyle("CliffLimestone", "Limestone coast cliff", "cliff-limestone.webp", 78, 122, I18N_ROOT, { borderOnly: true, widthRatio: 0.06, smooth: true }),
@@ -83,13 +93,20 @@ function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBott
   return Object.freeze({
     labelKey: `${i18nRoot}.Choices.${label}`,
     fallback,
-    assets: Object.freeze({ straight: asset, straightLong: asset, diag: asset, corner: asset, joint: asset }),
+    assets: Object.freeze({
+      get straight() { return resolvePresetTexture(asset); },
+      get straightLong() { return resolvePresetTexture(asset); },
+      get diag() { return resolvePresetTexture(asset); },
+      get corner() { return resolvePresetTexture(asset); },
+      get joint() { return resolvePresetTexture(asset); },
+    }),
     ribbonBounds: Object.freeze({ top: ribbonTop, bottom: ribbonBottom }),
     ...options,
   });
 }
 
 let redrawTimeout = null;
+let doorSwingIndicatorRedrawTimeout = null;
 const propagatingWalls = new Set();
 
 Hooks.once("init", () => {
@@ -111,6 +128,11 @@ Hooks.once("init", () => {
     default: true,
     type: Boolean,
   });
+});
+
+Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, () => {
+  scheduleWallTextureRedraw();
+  ui.controls?.render?.({ reset: true });
 });
 
 function getElement(root) {
@@ -171,44 +193,37 @@ function isWindowWall(wall) {
 }
 
 function supportsWallTexture(wall) {
-  const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
-  const secretDoor = globalThis.CONST?.WALL_DOOR_TYPES?.SECRET ?? 2;
-  const doorType = Number(wall?.door ?? noDoor);
-  return doorType === noDoor || doorType === secretDoor || isWindowWall(wall);
+  return Boolean(wall);
 }
 
-function getStyleDefinitions(wall) {
+function getStyleDefinitions(wall, mode = getTextureMode(wall)) {
   if (isWindowWall(wall)) return WINDOW_TEXTURE_STYLES;
-  const borderMode = isBorderEligibleWall(wall);
-  return Object.fromEntries(Object.entries(WALL_TEXTURE_STYLES).filter(([, style]) => Boolean(style.borderOnly) === borderMode));
+  const borderMode = mode === "border";
+  return Object.fromEntries(Object.entries(WALL_TEXTURE_STYLES)
+    .filter(([, style]) => Boolean(style.borderOnly) === borderMode));
 }
 
-function isBorderEligibleWall(wall) {
-  if (!wall) return false;
-  const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
-  const noRestriction = globalThis.CONST?.WALL_SENSE_TYPES?.NONE ?? 0;
-  return Number(wall?.door ?? noDoor) === noDoor
-    && ["move", "sight", "light", "sound"].every((key) => Number(wall?.[key] ?? noRestriction) === noRestriction);
-}
-
-function getDefaultStyle(wall) {
+function getDefaultStyle(wall, mode = getTextureMode(wall)) {
   if (isWindowWall(wall)) return DEFAULT_WINDOW_STYLE;
-  return isBorderEligibleWall(wall) ? DEFAULT_BORDER_STYLE : DEFAULT_STYLE;
+  return mode === "border" ? DEFAULT_BORDER_STYLE : DEFAULT_STYLE;
 }
 
 function getTextureMode(wall) {
   if (isWindowWall(wall)) return "window";
-  return isBorderEligibleWall(wall) ? "border" : "wall";
+  const flags = getFlagData(wall);
+  if (flags.mode === "wall" || flags.mode === "border") return flags.mode;
+  const legacyStyle = WALL_TEXTURE_STYLES[WALL_TEXTURE_STYLE_ALIASES[flags.style] ?? flags.style];
+  return legacyStyle?.borderOnly ? "border" : "wall";
 }
 
-function getStyleDefinition(style, wall = null) {
-  const styles = getStyleDefinitions(wall);
-  return styles[normalizeStyleKey(style, wall)] ?? styles[getDefaultStyle(wall)];
+function getStyleDefinition(style, wall = null, mode = getTextureMode(wall)) {
+  const styles = getStyleDefinitions(wall, mode);
+  return styles[normalizeStyleKey(style, wall, mode)] ?? styles[getDefaultStyle(wall, mode)];
 }
 
-function normalizeStyleKey(style, wall = null) {
+function normalizeStyleKey(style, wall = null, mode = getTextureMode(wall)) {
   const normalized = WALL_TEXTURE_STYLE_ALIASES[style] ?? style;
-  return getStyleDefinitions(wall)[normalized] ? normalized : getDefaultStyle(wall);
+  return getStyleDefinitions(wall, mode)[normalized] ? normalized : getDefaultStyle(wall, mode);
 }
 
 function getWallCoords(wall) {
@@ -445,10 +460,7 @@ function centerDisplayObject(displayObject, width, height) {
 function createWallTextureFieldset(wall) {
   const flags = getFlagData(wall);
   const enabled = isEnabled(flags.enabled);
-  const selectedStyle = normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
   const windowWall = isWindowWall(wall);
-  const borderWall = isBorderEligibleWall(wall);
-  const styles = getStyleDefinitions(wall);
   const closedLeft = isEnabled(flags.closedLeft);
   const closedRight = isEnabled(flags.closedRight);
   const flipped = isEnabled(flags.flipX);
@@ -460,83 +472,7 @@ function createWallTextureFieldset(wall) {
   const legend = document.createElement("legend");
   legend.textContent = windowWall
     ? t("Settings.WindowTextures.Fieldset", "Window texture")
-    : borderWall
-      ? t(`${I18N_ROOT}.BorderFieldset`, "Border texture")
-      : t(`${I18N_ROOT}.Fieldset`, "Wall texture");
-
-  const enabledGroup = document.createElement("div");
-  enabledGroup.className = "form-group";
-
-  const enabledLabel = document.createElement("label");
-  enabledLabel.textContent = windowWall
-    ? t("Settings.WindowTextures.EnableLabel", "Window texture")
-    : borderWall
-      ? t(`${I18N_ROOT}.BorderEnableLabel`, "Border texture")
-      : t(`${I18N_ROOT}.EnableLabel`, "Wall texture");
-
-  const enabledFields = document.createElement("div");
-  enabledFields.className = "form-fields";
-
-  const enabledInput = document.createElement("input");
-  enabledInput.type = "checkbox";
-  enabledInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.enabled`;
-  enabledInput.checked = enabled;
-
-  enabledFields.append(enabledInput);
-  enabledGroup.append(enabledLabel, enabledFields);
-
-  const styleGroup = document.createElement("div");
-  styleGroup.className = "form-group tsu-wall-texture-style";
-
-  const styleLabel = document.createElement("label");
-  styleLabel.textContent = windowWall
-    ? t("Settings.WindowTextures.StyleLabel", "Window style")
-    : borderWall
-      ? t(`${I18N_ROOT}.BorderStyleLabel`, "Border style")
-      : t(`${I18N_ROOT}.StyleLabel`, "Wall style");
-
-  const styleFields = document.createElement("div");
-  styleFields.className = "form-fields";
-
-  const styleSelect = document.createElement("select");
-  styleSelect.name = `flags.${MODULE_ID}.${FLAG_ROOT}.style`;
-  styleSelect.className = "tsu-wall-texture-native-select";
-
-  const stylePicker = document.createElement("div");
-  stylePicker.className = "tsu-wall-texture-picker";
-
-  for (const [value, definition] of Object.entries(styles)) {
-    const label = t(definition.labelKey, definition.fallback);
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    option.selected = value === selectedStyle;
-    styleSelect.append(option);
-
-    const choice = document.createElement("button");
-    choice.type = "button";
-    choice.className = "tsu-wall-texture-choice";
-    choice.dataset.style = value;
-    choice.title = label;
-    choice.classList.toggle("selected", value === selectedStyle);
-    const preview = document.createElement("img");
-    preview.src = definition.assets.straightLong;
-    preview.alt = "";
-    const caption = document.createElement("span");
-    caption.textContent = label;
-    choice.append(preview, caption);
-    choice.addEventListener("click", () => {
-      styleSelect.value = value;
-      styleSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      stylePicker.querySelectorAll("[data-style]").forEach((item) => {
-        item.classList.toggle("selected", item.dataset.style === value);
-      });
-    });
-    stylePicker.append(choice);
-  }
-
-  styleFields.append(styleSelect, stylePicker);
-  styleGroup.append(styleLabel, styleFields);
+    : t(`${I18N_ROOT}.ModeFieldset`, "Wall and border textures");
 
   const createEdgeGroup = (flag, labelKey, fallback, checked) => {
     const group = document.createElement("div");
@@ -563,21 +499,168 @@ function createWallTextureFieldset(wall) {
   hint.className = "hint";
   hint.textContent = windowWall
     ? t("Settings.WindowTextures.FieldHint", "Draws the selected texture along this window segment.")
-    : borderWall
-      ? t(`${I18N_ROOT}.BorderFieldHint`, "Draws the selected border texture along this unrestricted segment.")
-      : t(`${I18N_ROOT}.FieldHint`, "Draws the selected texture along this wall segment.");
+    : t(`${I18N_ROOT}.ModeFieldHint`, "Choose either a border texture or a wall texture. Wall restrictions are not changed.");
 
-  const updateStyleVisibility = () => {
-    styleGroup.hidden = !enabledInput.checked;
-    closedRightGroup.hidden = !enabledInput.checked;
-    closedLeftGroup.hidden = !enabledInput.checked;
-    flipGroup.hidden = !enabledInput.checked;
-    flipVerticalGroup.hidden = !enabledInput.checked;
+  const createStylePicker = (styles, selectedStyle, onSelect) => {
+    const picker = document.createElement("div");
+    picker.className = "tsu-wall-texture-picker";
+    for (const [value, definition] of Object.entries(styles)) {
+      const label = t(definition.labelKey, definition.fallback);
+      const choice = document.createElement("button");
+      choice.type = "button";
+      choice.className = "tsu-wall-texture-choice";
+      choice.dataset.style = value;
+      choice.title = label;
+      choice.classList.toggle("selected", value === selectedStyle);
+      const preview = document.createElement("img");
+      preview.src = definition.assets.straightLong;
+      preview.alt = "";
+      const caption = document.createElement("span");
+      caption.textContent = label;
+      choice.append(preview, caption);
+      choice.addEventListener("click", () => {
+        picker.querySelectorAll("[data-style]").forEach((item) => {
+          item.classList.toggle("selected", item.dataset.style === value);
+        });
+        onSelect(value);
+      });
+      picker.append(choice);
+    }
+    return picker;
   };
-  enabledInput.addEventListener("change", updateStyleVisibility);
-  updateStyleVisibility();
 
-  fieldset.append(legend, enabledGroup, styleGroup, flipGroup, flipVerticalGroup, closedRightGroup, closedLeftGroup, hint);
+  if (windowWall) {
+    const selectedStyle = normalizeStyleKey(flags.style || DEFAULT_WINDOW_STYLE, wall, "window");
+    const enabledGroup = document.createElement("div");
+    enabledGroup.className = "form-group";
+    const enabledLabel = document.createElement("label");
+    enabledLabel.textContent = t("Settings.WindowTextures.EnableLabel", "Window texture");
+    const enabledFields = document.createElement("div");
+    enabledFields.className = "form-fields";
+    const enabledInput = document.createElement("input");
+    enabledInput.type = "checkbox";
+    enabledInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.enabled`;
+    enabledInput.checked = enabled;
+    enabledFields.append(enabledInput);
+    enabledGroup.append(enabledLabel, enabledFields);
+
+    const styleInput = document.createElement("input");
+    styleInput.type = "hidden";
+    styleInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.style`;
+    styleInput.value = selectedStyle;
+    const styleGroup = document.createElement("div");
+    styleGroup.className = "form-group tsu-wall-texture-style";
+    const styleLabel = document.createElement("label");
+    styleLabel.textContent = t("Settings.WindowTextures.StyleLabel", "Window style");
+    const styleFields = document.createElement("div");
+    styleFields.className = "form-fields";
+    styleFields.append(createStylePicker(getStyleDefinitions(wall, "window"), selectedStyle, (value) => {
+      styleInput.value = value;
+    }));
+    styleGroup.append(styleLabel, styleFields);
+
+    const updateVisibility = () => {
+      styleGroup.hidden = !enabledInput.checked;
+      closedRightGroup.hidden = !enabledInput.checked;
+      closedLeftGroup.hidden = !enabledInput.checked;
+      flipGroup.hidden = !enabledInput.checked;
+      flipVerticalGroup.hidden = !enabledInput.checked;
+    };
+    enabledInput.addEventListener("change", updateVisibility);
+    updateVisibility();
+    fieldset.append(legend, enabledGroup, styleInput, styleGroup, flipGroup, flipVerticalGroup, closedRightGroup, closedLeftGroup, hint);
+    return fieldset;
+  }
+
+  let activeMode = getTextureMode(wall);
+  const rawStyle = WALL_TEXTURE_STYLE_ALIASES[flags.style] ?? flags.style;
+  const selectedStyles = {
+    wall: normalizeStyleKey(activeMode === "wall" ? rawStyle : DEFAULT_STYLE, wall, "wall"),
+    border: normalizeStyleKey(activeMode === "border" ? rawStyle : DEFAULT_BORDER_STYLE, wall, "border"),
+  };
+  const enabledInput = document.createElement("input");
+  enabledInput.type = "hidden";
+  enabledInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.enabled`;
+  enabledInput.dataset.dtype = "Boolean";
+  enabledInput.value = enabled ? "true" : "false";
+  const modeInput = document.createElement("input");
+  modeInput.type = "hidden";
+  modeInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.mode`;
+  modeInput.value = activeMode;
+  const styleInput = document.createElement("input");
+  styleInput.type = "hidden";
+  styleInput.name = `flags.${MODULE_ID}.${FLAG_ROOT}.style`;
+  styleInput.value = selectedStyles[activeMode];
+
+  const modeControls = {};
+  const setMode = (mode, checked = true) => {
+    if (checked) {
+      activeMode = mode;
+      enabledInput.value = "true";
+      modeInput.value = mode;
+      styleInput.value = selectedStyles[mode];
+    } else if (activeMode === mode) {
+      enabledInput.value = "false";
+    }
+    for (const [key, control] of Object.entries(modeControls)) {
+      control.checkbox.checked = enabledInput.value === "true" && key === activeMode;
+      control.styleGroup.hidden = !control.checkbox.checked;
+    }
+    const textureEnabled = enabledInput.value === "true";
+    closedRightGroup.hidden = !textureEnabled;
+    closedLeftGroup.hidden = !textureEnabled;
+    flipGroup.hidden = !textureEnabled;
+    flipVerticalGroup.hidden = !textureEnabled;
+  };
+
+  const createModeControls = (mode, labelKey, fallback) => {
+    const group = document.createElement("div");
+    group.className = "form-group tsu-wall-texture-mode";
+    const label = document.createElement("label");
+    label.textContent = t(`${I18N_ROOT}.${labelKey}`, fallback);
+    const fields = document.createElement("div");
+    fields.className = "form-fields";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = enabled && activeMode === mode;
+    checkbox.addEventListener("change", () => setMode(mode, checkbox.checked));
+    fields.append(checkbox);
+    group.append(label, fields);
+
+    const styleGroup = document.createElement("div");
+    styleGroup.className = "form-group tsu-wall-texture-style tsu-wall-texture-mode-styles";
+    const styleLabel = document.createElement("label");
+    styleLabel.textContent = mode === "border"
+      ? t(`${I18N_ROOT}.BorderStyleLabel`, "Border style")
+      : t(`${I18N_ROOT}.StyleLabel`, "Wall style");
+    const styleFields = document.createElement("div");
+    styleFields.className = "form-fields";
+    styleFields.append(createStylePicker(getStyleDefinitions(wall, mode), selectedStyles[mode], (value) => {
+      selectedStyles[mode] = value;
+      setMode(mode, true);
+    }));
+    styleGroup.append(styleLabel, styleFields);
+    modeControls[mode] = { checkbox, styleGroup };
+    return [group, styleGroup];
+  };
+
+  const wallControls = createModeControls("wall", "WallModeLabel", "Wall texture");
+  const borderControls = createModeControls("border", "BorderModeLabel", "Border texture");
+  setMode(activeMode, enabled);
+
+  fieldset.append(
+    legend,
+    enabledInput,
+    modeInput,
+    styleInput,
+    ...wallControls,
+    ...borderControls,
+    flipGroup,
+    flipVerticalGroup,
+    closedRightGroup,
+    closedLeftGroup,
+    hint,
+  );
   return fieldset;
 }
 
@@ -734,10 +817,11 @@ Hooks.on("renderWallConfig", async (app, element) => {
 function findConnectedWallTextureFlags(sourceWall) {
   const coords = getWallCoords(sourceWall);
   if (!coords) return null;
+  const sourceIsWindow = isWindowWall(sourceWall);
   const walls = canvas?.scene?.walls ?? [];
   for (const wall of walls) {
     if (!supportsWallTexture(wall)) continue;
-    if (getTextureMode(wall) !== getTextureMode(sourceWall)) continue;
+    if (isWindowWall(wall) !== sourceIsWindow) continue;
     const flags = getFlagData(wall);
     if (!isEnabled(flags.enabled)) continue;
 
@@ -771,9 +855,11 @@ function hasTextureFlags(wall) {
 
 function getPropagatedTextureFlags(wall) {
   const flags = getFlagData(wall);
+  const mode = getTextureMode(wall);
   return {
     enabled: isEnabled(flags.enabled),
-    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall),
+    mode,
+    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall, mode), wall, mode),
     flipX: isEnabled(flags.flipX),
     flipY: isEnabled(flags.flipY),
   };
@@ -823,13 +909,17 @@ Hooks.on("preCreateWall", (wall, data) => {
 
   const connectedFlags = findConnectedWallTextureFlags(data);
   if (!connectedFlags) return;
+  const mode = connectedFlags.mode === "border" || WALL_TEXTURE_STYLES[connectedFlags.style]?.borderOnly
+    ? "border"
+    : "wall";
 
   wall.updateSource({
     flags: {
       [MODULE_ID]: {
         [FLAG_ROOT]: {
           enabled: isEnabled(connectedFlags.enabled),
-          style: normalizeStyleKey(connectedFlags.style || getDefaultStyle(data), data),
+          mode,
+          style: normalizeStyleKey(connectedFlags.style || getDefaultStyle(data, mode), data, mode),
           flipX: isEnabled(connectedFlags.flipX),
           flipY: isEnabled(connectedFlags.flipY),
         },
@@ -838,14 +928,15 @@ Hooks.on("preCreateWall", (wall, data) => {
   });
 });
 
-function getTextureContainer() {
+function getTextureContainer(border = false) {
   const parent = canvas?.primary ?? canvas?.stage;
   if (!parent) return null;
+  const name = border ? BORDER_TEXTURE_CONTAINER : WALL_TEXTURE_CONTAINER;
 
-  let container = parent.children?.find((child) => child?.name === WALL_TEXTURE_CONTAINER);
+  let container = parent.children?.find((child) => child?.name === name);
   if (!container) {
     container = new PIXI.Container();
-    container.name = WALL_TEXTURE_CONTAINER;
+    container.name = name;
     container.eventMode = "none";
     container.interactive = false;
     parent.sortableChildren = true;
@@ -854,22 +945,147 @@ function getTextureContainer() {
   if (parent === canvas?.primary) {
     const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
     // PrimaryCanvasGroup compares elevation and sortLayer before zIndex.
-    // Keep textured walls above every native Tile asset, but below Drawings and Tokens.
+    // Decorative borders sit below forest canopies; blocking walls sit above them.
     container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
-    container.sortLayer = Number(sortLayers.TILES ?? 500) + 1;
+    container.sortLayer = Number(sortLayers.TILES ?? 500) + (border ? 1 : 3);
     container.sort = 0;
     container.zIndex = 0;
     parent.sortDirty = true;
   } else {
-    container.zIndex = 10000;
+    container.zIndex = border ? 10000 : 10002;
   }
   return container;
 }
 
 function clearWallTextureContainer() {
   const parent = canvas?.primary ?? canvas?.stage;
-  const container = parent?.children?.find((child) => child?.name === WALL_TEXTURE_CONTAINER);
-  if (container) container.destroy({ children: true });
+  for (const name of [WALL_TEXTURE_CONTAINER, BORDER_TEXTURE_CONTAINER]) {
+    const container = parent?.children?.find((child) => child?.name === name);
+    if (container) container.destroy({ children: true });
+  }
+}
+
+function getDoorSwingIndicatorContainer() {
+  const layer = canvas?.walls;
+  if (!layer?.objects || layer.destroyed) return null;
+
+  let container = layer.children?.find((child) => child?.name === DOOR_SWING_INDICATOR_CONTAINER);
+  if (!container) {
+    container = new PIXI.Container();
+    container.name = DOOR_SWING_INDICATOR_CONTAINER;
+    container.eventMode = "none";
+    container.interactive = false;
+
+    // Keep the indicators behind Foundry's wall lines, endpoints, and door controls.
+    const wallObjectsIndex = layer.getChildIndex?.(layer.objects) ?? -1;
+    if ((wallObjectsIndex >= 0) && (typeof layer.addChildAt === "function")) {
+      layer.addChildAt(container, wallObjectsIndex);
+    } else {
+      layer.addChild(container);
+    }
+  }
+  return container;
+}
+
+function clearDoorSwingIndicatorContainer() {
+  doorSwingIndicatorRedrawTimeout = null;
+  const layer = canvas?.walls;
+  const container = layer?.children?.find((child) => child?.name === DOOR_SWING_INDICATOR_CONTAINER);
+  if (container && !container.destroyed) container.destroy({ children: true });
+}
+
+function isSwingDoor(wall) {
+  const noDoor = globalThis.CONST?.WALL_DOOR_TYPES?.NONE ?? 0;
+  return Number(wall?.door ?? noDoor) > noDoor && wall?.animation?.type === "swing";
+}
+
+function rotateVector(x, y, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: x * cos - y * sin,
+    y: x * sin + y * cos,
+  };
+}
+
+function getDoorSwingTriangles(wall) {
+  const coords = getWallCoords(wall);
+  if (!coords || !isSwingDoor(wall)) return [];
+
+  const direction = Number(wall.animation?.direction) === -1 ? -1 : 1;
+  const configuredStrength = Number(wall.animation?.strength ?? 1);
+  const strength = Number.isFinite(configuredStrength) ? Math.max(0, Math.min(2, configuredStrength)) : 1;
+  const angle = Math.PI * direction * strength / 2;
+  if (Math.abs(angle) < 0.001) return [];
+
+  const start = { x: coords.x1, y: coords.y1 };
+  const end = { x: coords.x2, y: coords.y2 };
+  const midpoint = { x: (coords.x1 + coords.x2) / 2, y: (coords.y1 + coords.y2) / 2 };
+  const leaves = wall.animation?.double
+    ? [
+      { hinge: start, closed: midpoint, angle },
+      { hinge: end, closed: midpoint, angle: -angle },
+    ]
+    : [{ hinge: start, closed: end, angle }];
+
+  return leaves.map(({ hinge, closed, angle: leafAngle }) => {
+    const closedVector = {
+      x: (closed.x - hinge.x) * DOOR_SWING_INDICATOR_LENGTH_RATIO,
+      y: (closed.y - hinge.y) * DOOR_SWING_INDICATOR_LENGTH_RATIO,
+    };
+    const openVector = rotateVector(closedVector.x, closedVector.y, leafAngle);
+    return [
+      hinge.x, hinge.y,
+      hinge.x + closedVector.x, hinge.y + closedVector.y,
+      hinge.x + openVector.x, hinge.y + openVector.y,
+    ];
+  });
+}
+
+function drawDoorSwingTriangle(graphics, points) {
+  const lineWidth = Math.max(2, Number(canvas?.dimensions?.uiScale ?? 1) * 2);
+  if (typeof graphics.poly === "function" && typeof graphics.fill === "function") {
+    graphics.poly(points).fill({ color: DOOR_SWING_INDICATOR_COLOR, alpha: DOOR_SWING_INDICATOR_ALPHA });
+    graphics.poly(points).stroke({
+      color: DOOR_SWING_INDICATOR_COLOR,
+      alpha: DOOR_SWING_INDICATOR_OUTLINE_ALPHA,
+      width: lineWidth,
+      join: "round",
+    });
+    return;
+  }
+
+  graphics.lineStyle(lineWidth, DOOR_SWING_INDICATOR_COLOR, DOOR_SWING_INDICATOR_OUTLINE_ALPHA);
+  graphics.beginFill(DOOR_SWING_INDICATOR_COLOR, DOOR_SWING_INDICATOR_ALPHA);
+  graphics.drawPolygon(points);
+  graphics.endFill();
+}
+
+function redrawDoorSwingIndicators() {
+  doorSwingIndicatorRedrawTimeout = null;
+  const container = getDoorSwingIndicatorContainer();
+  if (!container) return;
+
+  container.removeChildren().forEach((child) => child.destroy());
+  container.visible = Boolean(canvas?.walls?.active);
+  if (!container.visible) return;
+
+  for (const placeable of canvas.walls?.placeables ?? []) {
+    const wall = placeable.document;
+    for (const points of getDoorSwingTriangles(wall)) {
+      const graphics = new PIXI.Graphics();
+      graphics.name = `${DOOR_SWING_INDICATOR_CONTAINER}-${wall.id}`;
+      graphics.eventMode = "none";
+      graphics.interactive = false;
+      drawDoorSwingTriangle(graphics, points);
+      container.addChild(graphics);
+    }
+  }
+}
+
+function scheduleDoorSwingIndicatorRedraw() {
+  if (doorSwingIndicatorRedrawTimeout) window.clearTimeout(doorSwingIndicatorRedrawTimeout);
+  doorSwingIndicatorRedrawTimeout = window.setTimeout(redrawDoorSwingIndicators, 50);
 }
 
 function getWallEndpointDirection(wall, isStart) {
@@ -1415,10 +1631,12 @@ function redrawWallTextures() {
     return;
   }
 
-  const container = getTextureContainer();
-  if (!container) return;
+  const wallContainer = getTextureContainer(false);
+  const borderContainer = getTextureContainer(true);
+  if (!wallContainer || !borderContainer) return;
 
-  container.removeChildren().forEach((child) => child.destroy());
+  wallContainer.removeChildren().forEach((child) => child.destroy());
+  borderContainer.removeChildren().forEach((child) => child.destroy());
   const texturedWalls = getTexturedWalls();
   const windows = texturedWalls.filter(isWindowWall);
   const walls = texturedWalls.filter((wall) => !isWindowWall(wall));
@@ -1428,22 +1646,26 @@ function redrawWallTextures() {
   for (const chain of chains) {
     const style = getStyleDefinition(chain.styleKey, chain.wall);
     const mesh = createWallRibbonMesh(style, chain.points, getFlagData(chain.wall));
-    if (mesh) container.addChild(mesh);
+    if (mesh) (style.borderOnly ? borderContainer : wallContainer).addChild(mesh);
   }
 
   for (const wall of windows) {
     const sprite = createWindowSprite(wall);
-    if (sprite) container.addChild(sprite);
+    if (sprite) wallContainer.addChild(sprite);
   }
 }
 
 function scheduleWallTextureRedraw() {
   if (redrawTimeout) window.clearTimeout(redrawTimeout);
   redrawTimeout = window.setTimeout(redrawWallTextures, 50);
+  scheduleDoorSwingIndicatorRedraw();
 }
 
 Hooks.on("canvasReady", scheduleWallTextureRedraw);
-Hooks.on("canvasTearDown", clearWallTextureContainer);
+Hooks.on("canvasTearDown", () => {
+  clearDoorSwingIndicatorContainer();
+  clearWallTextureContainer();
+});
 Hooks.on("createWall", scheduleWallTextureRedraw);
 Hooks.on("updateWall", (wall, change) => {
   if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${FLAG_ROOT}`)) {
@@ -1455,3 +1677,5 @@ Hooks.on("deleteWall", scheduleWallTextureRedraw);
 Hooks.on("updateScene", (_scene, change) => {
   if (change.walls || change.grid || change.dimensions) scheduleWallTextureRedraw();
 });
+Hooks.on("activateCanvasLayer", scheduleDoorSwingIndicatorRedraw);
+Hooks.on("deactivateWallsLayer", scheduleDoorSwingIndicatorRedraw);

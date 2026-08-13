@@ -1,9 +1,16 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
+import {
+  BASTION_TEXTURE_PRESET,
+  currentTexturePreset,
+  resolvePresetTexture,
+  TEXTURE_PRESET_CHANGE_HOOK,
+} from "./texture-presets.js?v=20260813-bastion-grass2";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
 const CONTROL_NAME = "tsu-floors";
 const FLOOR_CONTAINER = "tsu-floor-textures";
+const FOREST_CONTAINER = "tsu-forest-textures";
 const EDIT_CONTAINER = "tsu-floor-edit";
 const DEFAULT_STYLE = "uneven-limestone";
 const EPSILON = 0.01;
@@ -13,7 +20,7 @@ const FLOOR_STYLES = Object.freeze({
   [DEFAULT_STYLE]: Object.freeze({
     labelKey: "Settings.FloorTextures.Choices.UnevenLimestone",
     fallback: "Uneven limestone",
-    src: `modules/${MODULE_ID}/images/scene-floors/uneven-limestone-floor.png`,
+    get src() { return resolvePresetTexture(`modules/${MODULE_ID}/images/scene-floors/uneven-limestone-floor.png`); },
   }),
   "cave-brown": floorStyle("CaveBrown", "Brown cave floor", "cave-brown-floor.png"),
   "cave-grey-pebbles": floorStyle("CaveGreyPebbles", "Grey cave pebbles", "cave-grey-pebbles-floor-v2.webp"),
@@ -30,25 +37,30 @@ const FLOOR_STYLES = Object.freeze({
   "carpet-red-ornate": floorStyle("CarpetRedOrnate", "Ornate red carpet", "carpet-red-ornate-floor.webp", carpetEdge("red"), 0.5),
   "carpet-blue-heraldic": floorStyle("CarpetBlueHeraldic", "Ornate blue carpet", "carpet-blue-ornate-floor-v2.webp", carpetEdge("blue"), 0.5),
   "carpet-green-gold": floorStyle("CarpetGreenGold", "Green and gold carpet", "carpet-green-gold-floor.webp", carpetEdge("green"), 0.5),
-  "garden-cabbage": floorStyle("GardenCabbage", "Cabbage beds", "garden-cabbage-floor.webp", { kind: "garden", color: 0x493522, width: FLOOR_EDGE_WIDTH, jitter: 4 }),
-  "garden-carrot": floorStyle("GardenCarrot", "Carrot beds", "garden-carrot-floor.webp", { kind: "garden", color: 0x493522, width: FLOOR_EDGE_WIDTH, jitter: 4 }),
-  "garden-herbs": floorStyle("GardenHerbs", "Herb beds", "garden-herbs-floor.webp", { kind: "garden", color: 0x493522, width: FLOOR_EDGE_WIDTH, jitter: 4 }),
+  "garden-cabbage": gardenStyle("GardenCabbage", "Cabbage beds", "garden-cabbage-floor.webp", "garden-crop-cabbage-v2.webp", { cropSize: 0.19, spacingX: 0.27, spacingY: 0.19, missingChance: 0.015, cropBrightness: 1.24, cropSaturation: 0.14 }),
+  "garden-carrot": gardenStyle("GardenCarrot", "Carrot beds", "garden-carrot-floor.webp", "garden-crop-carrot-v2.webp", { cropSize: 0.17, spacingX: 0.21, spacingY: 0.13, missingChance: 0.02, cropBrightness: 1.5, cropSaturation: 0.26 }),
+  "garden-herbs": gardenStyle("GardenHerbs", "Herb beds", "garden-herbs-floor.webp", "garden-crop-herbs-v2.webp", { cropSize: 0.18, spacingX: 0.22, spacingY: 0.14, missingChance: 0.02, cropBrightness: 1.4, cropSaturation: 0.22 }),
+  "garden-rice": gardenStyle("GardenRice", "Flooded rice beds", "garden-rice-floor.webp", "garden-crop-rice-v2.webp", { cropSize: 0.18, spacingX: 0.22, spacingY: 0.13, missingChance: 0.015, cropBrightness: 1.18, cropSaturation: 0.16, water: true }),
   "forest-deciduous": forestStyle("ForestDeciduous", "Deciduous forest", [
-    forestAsset("forest-deciduous-simple.webp", 1, 0.48, 0.76, 1, 0.16, 0x73845f),
+    forestAsset("forest-deciduous-irregular-a.webp", 0.56, 1.2, 1.5, 1, 0x81906f),
+    forestAsset("forest-deciduous-irregular-b.webp", 0.44, 1.2, 1.5, 1, 0x748365),
   ]),
   "forest-pine": forestStyle("ForestPine", "Pine forest", [
-    forestAsset("forest-pine-simple.webp", 1, 0.42, 0.7, 1, 0.16, 0xc6d0b8),
+    forestAsset("forest-pine-irregular-a.webp", 0.54, 1.2, 1.5, 1, 0xb9c5ad),
+    forestAsset("forest-pine-irregular-b.webp", 0.46, 1.2, 1.5, 1, 0xaebca2),
   ]),
   "forest-mixed": forestStyle("ForestMixed", "Mixed forest", [
-    forestAsset("forest-pine-simple.webp", 0.68, 0.42, 0.72, 1, 0.16, 0xc6d0b8),
-    forestAsset("forest-deciduous-simple.webp", 0.32, 0.48, 0.76, 1, 0.16, 0x73845f),
+    forestAsset("forest-pine-irregular-a.webp", 0.31, 1.2, 1.5, 1, 0xb9c5ad),
+    forestAsset("forest-pine-irregular-b.webp", 0.27, 1.2, 1.5, 1, 0xaebca2),
+    forestAsset("forest-deciduous-irregular-a.webp", 0.23, 1.2, 1.5, 1, 0x81906f),
+    forestAsset("forest-deciduous-irregular-b.webp", 0.19, 1.2, 1.5, 1, 0x748365),
   ]),
   "sea-shallow": floorStyle("SeaShallow", "Shallow sea", "sea-shallow-floor.webp"),
   "sea-deep": floorStyle("SeaDeep", "Deep sea", "sea-deep-floor.webp"),
   "sea-stormy": floorStyle("SeaStormy", "Stormy sea", "sea-stormy-floor.webp"),
-  "roof-thatch": floorStyle("RoofThatch", "Thatched roof", "roof-thatch-floor.webp", null, 1.28),
-  "roof-shingles": floorStyle("RoofShingles", "Shingle roof", "roof-shingles-floor.webp", null, 1.28),
-  "roof-tiles": floorStyle("RoofTiles", "Tile roof", "roof-tiles-floor.webp", null, 1.28),
+  "roof-thatch": floorStyle("RoofThatch", "Thatched roof", "roof-thatch-floor.webp", roofEdge("thatch", 0x8d5c22, 0x2b190c, 0xc9933f), 1.28),
+  "roof-shingles": floorStyle("RoofShingles", "Shingle roof", "roof-shingles-floor.webp", roofEdge("shingles", 0x4a392d, 0x17120f, 0x806954), 1.28),
+  "roof-tiles": floorStyle("RoofTiles", "Tile roof", "roof-tiles-floor.webp", roofEdge("tiles", 0x743e2d, 0x21120f, 0xa96a4f), 1.28),
   ...stairStyles("stairs-uneven-limestone", "UnevenLimestone", "Uneven limestone", "stairs-uneven-limestone.png"),
   ...stairStyles("stairs-flagstone-grey", "FlagstoneGrey", "Grey flagstone", "stairs-flagstone-grey.png"),
   ...stairStyles("stairs-brick-red", "BrickRed", "Red brick", "stairs-brick-red.png"),
@@ -71,18 +83,53 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
   Object.freeze({ key: "Nature", fallback: "Nature", styles: ["grass-meadow", "forest-deciduous", "forest-pine", "forest-mixed"] }),
   Object.freeze({ key: "Seas", fallback: "Seas", styles: ["sea-shallow", "sea-deep", "sea-stormy"] }),
   Object.freeze({ key: "Roofs", fallback: "Roofs", styles: ["roof-thatch", "roof-shingles", "roof-tiles"] }),
-  Object.freeze({ key: "Gardens", fallback: "Gardens", styles: ["garden-cabbage", "garden-carrot", "garden-herbs"] }),
+  Object.freeze({ key: "Gardens", fallback: "Gardens", styles: ["garden-cabbage", "garden-carrot", "garden-herbs", "garden-rice"] }),
   Object.freeze({ key: "Paths", fallback: "Paths", styles: ["path-dirt", "path-cobblestone"] }),
   Object.freeze({ key: "Carpets", fallback: "Carpets", styles: ["carpet-red", "carpet-blue", "carpet-red-ornate", "carpet-blue-heraldic", "carpet-green-gold"] }),
 ]);
 
 function floorStyle(label, fallback, filename, edge = null, scale = 1) {
+  const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
   return Object.freeze({
     labelKey: `Settings.FloorTextures.Choices.${label}`,
     fallback,
-    src: `modules/${MODULE_ID}/images/scene-floors/${filename}`,
+    get src() { return resolvePresetTexture(source); },
     edge,
     scale,
+  });
+}
+
+function gardenStyle(label, fallback, previewFilename, cropFilename, options = {}) {
+  const water = Boolean(options.water);
+  const previewSource = `modules/${MODULE_ID}/images/scene-floors/${previewFilename}`;
+  const source = `modules/${MODULE_ID}/images/scene-floors/${water ? "garden-rice-water-v5.png" : "garden-soil-soft-v3.webp"}`;
+  const cropSource = `modules/${MODULE_ID}/images/scene-floors/${cropFilename}`;
+  return Object.freeze({
+    labelKey: `Settings.FloorTextures.Choices.${label}`,
+    fallback,
+    get previewSrc() { return resolvePresetTexture(previewSource); },
+    get src() { return resolvePresetTexture(source); },
+    scale: water ? 0.55 : 1,
+    edge: Object.freeze({
+      kind: "garden",
+      color: 0x66513c,
+      width: water ? 6 : 0,
+      alpha: water ? 0.9 : 0,
+      jitter: 2,
+    }),
+    garden: Object.freeze({
+      get cropSrc() { return resolvePresetTexture(cropSource); },
+      cropSize: Number(options.cropSize ?? 0.2),
+      spacingX: Number(options.spacingX ?? 0.45),
+      spacingY: Number(options.spacingY ?? 0.4),
+      inset: Number(options.inset ?? (water ? 0.045 : 0.025)),
+      missingChance: Number(options.missingChance ?? 0.06),
+      positionJitter: Number(options.positionJitter ?? 0.012),
+      sizeJitter: Number(options.sizeJitter ?? 0.08),
+      baseTint: water ? 0xffffff : 0xa59683,
+      cropBrightness: Number(options.cropBrightness ?? 1.35),
+      cropSaturation: Number(options.cropSaturation ?? 0.2),
+    }),
   });
 }
 
@@ -90,25 +137,22 @@ function forestStyle(label, fallback, assets) {
   return Object.freeze({
     labelKey: `Settings.FloorTextures.Choices.${label}`,
     fallback,
-    previewSrc: assets[0]?.src,
+    get previewSrc() { return assets[0]?.src; },
     forest: Object.freeze({
       assets: Object.freeze(assets),
-      density: 8,
-      minimumSpacing: 0.08,
-      clusterSize: 2.2,
-      maxTrees: 1200,
+      maxTrees: 8000,
     }),
   });
 }
 
-function forestAsset(filename, weight, minSize, maxSize, aspect, edgeMinSize, tint) {
+function forestAsset(filename, weight, minSize, maxSize, aspect, tint) {
+  const source = `modules/${MODULE_ID}/images/scene-assets/${filename}`;
   return Object.freeze({
-    src: `modules/${MODULE_ID}/images/scene-assets/${filename}`,
+    get src() { return resolvePresetTexture(source); },
     weight,
     minSize,
     maxSize,
     aspect,
-    edgeMinSize,
     tint,
   });
 }
@@ -118,6 +162,7 @@ function stairStyleKeys(prefix) {
 }
 
 function stairStyles(prefix, materialLabel, materialFallback, filename) {
+  const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
   const directions = [
     { key: "vertical-up", label: "VerticalUp", fallback: "Stairs vertical ↑", rotation: 0 },
     { key: "vertical-down", label: "VerticalDown", fallback: "Stairs vertical ↓", rotation: 180 },
@@ -129,7 +174,7 @@ function stairStyles(prefix, materialLabel, materialFallback, filename) {
     materialFallback,
     directionKey: `Directions.${direction.label}`,
     directionFallback: direction.fallback,
-    src: `modules/${MODULE_ID}/images/scene-floors/${filename}`,
+    get src() { return resolvePresetTexture(source); },
     cellSized: true,
     sourceSize: 200,
     rotation: direction.rotation,
@@ -142,13 +187,24 @@ function carpetEdge(color) {
     blue: { outer: 0x101a2a, band: 0xb5a06a, inner: 0x263d5c },
     green: { outer: 0x142319, band: 0xb69a50, inner: 0x304c32 },
   };
+  const textureSource = `modules/${MODULE_ID}/images/scene-floors/carpet-edge-${color}-v2.webp`;
+  const cornerSource = `modules/${MODULE_ID}/images/scene-floors/carpet-corner-${color}-v2.webp`;
   return Object.freeze({
     kind: "carpet",
     width: FLOOR_EDGE_WIDTH,
     sourceHeight: 32,
-    texture: `modules/${MODULE_ID}/images/scene-floors/carpet-edge-${color}-v2.webp`,
-    corner: `modules/${MODULE_ID}/images/scene-floors/carpet-corner-${color}-v2.webp`,
+    get texture() { return resolvePresetTexture(textureSource); },
+    get corner() { return resolvePresetTexture(cornerSource); },
     palette: palettes[color] ?? palettes.red,
+  });
+}
+
+function roofEdge(materialType, material, shadow, highlight) {
+  return Object.freeze({
+    kind: "roof",
+    materialType,
+    shadow,
+    jitter: 0,
   });
 }
 
@@ -161,6 +217,36 @@ let selectedEdge = null;
 let redrawTimer = null;
 let stageBound = null;
 let lastClick = null;
+let renderWallSegments = [];
+let forestRenderSignature = null;
+let gardenAssetsReady = false;
+let gardenAssetPromise = null;
+let gardenAssetRevision = 0;
+
+async function ensureGardenAssets() {
+  if (gardenAssetsReady) return true;
+  if (!gardenAssetPromise) {
+    const revision = gardenAssetRevision;
+    const sceneGardenStyles = new Set(getSceneData().floors.map((floor) => FLOOR_STYLES[floor.style]).filter((style) => style?.garden));
+    const sources = new Set([...sceneGardenStyles].flatMap((style) => [style.src, style.garden.cropSrc]));
+    if (!sources.size) return true;
+    gardenAssetPromise = (async () => {
+      for (const src of sources) {
+        try {
+          if (PIXI.Assets?.load) await PIXI.Assets.load(src);
+          else if (globalThis.loadTexture) await globalThis.loadTexture(src);
+        } catch (error) {
+          console.warn(`${MODULE_ID} | Failed to preload garden texture`, src, error);
+        }
+      }
+      if (revision !== gardenAssetRevision) return false;
+      gardenAssetsReady = true;
+      gardenAssetPromise = null;
+      return true;
+    })();
+  }
+  return gardenAssetPromise;
+}
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
@@ -175,6 +261,14 @@ Hooks.once("init", () => {
       scheduleRedraw();
     },
   });
+});
+
+Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, () => {
+  gardenAssetRevision += 1;
+  gardenAssetsReady = false;
+  gardenAssetPromise = null;
+  renderStyleSelect(ui.controls?.element);
+  scheduleRedraw();
 });
 
 function enabled() {
@@ -750,6 +844,31 @@ function getFloorContainer(create = true) {
   return container;
 }
 
+function getForestContainer(create = true) {
+  const parent = canvas?.primary ?? canvas?.stage;
+  if (!parent) return null;
+  let container = parent.children?.find((child) => child.name === FOREST_CONTAINER);
+  if (!container && create) {
+    container = new PIXI.Container();
+    container.name = FOREST_CONTAINER;
+    container.eventMode = "none";
+    container.sortableChildren = true;
+    parent.sortableChildren = true;
+    parent.addChild(container);
+  }
+  if (parent === canvas?.primary) {
+    const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
+    // Canopies cover the wall border, while placement clearance prevents them
+    // from crossing the wall's inner edge.
+    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
+    container.sortLayer = Number(sortLayers.TILES ?? 500) + 2;
+    container.sort = 0;
+    container.zIndex = 0;
+    parent.sortDirty = true;
+  } else container.zIndex = 10001;
+  return container;
+}
+
 function getEditorContainer(create = true) {
   const parent = canvas?.controls ?? canvas?.stage;
   if (!parent) return null;
@@ -817,9 +936,27 @@ function drawClosedStroke(graphics, points, color, width, alpha = 1, join = "rou
 
 function redrawFloors() {
   const container = getFloorContainer();
+  const forestContainer = getForestContainer();
   clearContainer(container);
-  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) return;
-  for (const floor of getSceneData().floors) {
+  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) {
+    clearContainer(forestContainer);
+    forestRenderSignature = null;
+    return;
+  }
+  renderWallSegments = blockingWallSegments();
+  const sceneData = getSceneData();
+  const gridSize = Number(canvas?.dimensions?.size ?? 100);
+  const nextForestSignature = JSON.stringify({
+    currentLevel,
+    gridSize,
+    walls: renderWallSegments,
+    forests: sceneData.floors.filter((floor) => FLOOR_STYLES[floor.style]?.forest)
+      .map((floor) => ({ id: floor.id, style: floor.style, level: floor.level, points: floor.points })),
+  });
+  const redrawForest = nextForestSignature !== forestRenderSignature;
+  if (redrawForest) clearContainer(forestContainer);
+
+  for (const floor of sceneData.floors) {
     if (Number(floor.level ?? 0) > currentLevel) continue;
     const points = normalizePolygon(floor.points);
     if (points.length < 3) continue;
@@ -827,24 +964,40 @@ function redrawFloors() {
     const floorLayer = new PIXI.Container();
     floorLayer.eventMode = "none";
     floorLayer.zIndex = Number(floor.level ?? 0);
-    container.addChild(floorLayer);
     if (style.forest) {
+      if (!redrawForest) continue;
+      forestContainer?.addChild(floorLayer);
       const forest = createForestFill(points, style.forest, `${floor.id}:${floor.style}`);
       if (forest) floorLayer.addChild(forest);
       continue;
     }
-    const renderPoints = style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, `${floor.id}:${floor.style}`, style.edge) : points;
+    container.addChild(floorLayer);
+    const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
+    const renderPoints = style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, boundarySeed, style.edge) : points;
+    if (style.garden) {
+      const garden = createGardenFill(renderPoints, style, `${floor.id}:${floor.style}`);
+      if (garden) floorLayer.addChild(garden);
+      const edgeGraphic = createFloorEdge(renderPoints, style.edge, `${floor.id}:${floor.style}`);
+      if (edgeGraphic) floorLayer.addChild(edgeGraphic);
+      continue;
+    }
     const bounds = polygonBounds(renderPoints);
+    const roofFrame = style.edge?.kind === "roof" ? orientedPolygonFrame(renderPoints) : null;
     const texture = PIXI.Texture.from(style.src);
-    const rotationDegrees = Number(style.rotation ?? 0);
+    const roofTextureQuarterTurn = roofFrame && roofFrame.height > roofFrame.width ? 90 : 0;
+    const rotationDegrees = Number(style.rotation ?? 0) + (roofFrame?.angle ?? 0) * 180 / Math.PI + roofTextureQuarterTurn;
     const swapsAxes = Math.abs(rotationDegrees) % 180 === 90;
-    const spriteWidth = swapsAxes ? bounds.height : bounds.width;
-    const spriteHeight = swapsAxes ? bounds.width : bounds.height;
+    const spriteWidth = roofFrame
+      ? (roofTextureQuarterTurn ? roofFrame.height : roofFrame.width)
+      : (swapsAxes ? bounds.height : bounds.width);
+    const spriteHeight = roofFrame
+      ? (roofTextureQuarterTurn ? roofFrame.width : roofFrame.height)
+      : (swapsAxes ? bounds.width : bounds.height);
     let sprite;
     try { sprite = new PIXI.TilingSprite({ texture, width: spriteWidth, height: spriteHeight }); }
     catch { sprite = new PIXI.TilingSprite(texture, spriteWidth, spriteHeight); }
     sprite.pivot.set(spriteWidth / 2, spriteHeight / 2);
-    sprite.position.set(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    sprite.position.set(roofFrame?.center.x ?? bounds.x + bounds.width / 2, roofFrame?.center.y ?? bounds.y + bounds.height / 2);
     sprite.rotation = rotationDegrees * Math.PI / 180;
     const tileScale = style.cellSized
       ? Number(canvas?.dimensions?.size ?? 100) / Number(style.sourceSize ?? 200)
@@ -859,6 +1012,7 @@ function redrawFloors() {
     const edgeGraphic = style.edge ? createFloorEdge(renderPoints, style.edge, `${floor.id}:${floor.style}`) : null;
     if (edgeGraphic) floorLayer.addChild(edgeGraphic);
   }
+  if (redrawForest) forestRenderSignature = nextForestSignature;
 }
 
 function isNaturalPathEdge(edge) {
@@ -869,66 +1023,55 @@ function createForestFill(points, forest, seed) {
   const container = new PIXI.Container();
   container.eventMode = "none";
   container.interactive = false;
-  container.sortableChildren = true;
+  const trees = new PIXI.Container();
+  trees.eventMode = "none";
+  trees.interactive = false;
+  trees.sortableChildren = true;
+  container.addChild(trees);
 
   const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
   const bounds = polygonBounds(points);
-  const areaCells = Math.abs(polygonArea(points)) / (grid * grid);
-  const wanted = Math.min(Number(forest.maxTrees ?? 800), Math.max(1, Math.round(areaCells * Number(forest.density ?? 0.5))));
-  const spacing = grid * Number(forest.minimumSpacing ?? 0.62);
-  const random = seededRandom(seed);
+  const maxTrees = Math.max(1, Number(forest.maxTrees ?? 8000));
   const placements = [];
-  const buckets = new Map();
-  const bucketKey = (point) => `${Math.floor(point.x / spacing)}:${Math.floor(point.y / spacing)}`;
-  const hasNearbyTree = (point, personalSpacing) => {
-    const cellX = Math.floor(point.x / spacing), cellY = Math.floor(point.y / spacing);
-    for (let offsetY = -2; offsetY <= 2; offsetY += 1) for (let offsetX = -2; offsetX <= 2; offsetX += 1) {
-      for (const other of buckets.get(`${cellX + offsetX}:${cellY + offsetY}`) ?? []) {
-        if (distance(point, other) < Math.min(personalSpacing, other.spacing)) return true;
+  const startCellX = Math.floor(bounds.x / grid);
+  const endCellX = Math.ceil((bounds.x + bounds.width) / grid);
+  const startCellY = Math.floor(bounds.y / grid);
+  const endCellY = Math.ceil((bounds.y + bounds.height) / grid);
+
+  for (let cellY = startCellY; cellY < endCellY && placements.length < maxTrees; cellY += 1) {
+    for (let cellX = startCellX; cellX < endCellX && placements.length < maxTrees; cellX += 1) {
+      const random = seededRandom(`${seed}:cell:${cellX}:${cellY}`);
+      const speciesPatch = stableNoise(`${seed}:species:${Math.floor(cellX / 3)}:${Math.floor(cellY / 3)}`);
+      const asset = weightedForestAsset(forest.assets, speciesPatch * 0.72 + random() * 0.28);
+      if (!asset) continue;
+      const aspect = Math.max(0.1, Number(asset.aspect ?? 1));
+      const sizeCells = lerp(Number(asset.minSize ?? 1.2), Number(asset.maxSize ?? 1.5), random());
+      const width = grid * sizeCells;
+      const height = width / aspect;
+      const wallClearance = Math.max(0, Math.max(width, height) * 0.46 - grid * 0.1);
+      let point = null;
+      for (let attempt = 0; attempt < 28; attempt += 1) {
+        const inset = attempt < 18 ? 0.08 : 0;
+        const candidate = {
+          x: (cellX + inset + random() * (1 - inset * 2)) * grid,
+          y: (cellY + inset + random() * (1 - inset * 2)) * grid,
+        };
+        const clearsWalls = renderWallSegments.every((wall) => pointSegmentDistance(candidate, wall.a, wall.b) >= wallClearance);
+        if (pointInPolygon(candidate, points) && clearsWalls) {
+          point = candidate;
+          break;
+        }
       }
+      if (!point) continue;
+
+      placements.push({
+        ...point,
+        asset,
+        width,
+        height: width / aspect,
+        rotation: random() * Math.PI * 2,
+      });
     }
-    return false;
-  };
-  const attempts = Math.min(60000, Math.max(180, wanted * 90));
-
-  for (let attempt = 0; attempt < attempts && placements.length < wanted; attempt += 1) {
-    const asset = weightedForestAsset(forest.assets, random());
-    if (!asset) break;
-    const point = {
-      x: bounds.x + random() * bounds.width,
-      y: bounds.y + random() * bounds.height,
-    };
-    if (!pointInPolygon(point, points)) continue;
-
-    const edgeDistance = distanceToPolygon(point, points);
-    const aspect = Math.max(0.1, Number(asset.aspect ?? 1));
-    const naturalSizeCells = lerp(Number(asset.minSize ?? 1), Number(asset.maxSize ?? 1.5), random());
-    // Shrink crowns near the contour instead of rejecting the position. This
-    // lets narrow polygon branches fill while keeping most of each crown inside.
-    const footprintRadiusPerCell = 0.38 * Math.max(1, 1 / aspect);
-    const fittedSizeCells = edgeDistance / (grid * footprintRadiusPerCell);
-    const sizeCells = Math.min(naturalSizeCells, fittedSizeCells);
-    if (sizeCells < Number(asset.edgeMinSize ?? 0.55)) continue;
-    const width = grid * sizeCells;
-    const height = width / aspect;
-
-    const clusterNoise = smoothValueNoise(
-      (point.x - bounds.x) / (grid * Number(forest.clusterSize ?? 3.8)),
-      (point.y - bounds.y) / (grid * Number(forest.clusterSize ?? 3.8)),
-      `${seed}:clusters`,
-    );
-    const edgeBoost = Math.max(0, 1 - edgeDistance / (grid * 1.35));
-    const presence = 0.28 + clusterNoise * 0.54 + edgeBoost * 0.24;
-    if (random() > Math.min(0.96, presence)) continue;
-
-    const edgeScale = Math.max(0.55, Math.min(1, sizeCells / naturalSizeCells));
-    const personalSpacing = spacing * lerp(0.82, 1.2, random()) * edgeScale;
-    if (hasNearbyTree(point, personalSpacing)) continue;
-    const placement = { ...point, asset, width, height, spacing: personalSpacing, rotation: random() * Math.PI * 2, shade: random() };
-    placements.push(placement);
-    const key = bucketKey(placement);
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(placement);
   }
 
   placements.sort((a, b) => a.y - b.y);
@@ -947,8 +1090,79 @@ function createForestFill(points, forest, seed) {
     tree.zIndex = index;
     tree.eventMode = "none";
     tree.interactive = false;
-    container.addChild(tree);
+    trees.addChild(tree);
   });
+  return container;
+}
+
+function createGardenFill(points, style, seed) {
+  const garden = style.garden;
+  if (!garden) return null;
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  const bounds = polygonBounds(points);
+
+  const baseTexture = PIXI.Texture.from(style.src);
+  let base;
+  try { base = new PIXI.TilingSprite({ texture: baseTexture, width: bounds.width, height: bounds.height }); }
+  catch { base = new PIXI.TilingSprite(baseTexture, bounds.width, bounds.height); }
+  base.position.set(bounds.x, bounds.y);
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const spacingX = Math.max(0.05, Number(garden.spacingX ?? 0.45)) * grid;
+  base.tileScale?.set?.(Number(style.scale ?? 1));
+  base.tilePosition?.set?.(-bounds.x / Number(style.scale ?? 1), -bounds.y / Number(style.scale ?? 1));
+  base.tint = Number(garden.baseTint ?? 0xffffff);
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  base.mask = mask;
+  container.addChild(base, mask);
+
+  const cropSize = Math.max(0.08, Number(garden.cropSize ?? 0.2));
+  const cropPixels = cropSize * grid;
+  const spacingY = Math.max(0.05, Number(garden.spacingY ?? 0.4)) * grid;
+  const clearance = cropPixels / 2 + Math.max(2, Number(garden.inset ?? 0.08) * grid);
+  const texture = PIXI.Texture.from(garden.cropSrc);
+  const crops = new PIXI.Container();
+  crops.eventMode = "none";
+  crops.interactive = false;
+  const ColorMatrixFilter = PIXI.ColorMatrixFilter ?? PIXI.filters?.ColorMatrixFilter;
+  if (ColorMatrixFilter) {
+    const cropFilter = new ColorMatrixFilter();
+    cropFilter.brightness(Number(garden.cropBrightness ?? 1.35), false);
+    cropFilter.saturate(Number(garden.cropSaturation ?? 0.2), true);
+    crops.filters = [cropFilter];
+  }
+  container.addChild(crops);
+  const firstX = Math.ceil((bounds.x + clearance) / spacingX) * spacingX;
+  const firstY = Math.ceil((bounds.y + clearance) / spacingY) * spacingY;
+
+  for (let y = firstY; y <= bounds.y + bounds.height - clearance; y += spacingY) {
+    for (let x = firstX; x <= bounds.x + bounds.width - clearance; x += spacingX) {
+      const key = `${seed}:${Math.round(x)}:${Math.round(y)}`;
+      if (stableNoise(`${key}:missing`) < Number(garden.missingChance ?? 0.06)) continue;
+      const jitter = Number(garden.positionJitter ?? 0.035) * grid;
+      const point = {
+        x: x + (stableNoise(`${key}:x`) * 2 - 1) * jitter,
+        y: y + (stableNoise(`${key}:y`) * 2 - 1) * jitter,
+      };
+      const sizeScale = 1 + (stableNoise(`${key}:size`) * 2 - 1) * Number(garden.sizeJitter ?? 0.14);
+      const renderedSize = cropPixels * sizeScale;
+      const renderedClearance = renderedSize / 2 + Math.max(2, Number(garden.inset ?? 0.035) * grid);
+      if (!pointInPolygon(point, points) || distanceToPolygon(point, points) < renderedClearance) continue;
+      let crop;
+      try { crop = new PIXI.Sprite({ texture }); }
+      catch { crop = new PIXI.Sprite(texture); }
+      crop.anchor?.set?.(0.5);
+      crop.position.set(point.x, point.y);
+      crop.width = renderedSize;
+      crop.height = renderedSize;
+      crop.rotation = (stableNoise(`${key}:rotation`) - 0.5) * 0.34;
+      crop.eventMode = "none";
+      crop.interactive = false;
+      crops.addChild(crop);
+    }
+  }
   return container;
 }
 
@@ -975,15 +1189,6 @@ function seededRandom(seed) {
   };
 }
 
-function smoothValueNoise(x, y, seed) {
-  const x0 = Math.floor(x), y0 = Math.floor(y);
-  const tx = smoothStep(x - x0), ty = smoothStep(y - y0);
-  const top = lerp(stableNoise(`${seed}:${x0}:${y0}`), stableNoise(`${seed}:${x0 + 1}:${y0}`), tx);
-  const bottom = lerp(stableNoise(`${seed}:${x0}:${y0 + 1}`), stableNoise(`${seed}:${x0 + 1}:${y0 + 1}`), tx);
-  return lerp(top, bottom, ty);
-}
-
-function smoothStep(value) { return value * value * (3 - 2 * value); }
 function lerp(from, to, ratio) { return from + (to - from) * ratio; }
 
 function forestTint() {
@@ -1043,11 +1248,19 @@ function createNaturalBoundary(points, seed, edge) {
     const to = points[(edgeIndex + 1) % points.length];
     const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
     const divisions = Math.max(1, Math.ceil(length / spacing));
-    const normal = { x: -dy / length, y: dx / length };
+    const forward = from.x < to.x || (Math.abs(from.x - to.x) < EPSILON && from.y <= to.y);
+    const canonicalFrom = forward ? from : to;
+    const canonicalTo = forward ? to : from;
+    const canonicalDx = canonicalTo.x - canonicalFrom.x;
+    const canonicalDy = canonicalTo.y - canonicalFrom.y;
+    const normal = { x: -canonicalDy / length, y: canonicalDx / length };
+    const segmentKey = `${Math.round(canonicalFrom.x * 10)}:${Math.round(canonicalFrom.y * 10)}:${Math.round(canonicalTo.x * 10)}:${Math.round(canonicalTo.y * 10)}`;
     for (let step = 0; step < divisions; step += 1) {
       const ratio = step / divisions;
-      const taper = step === 0 ? 0 : Math.sin(Math.PI * ratio);
-      const jitter = (stableNoise(`${seed}:${edgeIndex}:${step}`) * 2 - 1) * Number(edge.jitter ?? 0) * taper;
+      const canonicalRatio = forward ? ratio : 1 - ratio;
+      const taper = Math.sin(Math.PI * canonicalRatio);
+      const sample = Math.round(canonicalRatio * divisions);
+      const jitter = (stableNoise(`${seed}:${segmentKey}:${sample}`) * 2 - 1) * Number(edge.jitter ?? 0) * taper;
       result.push({ x: from.x + dx * ratio + normal.x * jitter, y: from.y + dy * ratio + normal.y * jitter });
     }
   });
@@ -1060,7 +1273,22 @@ function createFloorEdge(points, edge, seed) {
   if (isNaturalPathEdge(edge)) return null;
   if (edge.texture) return createTexturedFloorEdge(points, edge);
   const graphics = newGraphics();
-  const alpha = edge.kind === "garden" ? 0.58 : 0.72;
+  if (edge.kind === "garden") {
+    // The Bastion water/soil treatment already supplies its own dark edge.
+    // Drawing the generic garden stroke on top reads as a rectangular UI-like
+    // selection outline, particularly on narrow beds.
+    if (currentTexturePreset() === BASTION_TEXTURE_PRESET) return null;
+    const width = Number(edge.width ?? 0);
+    if (width <= 0) return null;
+    drawClosedStroke(graphics, points, Number(edge.color ?? 0x766047), width, Number(edge.alpha ?? 0.82));
+    graphics.eventMode = "none";
+    graphics.interactive = false;
+    return graphics;
+  }
+  if (edge.kind === "roof") {
+    return drawRoofEdge(graphics, points, edge, seed);
+  }
+  const alpha = edge.kind === "garden" ? 0.6 : 0.72;
   const edgeWidth = Number(edge.width ?? FLOOR_EDGE_WIDTH);
   points.forEach((point, index) => drawLine(graphics, point, points[(index + 1) % points.length], edge.color, edgeWidth, alpha));
   if (edge.kind === "carpet") {
@@ -1076,6 +1304,87 @@ function createFloorEdge(points, edge, seed) {
   graphics.eventMode = "none";
   graphics.interactive = false;
   return graphics;
+}
+
+function drawRoofEdge(graphics, points, edge, seed) {
+  const shadow = Number(edge.shadow ?? 0x17120f);
+  const frame = orientedPolygonFrame(points);
+  const left = frame.minX;
+  const right = frame.maxX;
+  const top = frame.minY;
+  const bottom = frame.maxY;
+  const center = { x: (left + right) / 2, y: (top + bottom) / 2 };
+  const horizontal = frame.width >= frame.height;
+  const shortSide = horizontal ? frame.height : frame.width;
+  const hipDepth = Math.min(shortSide * 0.46, (horizontal ? frame.width : frame.height) * 0.34);
+  const world = (point) => frame.toWorld(point);
+  const corners = {
+    topLeft: world({ x: left, y: top }),
+    topRight: world({ x: right, y: top }),
+    bottomRight: world({ x: right, y: bottom }),
+    bottomLeft: world({ x: left, y: bottom }),
+  };
+  const ridgeStart = horizontal
+    ? world({ x: left + hipDepth, y: center.y })
+    : world({ x: center.x, y: top + hipDepth });
+  const ridgeEnd = horizontal
+    ? world({ x: right - hipDepth, y: center.y })
+    : world({ x: center.x, y: bottom - hipDepth });
+
+  if (horizontal) {
+    drawPolygon(graphics, [corners.topLeft, corners.topRight, ridgeEnd, ridgeStart], 0xffffff, 0.035);
+    drawPolygon(graphics, [corners.bottomLeft, ridgeStart, ridgeEnd, corners.bottomRight], shadow, 0.12);
+    drawPolygon(graphics, [corners.topLeft, ridgeStart, corners.bottomLeft], shadow, 0.055);
+    drawPolygon(graphics, [corners.topRight, corners.bottomRight, ridgeEnd], shadow, 0.08);
+  } else {
+    drawPolygon(graphics, [corners.topLeft, ridgeStart, ridgeEnd, corners.bottomLeft], 0xffffff, 0.035);
+    drawPolygon(graphics, [corners.topRight, corners.bottomRight, ridgeEnd, ridgeStart], shadow, 0.12);
+    drawPolygon(graphics, [corners.topLeft, corners.topRight, ridgeStart], shadow, 0.055);
+    drawPolygon(graphics, [corners.bottomLeft, ridgeEnd, corners.bottomRight], shadow, 0.08);
+  }
+
+  const hipLines = horizontal
+    ? [[corners.topLeft, ridgeStart], [corners.bottomLeft, ridgeStart], [corners.topRight, ridgeEnd], [corners.bottomRight, ridgeEnd]]
+    : [[corners.topLeft, ridgeStart], [corners.topRight, ridgeStart], [corners.bottomLeft, ridgeEnd], [corners.bottomRight, ridgeEnd]];
+  drawLine(graphics, ridgeStart, ridgeEnd, shadow, 3, 0.55);
+  const ridgeHighlightOffset = frame.vectorToWorld(horizontal ? { x: 0, y: -1 } : { x: -1, y: 0 });
+  drawLine(graphics,
+    { x: ridgeStart.x + ridgeHighlightOffset.x, y: ridgeStart.y + ridgeHighlightOffset.y },
+    { x: ridgeEnd.x + ridgeHighlightOffset.x, y: ridgeEnd.y + ridgeHighlightOffset.y },
+    0xffffff, 1, 0.27);
+  hipLines.forEach(([from, to]) => drawLine(graphics, from, to, shadow, 2, 0.38));
+
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const bevel = Math.max(10, Math.min(grid * 0.18, frame.width * 0.16, frame.height * 0.22));
+  const inner = {
+    topLeft: world({ x: left + bevel, y: top + bevel }),
+    topRight: world({ x: right - bevel, y: top + bevel }),
+    bottomRight: world({ x: right - bevel, y: bottom - bevel }),
+    bottomLeft: world({ x: left + bevel, y: bottom - bevel }),
+  };
+  // Four explicit trapezoids form a straight architectural bevel. Their
+  // different values make the roof edge readable on both light and dark tiles.
+  drawPolygon(graphics, [corners.topLeft, corners.topRight, inner.topRight, inner.topLeft], shadow, 0.24);
+  drawPolygon(graphics, [corners.bottomLeft, inner.bottomLeft, inner.bottomRight, corners.bottomRight], shadow, 0.48);
+  drawPolygon(graphics, [corners.topLeft, inner.topLeft, inner.bottomLeft, corners.bottomLeft], shadow, 0.34);
+  drawPolygon(graphics, [corners.topRight, corners.bottomRight, inner.bottomRight, inner.topRight], shadow, 0.4);
+  drawClosedStroke(graphics, [inner.topLeft, inner.topRight, inner.bottomRight, inner.bottomLeft], shadow, 3, 0.72);
+  drawLine(graphics, inner.topLeft, inner.topRight, 0xffffff, 1.5, 0.22);
+  drawLine(graphics, inner.topLeft, inner.bottomLeft, 0xffffff, 1, 0.12);
+  drawClosedStroke(graphics, points, shadow, 2.5, 0.72);
+
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  graphics.mask = mask;
+  graphics.eventMode = "none";
+  graphics.interactive = false;
+  mask.eventMode = "none";
+  mask.interactive = false;
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  container.addChild(graphics, mask);
+  return container;
 }
 
 function createTexturedFloorEdge(points, edge) {
@@ -1159,10 +1468,11 @@ function drawEditorData(data, cursor = null) {
 
 function scheduleRedraw() {
   clearTimeout(redrawTimer);
-  redrawTimer = setTimeout(() => {
+  redrawTimer = setTimeout(async () => {
+    await ensureGardenAssets();
     redrawFloors();
     redrawEditor();
-  }, 25);
+  }, 100);
 }
 
 Hooks.on("canvasReady", () => {
@@ -1173,7 +1483,10 @@ Hooks.on("canvasReady", () => {
 });
 Hooks.on("canvasTearDown", () => {
   clearContainer(getFloorContainer(false));
+  clearContainer(getForestContainer(false));
   clearContainer(getEditorContainer(false));
+  renderWallSegments = [];
+  forestRenderSignature = null;
   draftPoints = [];
   selectedEdge = null;
   lastClick = null;
@@ -1185,9 +1498,26 @@ Hooks.on("updateScene", (_scene, change) => {
       || foundry.utils.hasProperty(change, "width")
       || foundry.utils.hasProperty(change, "height")) scheduleRedraw();
 });
+Hooks.on("createWall", scheduleRedraw);
+Hooks.on("updateWall", (_wall, change) => {
+  if (foundry.utils.hasProperty(change, "c")
+      || foundry.utils.hasProperty(change, "move")
+      || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.wallTexture.style`)
+      || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.wallTexture.mode`)) scheduleRedraw();
+});
+Hooks.on("deleteWall", scheduleRedraw);
 
 function wallSegments() {
   return (canvas?.scene?.walls ?? []).map((wall) => wall.c).filter((c) => Array.isArray(c) && c.length >= 4)
+    .map((c) => ({ a: { x: Number(c[0]), y: Number(c[1]) }, b: { x: Number(c[2]), y: Number(c[3]) } }))
+    .filter(({ a, b }) => distance(a, b) > EPSILON);
+}
+
+function blockingWallSegments() {
+  const noRestriction = globalThis.CONST?.WALL_SENSE_TYPES?.NONE ?? 0;
+  return (canvas?.scene?.walls ?? [])
+    .filter((wall) => Number(wall?.move ?? noRestriction) !== noRestriction)
+    .map((wall) => wall.c).filter((c) => Array.isArray(c) && c.length >= 4)
     .map((c) => ({ a: { x: Number(c[0]), y: Number(c[1]) }, b: { x: Number(c[2]), y: Number(c[3]) } }))
     .filter(({ a, b }) => distance(a, b) > EPSILON);
 }
@@ -1275,6 +1605,38 @@ function polygonBounds(points) {
   const xs = points.map((p) => p.x); const ys = points.map((p) => p.y);
   const x = Math.min(...xs); const y = Math.min(...ys);
   return { x, y, width: Math.max(1, Math.max(...xs) - x), height: Math.max(1, Math.max(...ys) - y) };
+}
+function orientedPolygonFrame(points) {
+  let best = null;
+  for (let index = 0; index < points.length; index += 1) {
+    const from = points[index]; const to = points[(index + 1) % points.length];
+    if (distance(from, to) < EPSILON) continue;
+    let angle = Math.atan2(to.y - from.y, to.x - from.x);
+    angle -= Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
+    const cos = Math.cos(angle); const sin = Math.sin(angle);
+    let minX = Number.POSITIVE_INFINITY; let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY; let maxY = Number.NEGATIVE_INFINITY;
+    for (const point of points) {
+      const x = point.x * cos + point.y * sin;
+      const y = -point.x * sin + point.y * cos;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+    const width = Math.max(1, maxX - minX); const height = Math.max(1, maxY - minY);
+    const candidate = { angle, cos, sin, minX, maxX, minY, maxY, width, height, area: width * height };
+    if (!best || candidate.area < best.area - EPSILON || (Math.abs(candidate.area - best.area) <= EPSILON && Math.abs(angle) < Math.abs(best.angle))) best = candidate;
+  }
+  if (!best) {
+    const bounds = polygonBounds(points);
+    best = { angle: 0, cos: 1, sin: 0, minX: bounds.x, maxX: bounds.x + bounds.width, minY: bounds.y, maxY: bounds.y + bounds.height, width: bounds.width, height: bounds.height };
+  }
+  const localCenter = { x: (best.minX + best.maxX) / 2, y: (best.minY + best.maxY) / 2 };
+  return {
+    ...best,
+    center: { x: localCenter.x * best.cos - localCenter.y * best.sin, y: localCenter.x * best.sin + localCenter.y * best.cos },
+    toWorld: ({ x, y }) => ({ x: x * best.cos - y * best.sin, y: x * best.sin + y * best.cos }),
+    vectorToWorld: ({ x, y }) => ({ x: x * best.cos - y * best.sin, y: x * best.sin + y * best.cos }),
+  };
 }
 function pointInPolygon(point, polygon) {
   let inside = false;

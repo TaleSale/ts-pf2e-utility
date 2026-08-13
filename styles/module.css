@@ -4983,6 +4983,7 @@
 .tsu-decorator-asset-grid button span { width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
 .tsu-decorator-asset-grid button.selected { border-color:#d4a7ff; background:rgba(105,55,145,.55); }
 
+
 /* Automation controls embedded into PF2e roll-option rows. */
 ul[data-option-toggles] > li.ts-automation-toggle-row {
   display: flex;

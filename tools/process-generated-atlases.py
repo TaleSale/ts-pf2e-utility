@@ -37,17 +37,19 @@ def crop_object(cell: Image.Image, output: Path, maximum: int = 1024) -> None:
     padded.save(output, "WEBP", quality=91, method=6, exact=True)
 
 
-def split_row(source: str, names: list[str], cuts: list[float] | None = None) -> None:
+def split_row(source: str, names: list[str | None], cuts: list[float] | None = None) -> None:
     image = Image.open(SOURCE / source)
     boundaries = [round(value * image.width) for value in cuts] if cuts else [round(index * image.width / len(names)) for index in range(len(names) + 1)]
     for index, name in enumerate(names):
+        if name is None:
+            continue
         left, right = boundaries[index], boundaries[index + 1]
         crop_object(image.crop((left, 0, right, image.height)), ASSETS / f"{name}.webp")
 
 
-def split_grid(source: str, names: list[str], columns: int = 3) -> None:
+def split_grid(source: str, names: list[str], columns: int = 3, rows: int | None = None) -> None:
     image = Image.open(SOURCE / source).convert("RGB")
-    rows = (len(names) + columns - 1) // columns
+    rows = rows or (len(names) + columns - 1) // columns
     cell_width, cell_height = image.width / columns, image.height / rows
     for index, name in enumerate(names):
         column, row = index % columns, index // columns
@@ -139,10 +141,10 @@ def process_seamless_edge_blend(source: str, output: str, band: int = 64) -> Non
 ASSETS.mkdir(parents=True, exist_ok=True)
 FLOORS.mkdir(parents=True, exist_ok=True)
 split_row("beds.png", ["bed-oak", "bed-blue", "bed-fur", "double-bed-red", "double-bed-linen"], [0, .17, .335, .515, .74, 1])
-split_row("hearths.png", ["wall-torch-iron", "wall-torch-bracket", "fireplace-stone", "fireplace-brick", "stairs-wood-straight", "stairs-wood-rustic"], [0, .137, .29, .488, .688, .852, 1])
+split_row("hearths.png", ["wall-torch-iron", "wall-torch-bracket", None, None, "stairs-wood-straight", "stairs-wood-rustic"], [0, .137, .29, .488, .688, .852, 1])
 split_row("camp.png", ["bedroll-green", "bedroll-fur", "bedroll-blue", "campfire-stones", "campfire-embers"], [0, .203, .396, .583, .772, 1])
 split_row("washroom.png", ["bathtub-wood", "bathtub-copper", "sink-wood", "sink-stone", "toilet-board-oak", "toilet-board-alder", "toilet-board-walnut"], [0, .161, .32, .461, .598, .732, .862, 1])
-split_grid("floors.png", ["carpet-red-ornate", "carpet-blue-heraldic", "carpet-green-gold", "garden-cabbage", "garden-carrot", "garden-herbs", "forest-deciduous", "forest-pine", "forest-mixed"])
+split_grid("floors.png", ["carpet-red-ornate", "carpet-blue-heraldic", "carpet-green-gold", "garden-cabbage", "garden-carrot", "garden-herbs"], rows=3)
 if (SOURCE / "messy-beds-stairs.png").exists():
     split_row("messy-beds-stairs.png", ["bed-messy-blue", "bed-messy-brown", "stairs-wood-square", "stairs-stone-square"])
 if (SOURCE / "border-trim.png").exists():
@@ -162,9 +164,6 @@ for replacement_source, replacement_output in [
     ("garden-cabbage-v2.png", "garden-cabbage-floor.webp"),
     ("garden-carrot-v2.png", "garden-carrot-floor.webp"),
     ("garden-herbs-v2.png", "garden-herbs-floor.webp"),
-    ("forest-deciduous-v2.png", "forest-deciduous-floor.webp"),
-    ("forest-pine-v2.png", "forest-pine-floor.webp"),
-    ("forest-mixed-v2.png", "forest-mixed-floor.webp"),
 ]:
     if (SOURCE / replacement_source).exists():
         process_seamless_replacement(replacement_source, replacement_output)
@@ -173,9 +172,6 @@ if (SOURCE / "cave-grey-pebbles-v2.png").exists():
 if (SOURCE / "carpet-blue-ornate-v2.png").exists():
     process_seamless_edge_blend("carpet-blue-ornate-v2.png", "carpet-blue-ornate-floor-v2.webp", 48)
 for source, output in [
-    ("forest-clearing-deciduous.png", "forest-deciduous-floor.webp"),
-    ("forest-clearing-pine.png", "forest-pine-floor.webp"),
-    ("forest-clearing-mixed.png", "forest-mixed-floor.webp"),
     ("sea-shallow.png", "sea-shallow-floor.webp"),
     ("sea-deep.png", "sea-deep-floor.webp"),
     ("sea-stormy.png", "sea-stormy-floor.webp"),
@@ -198,7 +194,6 @@ for source, output in [
     if (SOURCE / source).exists():
         process_wall_source(source, output)
 for source, output in [
-    ("stonehenge-trilithon.png", "stonehenge-trilithon.webp"),
     ("stonehenge-circle.png", "stonehenge-circle.webp"),
     ("stonehenge-fangs.png", "stonehenge-fangs.webp"),
     ("stonehenge-trilithon-circle-v2.png", "stonehenge-trilithon-circle-v2.webp"),

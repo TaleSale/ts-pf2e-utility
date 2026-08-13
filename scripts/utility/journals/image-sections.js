@@ -82,7 +82,7 @@ function buildWrappedImageHtml(form) {
   const caption = String(form.elements.caption?.value ?? form.elements.imageSectionCaption?.value ?? "").trim();
   const imageHtml = `<img ${attributes.join(" ")}>`;
   const content = caption
-    ? `<figure class="tsu-image-section-figure">${imageHtml}<figcaption class="tsu-image-section-caption">${escapeHtml(caption)}</figcaption></figure>`
+    ? `${imageHtml}<figure><figcaption class="tsu-image-section-caption">${escapeHtml(caption)}</figcaption></figure>`
     : imageHtml;
 
   return `<section class="${escapeHtml(className)}">${content}</section>`;

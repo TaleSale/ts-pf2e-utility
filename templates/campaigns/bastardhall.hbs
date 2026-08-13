@@ -7,9 +7,11 @@
     </div>
     <div class="bh-header-actions">
       {{#if isGM}}
+        {{#if showConfig}}
         <button type="button" class="bh-settings-button bh-reset-button" data-action="reset-sheet" title="Сбросить Лист Бастардхолла">
           <i class="fa-solid fa-arrow-rotate-left"></i>
         </button>
+        {{/if}}
         <button type="button" class="bh-settings-button" data-action="{{#if showConfig}}close-settings{{else}}open-settings{{/if}}" title="{{#if showConfig}}Вернуться к листу{{else}}Настройки Бастардхолла{{/if}}">
           <i class="fa-solid {{#if showConfig}}fa-arrow-left{{else}}fa-gear{{/if}}"></i>
         </button>
@@ -84,7 +86,7 @@
                 </header>
                 {{#if canAronDrinks}}
                   <div class="bh-phantom-actions">
-                    <button type="button" data-phantom-action="aron-drinks" data-phantom="{{id}}" title="Получить до {{aronDrinkLimit}} напитков Арона в день"><i class="fa-solid fa-mug-hot"></i><span>Напитки ×{{aronDrinkLimit}}</span></button>
+                    <button type="button" data-phantom-action="aron-drinks" data-phantom="{{id}}" title="Получить до {{aronDrinkLimit}} напитков Арона в день на всю группу"><i class="fa-solid fa-mug-hot"></i><span>Напитки ×{{aronDrinkLimit}}</span></button>
                     {{#if canAronCounteract}}<button type="button" data-phantom-action="aron-counteract" data-phantom="{{id}}" title="Проверка противодействия со средним модификатором группы"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Противодействие</span></button>{{/if}}
                   </div>
                 {{/if}}

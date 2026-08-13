@@ -264,6 +264,7 @@
         "FamiliarUuidHint": "Enter the UUID of a familiar actor from the Actors directory.",
         "DropHint": "Drop the familiar actor here",
         "SelectedFamiliar": "Familiar: {name}",
+        "SelectedTokenOwner": "{name} [token owner]",
         "InvalidFamiliar": "The UUID must refer to a world actor of the Familiar type.",
         "NoPermission": "You do not have permission to update this familiar."
       },

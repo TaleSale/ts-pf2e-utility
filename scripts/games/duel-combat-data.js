@@ -1649,6 +1649,21 @@ export const DUEL_STYLE = `
   
   .dl-wound-bar-bg { background: #111; height: 12px; width: 100%; border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #4a0404; position: relative;}
   .dl-wound-bar-fill { background: linear-gradient(90deg, #800020, #ff0000); height: 100%; transition: 0.5s; }
+  .dl-wound-confirmation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 7px;
+    padding: 6px 8px;
+    border: 1px solid #8c6b20;
+    border-radius: 3px;
+    background: rgba(140, 107, 32, 0.15);
+    color: #e1c879;
+    font-size: 10.5px;
+  }
+  .dl-wound-confirmation strong { color: #ffd977; }
+  .dl-cancel-wounds-btn { flex: 0 0 auto; }
   
   .dl-action-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 4px; border: 1px solid #333; }
   .dl-action-row.disabled { opacity: 0.3; pointer-events: none; }
@@ -1717,6 +1732,7 @@ export const DUEL_STYLE = `
   .dl-debug-label { color: #99a6b4; }
   .dl-gm-debug-label { order: 1; }
   .dl-random-rule-label { order: 2; }
+  .dl-wound-rule-label { order: 3; }
   .dl-join-label input,
   .dl-debug-label input {
     display: block;
@@ -1874,6 +1890,11 @@ export const DUEL_TEMPLATE = `
               {{#if (and ../isPlayingPhase this.isOwnerParticipant)}}
                   <button class="dl-btn-main dl-ready-btn {{#if this.isReady}}is-ready{{/if}}" data-actor="{{this.id}}">{{#if this.isReady}}{{../ui.readyLabel}}{{else}}{{../ui.confirmLabel}}{{/if}}</button>
               {{/if}}
+              {{#if ../isWoundConfirmationPhase}}
+                {{#if this.canRequestWoundCancellation}}
+                  <button class="dl-btn-main dl-ready-btn dl-cancel-wounds-btn" data-actor="{{this.id}}">{{../ui.cancelWoundsLabel}}</button>
+                {{/if}}
+              {{/if}}
             </div>
         </div>
         
@@ -1902,6 +1923,15 @@ export const DUEL_TEMPLATE = `
         {{/if}}
         
         <div class="dl-wound-bar-bg"><div class="dl-wound-bar-fill" style="width:{{this.woundPct}}%;"></div></div>
+
+        {{#if ../isWoundConfirmationPhase}}
+          {{#if this.isParticipating}}
+            <div class="dl-wound-confirmation">
+              <strong>{{../ui.woundConfirmationTitle}}</strong>
+              <span>{{this.woundConfirmationStatus}}</span>
+            </div>
+          {{/if}}
+        {{/if}}
         
         {{#if (or this.acPenalty this.lostActions)}}
             <div style="display:flex; gap:5px;">
@@ -1953,6 +1983,9 @@ export const DUEL_TEMPLATE = `
         <label class="dl-debug-label dl-random-rule-label">
             <input type="checkbox" id="dl-random-lost-action" {{#if state.randomLostActionRule}}checked{{/if}}> {{randomLostActionLabel}}
         </label>
+        <label class="dl-debug-label dl-wound-rule-label">
+            <input type="checkbox" id="dl-wound-confirmation-rule" {{#if state.woundConfirmationRule}}checked{{/if}}> {{woundConfirmationRuleLabel}}
+        </label>
         <label class="dl-debug-label dl-gm-debug-label">
             <input type="checkbox" id="dl-debug" {{#if state.debugMode}}checked{{/if}}> {{ui.gmModeLabel}}
         </label>
@@ -1961,7 +1994,7 @@ export const DUEL_TEMPLATE = `
     <div class="dl-footer-actions">
       {{#if isGM}}
         {{#if (eq state.phase 'join')}}<button class="dl-btn-main" id="dl-start" {{#unless canStartDuel}}disabled{{/unless}}>{{ui.startLabel}}</button>{{/if}}
-        {{#if (eq state.phase 'play')}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">{{ui.resolveLabel}}</button>{{/if}}
+        {{#if (or (eq state.phase 'play') (eq state.phase 'wound-confirmation'))}}<button class="dl-btn-main dl-btn-accent" id="dl-resolve">{{ui.resolveLabel}}</button>{{/if}}
         <button class="dl-btn-main dl-btn-accent" id="dl-clear">{{ui.clearLabel}}</button>
         <button class="dl-btn-main dl-btn-muted" id="dl-reset">{{ui.resetLabel}}</button>
       {{/if}}

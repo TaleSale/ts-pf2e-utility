@@ -5,6 +5,7 @@ const FEATURE_ID = "familiarOwner";
 const FLAG_KEY = "familiarOwner";
 const MASTER_FLAG_KEY = "familiarOwnerMasterUuid";
 const PATCH_MARKER = Symbol.for(`${MODULE_ID}.familiarOwner.masterGetter`);
+const ATTRIBUTE_PATCH_MARKER = Symbol.for(`${MODULE_ID}.familiarOwner.masterAttributeModifierGetter`);
 const localize = (key) => game.i18n.localize(`${I18N_PREFIX}.ActionPlus.FamiliarOwner.${key}`);
 
 function normalizeConfig(value) {
@@ -44,10 +45,6 @@ async function resolveFamiliar(uuid) {
   }
 }
 
-function masterUuid(master) {
-  return String(master?.token?.uuid ?? master?.uuid ?? "");
-}
-
 function actorFromUuid(uuid) {
   if (!uuid) return null;
   try {
@@ -59,29 +56,97 @@ function actorFromUuid(uuid) {
   }
 }
 
+function createMasterReference(master) {
+  const token = master?.token?.documentName === "Token"
+    ? master.token
+    : master?.parent?.documentName === "Token" ? master.parent : null;
+  if (token) {
+    return {
+      type: "token",
+      sceneId: String(token.parent?.id ?? ""),
+      tokenId: String(token.id ?? ""),
+      actorId: String(master.id ?? token.actorId ?? ""),
+    };
+  }
+  return {
+    type: "actor",
+    actorId: String(master?.id ?? ""),
+  };
+}
+
+function resolveMasterReference(reference) {
+  // Compatibility with links created by the first implementation.
+  if (typeof reference === "string") return actorFromUuid(reference);
+  if (reference?.type === "token") {
+    return game.scenes?.get(String(reference.sceneId ?? ""))
+      ?.tokens?.get(String(reference.tokenId ?? ""))
+      ?.actor ?? null;
+  }
+  if (reference?.type === "actor") {
+    return game.actors?.get(String(reference.actorId ?? "")) ?? null;
+  }
+  return null;
+}
+
+function referencesSameMaster(reference, master) {
+  if (typeof reference === "string") {
+    return actorFromUuid(reference) === master;
+  }
+  const current = createMasterReference(master);
+  return reference?.type === current.type
+    && String(reference?.actorId ?? "") === current.actorId
+    && (current.type !== "token" || (
+      String(reference?.sceneId ?? "") === current.sceneId
+      && String(reference?.tokenId ?? "") === current.tokenId
+    ));
+}
+
 function configuredMaster(familiar) {
-  const storedUuid = String(familiar?.getFlag?.(MODULE_ID, MASTER_FLAG_KEY) ?? "");
-  const master = actorFromUuid(storedUuid)
-    ?? game.actors?.get(String(familiar?.system?.master?.id ?? ""))
-    ?? null;
+  const reference = familiar?.getFlag?.(MODULE_ID, MASTER_FLAG_KEY) ?? null;
+  const master = resolveMasterReference(reference);
   return master && getOwnerAction(master, familiar) ? master : null;
+}
+
+function findGetterDescriptor(prototype, property) {
+  for (let current = prototype; current; current = Object.getPrototypeOf(current)) {
+    const descriptor = Object.getOwnPropertyDescriptor(current, property);
+    if (descriptor?.get) return descriptor;
+  }
+  return null;
 }
 
 function patchFamiliarMasterGetter(familiar) {
   const prototype = familiar ? Object.getPrototypeOf(familiar) : null;
-  const descriptor = prototype && Object.getOwnPropertyDescriptor(prototype, "master");
-  if (!descriptor?.get || descriptor.get[PATCH_MARKER]) return Boolean(descriptor?.get?.[PATCH_MARKER]);
-  const original = descriptor.get;
-  function getMasterWithConfiguredCreatureOwner() {
-    const systemMaster = original.call(this);
-    if (systemMaster) return systemMaster;
-    const master = configuredMaster(this);
-    if (master) master.familiar ??= this;
-    return master;
+  const descriptor = prototype && findGetterDescriptor(prototype, "master");
+  if (descriptor?.get && !descriptor.get[PATCH_MARKER]) {
+    const original = descriptor.get;
+    function getMasterWithConfiguredCreatureOwner() {
+      const systemMaster = original.call(this);
+      if (systemMaster) return systemMaster;
+      const master = configuredMaster(this);
+      if (master) master.familiar ??= this;
+      return master;
+    }
+    getMasterWithConfiguredCreatureOwner[PATCH_MARKER] = true;
+    Object.defineProperty(prototype, "master", { ...descriptor, get: getMasterWithConfiguredCreatureOwner });
   }
-  getMasterWithConfiguredCreatureOwner[PATCH_MARKER] = true;
-  Object.defineProperty(prototype, "master", { ...descriptor, get: getMasterWithConfiguredCreatureOwner });
-  return true;
+
+  const attributeDescriptor = prototype && findGetterDescriptor(prototype, "masterAttributeModifier");
+  if (attributeDescriptor?.get && !attributeDescriptor.get[ATTRIBUTE_PATCH_MARKER]) {
+    const original = attributeDescriptor.get;
+    function getConfiguredMasterAttributeModifier() {
+      const selectedAbility = String(this.system?.master?.ability ?? "");
+      if (selectedAbility) return original.call(this);
+      return Number(this.master?.system?.abilities?.cha?.mod) || 0;
+    }
+    getConfiguredMasterAttributeModifier[ATTRIBUTE_PATCH_MARKER] = true;
+    Object.defineProperty(prototype, "masterAttributeModifier", {
+      ...attributeDescriptor,
+      get: getConfiguredMasterAttributeModifier,
+    });
+  }
+
+  return Boolean(Object.getOwnPropertyDescriptor(prototype, "master")?.get?.[PATCH_MARKER]);
 }
 
 function ensurePatch() {
@@ -90,10 +155,8 @@ function ensurePatch() {
 }
 
 async function unlinkFamiliar(familiar, master) {
-  const storedUuid = String(familiar?.getFlag?.(MODULE_ID, MASTER_FLAG_KEY) ?? "");
-  const belongsToMaster = storedUuid
-    ? storedUuid === masterUuid(master)
-    : familiar?.system?.master?.id === master?.id;
+  const reference = familiar?.getFlag?.(MODULE_ID, MASTER_FLAG_KEY) ?? null;
+  const belongsToMaster = referencesSameMaster(reference, master);
   if (!familiar || !belongsToMaster || getOwnerAction(master, familiar)) return;
   if (canUpdate(familiar)) {
     await familiar.update({
@@ -113,7 +176,7 @@ async function linkFamiliar(item, familiar) {
   ensurePatch();
   await familiar.update({
     "system.master.id": master.id,
-    [`flags.${MODULE_ID}.${MASTER_FLAG_KEY}`]: masterUuid(master),
+    [`flags.${MODULE_ID}.${MASTER_FLAG_KEY}`]: createMasterReference(master),
   });
   familiar.reset();
   if (previous && previous !== familiar) await unlinkFamiliar(previous, master);
@@ -191,6 +254,29 @@ Hooks.on("updateActor", (actor, changed, options) => {
     candidate.type === "familiar" && configuredMaster(candidate) === actor
   ));
   if (familiar) familiar.reset({ fromMaster: true });
+});
+
+Hooks.on("renderActorSheet", (app, html) => {
+  const familiar = app?.actor ?? app?.document ?? app?.object ?? null;
+  if (familiar?.type !== "familiar") return;
+  const master = configuredMaster(familiar);
+  if (!master) return;
+  const root = html instanceof HTMLElement ? html : html?.[0] ?? html?.element ?? null;
+  const select = root?.querySelector('select[name="system.master.id"]');
+  if (!select) return;
+
+  let option = Array.from(select.options).find((entry) => entry.value === master.id);
+  if (!option) {
+    option = document.createElement("option");
+    option.value = master.id;
+    select.append(option);
+  }
+  const isTokenOwner = Boolean(master.isToken || master.token);
+  option.textContent = isTokenOwner
+    ? localize("SelectedTokenOwner").replace("{name}", master.name)
+    : master.name;
+  option.selected = true;
+  select.value = master.id;
 });
 
 Hooks.on("deleteItem", (item) => {

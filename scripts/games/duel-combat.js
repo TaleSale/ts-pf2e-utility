@@ -68,6 +68,8 @@ function createInitialState() {
     log: [],
     debugMode: false,
     randomLostActionRule: false,
+    woundConfirmationRule: false,
+    pendingWoundConfirmation: null,
     openSignal: null,
   };
 }
@@ -337,6 +339,7 @@ function isActionSlotLost(playerData, slot) {
 function startDuel(state) {
   state.phase = "play";
   state.round = 1;
+  state.pendingWoundConfirmation = null;
   for (const playerData of Object.values(state.players ?? {})) {
     playerData.planned = [];
     playerData.isReady = false;
@@ -349,6 +352,7 @@ function startDuel(state) {
 function clearDuel(state) {
   state.phase = "join";
   state.round = 1;
+  state.pendingWoundConfirmation = null;
   state.log = [tx("cleared", "<div style='text-align:center; color:#2ecc71; background:rgba(46, 204, 113, 0.1); border:1px solid #2ecc71; padding:5px; border-radius:3px; font-weight:bold;'>--- Дуэль очищена, раны исцелены ---</div>")];
   for (const playerData of Object.values(state.players ?? {})) {
     playerData.planned = [];
@@ -357,6 +361,82 @@ function clearDuel(state) {
     setPlayerLostActions(playerData, 0, state.randomLostActionRule);
     playerData.wounds = 0;
   }
+}
+
+function getPendingWounds(state, actorId) {
+  const pending = state.pendingWoundConfirmation;
+  if (!pending || pending.round !== state.round) return { received: 0, saved: 0, remaining: 0 };
+  const received = Math.max(0, Math.trunc(Number(pending.wounds?.[actorId]) || 0));
+  const saved = Math.max(0, Math.min(received, Math.trunc(Number(pending.saved?.[actorId]) || 0)));
+  return { received, saved, remaining: received - saved };
+}
+
+async function promptWoundCancellation(playerData, maxWounds) {
+  const maximum = Math.max(1, Math.trunc(Number(maxWounds) || 1));
+  const title = tfx("cancelWoundsDialogTitle", { name: escapeHtml(playerData.name) }, ({ name }) => `Отмена ран: ${name}`);
+  const content = `
+    <form class="dl-cancel-wounds-dialog">
+      <p>${tfx("cancelWoundsDialogPrompt", {
+        name: escapeHtml(playerData.name),
+        max: maximum,
+      }, ({ name, max }) => `Сколько ран отменить для <b>${name}</b>? Максимум: ${max}.`)}</p>
+      <div class="form-group">
+        <label>${tx("cancelWoundsAmountLabel", "Раны")}</label>
+        <input type="number" name="amount" min="1" max="${maximum}" step="1" value="${maximum}">
+      </div>
+    </form>`;
+
+  return new Promise((resolve) => {
+    new Dialog({
+      title,
+      content,
+      buttons: {
+        confirm: {
+          icon: '<i class="fas fa-shield-heart"></i>',
+          label: tx("cancelWoundsDialogConfirm", "Отменить"),
+          callback: (html) => {
+            const value = Number.parseInt(String(html.find('input[name="amount"]').val() ?? ""), 10);
+            resolve(Math.max(1, Math.min(maximum, Number.isFinite(value) ? value : maximum)));
+          },
+        },
+        cancel: {
+          label: tx("cancelWoundsDialogCancel", "Нет"),
+          callback: () => resolve(0),
+        },
+      },
+      default: "confirm",
+      close: () => resolve(0),
+    }).render(true);
+  });
+}
+
+function finalizeResolvedRound(state) {
+  const activeIds = getParticipatingActorIds(state);
+  if (activeIds.length !== 2) return false;
+
+  const [p1Id, p2Id] = activeIds;
+  const p1 = state.players[p1Id];
+  const p2 = state.players[p2Id];
+  state.pendingWoundConfirmation = null;
+  state.round += 1;
+
+  const stats1 = getActorDuelStats(game.actors.get(p1.id));
+  const stats2 = getActorDuelStats(game.actors.get(p2.id));
+  const p1Dead = (p1.wounds || 0) >= (stats1?.maxWounds || 1);
+  const p2Dead = (p2.wounds || 0) >= (stats2?.maxWounds || 1);
+
+  if (p1Dead || p2Dead) {
+    state.phase = "end";
+    let endText = "";
+    if (p1Dead && p2Dead) endText = tx("draw", "НИЧЬЯ! Оба дуэлянта падают, истекая кровью.");
+    else if (p1Dead) endText = tfx("victory", { name: escapeHtml(p2.name) }, ({ name }) => `🏆 ПОБЕДА: ${name}! Противник сломлен.`);
+    else endText = tfx("victory", { name: escapeHtml(p1.name) }, ({ name }) => `🏆 ПОБЕДА: ${name}! Противник сломлен.`);
+    state.log.unshift(`<div style="background:linear-gradient(135deg, #4a0404, #800020, #4a0404); border:2px solid #A8A9AD; padding:10px; border-radius:5px; color:#d3d3d3; text-align:center; font-weight:bold; font-size:13px; text-shadow:1px 1px 2px black;">${endText}</div>`);
+  } else {
+    state.phase = "play";
+  }
+
+  return true;
 }
 
 async function resolveRound(state) {
@@ -377,6 +457,7 @@ async function resolveRound(state) {
   let p2NextLost = 0;
   let p1NextAcPen = 0;
   let p2NextAcPen = 0;
+  const roundWounds = { [p1Id]: 0, [p2Id]: 0 };
   const mapP1 = { attack: 0, ath: 0, acr: 0, int: 0, dec: 0 };
   const mapP2 = { attack: 0, ath: 0, acr: 0, int: 0, dec: 0 };
 
@@ -459,6 +540,7 @@ async function resolveRound(state) {
 
         if (woundDelta > 0) {
           defender.wounds = (defender.wounds || 0) + woundDelta;
+          roundWounds[defender.id] = (roundWounds[defender.id] || 0) + woundDelta;
           effectText = `<b>${tx("effectLabel", "Эффект")}:</b> ${tfx("woundEffect", {
             count: woundDelta,
             word: woundDelta === 1 ? tx("woundSingular", "рану") : tx("woundPlural", "раны"),
@@ -557,23 +639,19 @@ async function resolveRound(state) {
   p2.isReady = false;
   p1.planned = [];
   p2.planned = [];
-  state.round += 1;
 
-  const stats1 = getActorDuelStats(game.actors.get(p1.id));
-  const stats2 = getActorDuelStats(game.actors.get(p2.id));
-  const p1Dead = (p1.wounds || 0) >= (stats1?.maxWounds || 1);
-  const p2Dead = (p2.wounds || 0) >= (stats2?.maxWounds || 1);
-
-  if (p1Dead || p2Dead) {
-    state.phase = "end";
-    let endText = "";
-    if (p1Dead && p2Dead) endText = tx("draw", "НИЧЬЯ! Оба дуэлянта падают, истекая кровью.");
-    else if (p1Dead) endText = tfx("victory", { name: escapeHtml(p2.name) }, ({ name }) => `🏆 ПОБЕДА: ${name}! Противник сломлен.`);
-    else endText = tfx("victory", { name: escapeHtml(p1.name) }, ({ name }) => `🏆 ПОБЕДА: ${name}! Противник сломлен.`);
-    state.log.unshift(`<div style="background:linear-gradient(135deg, #4a0404, #800020, #4a0404); border:2px solid #A8A9AD; padding:10px; border-radius:5px; color:#d3d3d3; text-align:center; font-weight:bold; font-size:13px; text-shadow:1px 1px 2px black;">${endText}</div>`);
+  if (state.woundConfirmationRule) {
+    state.pendingWoundConfirmation = {
+      round: state.round,
+      wounds: roundWounds,
+      saved: {},
+    };
+    state.phase = "wound-confirmation";
+    state.log.unshift(`<div style="text-align:center; color:#ffaa00; border:1px solid #8c6b20; background:rgba(140,107,32,0.15); padding:6px; border-radius:3px; font-weight:bold;">${tx("woundConfirmationLog", "Ожидается подтверждение ран. ГМ должен нажать «Раунд» ещё раз.")}</div>`);
+    return true;
   }
 
-  return true;
+  return finalizeResolvedRound(state);
 }
 
 let helpersRegistered = false;
@@ -630,10 +708,12 @@ class DuelCombatApplication extends Application {
   getData() {
     const state = this.getState();
     state.randomLostActionRule = Boolean(state.randomLostActionRule);
+    state.woundConfirmationRule = Boolean(state.woundConfirmationRule);
     const players = [];
     const activeCombatants = Object.values(state.players ?? {}).filter((entry) => entry.isParticipating);
     const participatingCount = activeCombatants.length;
     const isSpectator = isCurrentUserSpectator(state);
+    const isWoundConfirmationPhase = state.phase === "wound-confirmation";
     const pinnedActorId = getPinnedPlayerActorIdForDisplay(Object.entries(state.players ?? {}), game.user);
 
     const entries = Object.entries(state.players ?? {})
@@ -652,10 +732,29 @@ class DuelCombatApplication extends Application {
       const canSpectatorInspectActor = isSpectator && isActorControlledByNonGm(actor);
       const isObserverCard = !playerData.isParticipating;
       const isOwnerParticipant = isOwner && playerData.isParticipating;
-      const canEditActionPlan = isOwnerParticipant && !playerData.isReady;
+      const canEditActionPlan = isOwnerParticipant
+        && ["join", "play"].includes(state.phase)
+        && !playerData.isReady;
       const canSeeActionPlan = playerData.isParticipating && (isOwner || canSpectatorInspectActor);
       const showStats = game.user.isGM || isOwner || canSpectatorInspectActor;
       const actionSlots = [];
+      const pendingWounds = getPendingWounds(state, actorId);
+      const canRequestWoundCancellation = isWoundConfirmationPhase
+        && playerData.isParticipating
+        && isOwner
+        && pendingWounds.remaining > 0;
+      const woundConfirmationStatus = pendingWounds.received === 0
+        ? tx("woundConfirmationNone", "Новых ран нет.")
+        : pendingWounds.remaining === 0
+          ? tfx("woundConfirmationAllSaved", { saved: pendingWounds.saved }, ({ saved }) => `Отменено ран: ${saved}.`)
+          : pendingWounds.saved > 0
+            ? tfx("woundConfirmationPartiallySaved", {
+              pending: pendingWounds.remaining,
+              saved: pendingWounds.saved,
+            }, ({ pending, saved }) => `Ожидают подтверждения: ${pending}; отменено: ${saved}.`)
+            : tfx("woundConfirmationPending", {
+              pending: pendingWounds.remaining,
+            }, ({ pending }) => `Ожидают подтверждения: ${pending}.`);
       ensurePlayerLostActionState(playerData);
 
       for (let index = 0; index < 3; index += 1) {
@@ -683,6 +782,9 @@ class DuelCombatApplication extends Application {
         woundPct,
         stats,
         actionSlots,
+        pendingWounds,
+        canRequestWoundCancellation,
+        woundConfirmationStatus,
       });
     }
 
@@ -692,8 +794,10 @@ class DuelCombatApplication extends Application {
       isGM: game.user.isGM,
       isJoinPhase: state.phase === "join",
       isPlayingPhase: state.phase === "play",
+      isWoundConfirmationPhase,
       canStartDuel: participatingCount === 2,
       randomLostActionLabel: tx("randomLostActionLabel", gt(definition, "Footer.RandomLostAction", "Потеряно случайное действие")),
+      woundConfirmationRuleLabel: tx("woundConfirmationRuleLabel", "Подтверждение ран"),
       ui: {
         title: gt(definition, "Title", "Дуэль - Боевая"),
         headerTitle: tx("headerTitle", "БОЕВАЯ ДУЭЛЬ"),
@@ -702,6 +806,8 @@ class DuelCombatApplication extends Application {
         joinLabel: tx("joinLabel", "Я В ИГРЕ"),
         readyLabel: tx("readyLabel", "ГОТОВ"),
         confirmLabel: tx("confirmLabel", "ПОДТВЕРДИТЬ"),
+        cancelWoundsLabel: tx("cancelWoundsLabel", "ОТМЕНИТЬ"),
+        woundConfirmationTitle: tx("woundConfirmationTitle", "Подтверждение ран"),
         startLabel: tx("startLabel", isRussianLocale() ? "Начать" : "Start"),
         resolveLabel: tx("resolveLabel", isRussianLocale() ? "Раунд" : "Round"),
         clearLabel: tx("clearLabel", isRussianLocale() ? "Очистить" : "Clear"),
@@ -766,7 +872,7 @@ class DuelCombatApplication extends Application {
       });
     });
 
-    html.find(".dl-ready-btn").on("click", (event) => {
+    html.find(".dl-ready-btn:not(.dl-cancel-wounds-btn)").on("click", (event) => {
       const actorId = $(event.currentTarget).data("actor");
       const playerData = this.getState().players?.[actorId];
       void requestGameAction(GAME_ID, "toggle-ready", {
@@ -782,6 +888,16 @@ class DuelCombatApplication extends Application {
     html.find("#dl-random-lost-action").on("change", (event) => {
       if (!game.user?.isGM) return;
       void requestGameAction(GAME_ID, "toggle-random-lost-action", { enabled: event.currentTarget.checked });
+    });
+    html.find("#dl-wound-confirmation-rule").on("change", (event) => {
+      if (!game.user?.isGM) return;
+      void requestGameAction(GAME_ID, "toggle-wound-confirmation-rule", { enabled: event.currentTarget.checked });
+    });
+
+    html.find(".dl-cancel-wounds-btn").on("click", (event) => {
+      void requestGameAction(GAME_ID, "request-wound-cancellation", {
+        actorId: $(event.currentTarget).data("actor"),
+      });
     });
 
     html.find("#dl-start").on("click", () => {
@@ -841,7 +957,13 @@ const definition = {
       }
       case "select-strike": {
         const playerData = state.players?.[data.actorId];
-        if (!playerData || !playerData.isParticipating || playerData.isReady || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)) return false;
+        if (
+          !playerData
+          || !playerData.isParticipating
+          || !["join", "play"].includes(state.phase)
+          || playerData.isReady
+          || !canSenderOperateActor(data.actorId, senderId, state, canUserControlActor)
+        ) return false;
         playerData.selectedStrikeId = String(data.strikeId ?? "");
         return true;
       }
@@ -873,6 +995,11 @@ const definition = {
         state.randomLostActionRule = Boolean(data.enabled);
         return true;
       }
+      case "toggle-wound-confirmation-rule": {
+        if (!senderIsGM) return false;
+        state.woundConfirmationRule = Boolean(data.enabled);
+        return true;
+      }
       case "start-duel": {
         if (!senderIsGM) return false;
         if (!canStartDuelWithState(state)) {
@@ -883,8 +1010,35 @@ const definition = {
         return true;
       }
       case "resolve-round": {
-        if (!senderIsGM || state.phase !== "play") return false;
+        if (!senderIsGM) return false;
+        if (state.phase === "wound-confirmation") return finalizeResolvedRound(state);
+        if (state.phase !== "play") return false;
         return resolveRound(state);
+      }
+      case "request-wound-cancellation": {
+        const actorId = String(data.actorId ?? "");
+        const playerData = state.players?.[actorId];
+        const pending = getPendingWounds(state, actorId);
+        if (
+          state.phase !== "wound-confirmation"
+          || !playerData?.isParticipating
+          || pending.remaining <= 0
+          || !canSenderOperateActor(actorId, senderId, state, canUserControlActor)
+        ) return false;
+
+        const amount = await promptWoundCancellation(playerData, pending.remaining);
+        if (amount <= 0) return false;
+
+        const saved = Math.min(pending.remaining, amount);
+        state.pendingWoundConfirmation.saved ||= {};
+        state.pendingWoundConfirmation.saved[actorId] = pending.saved + saved;
+        playerData.wounds = Math.max(0, (Number(playerData.wounds) || 0) - saved);
+        state.log.unshift(`<div style="color:#2ecc71; border-left:3px solid #2ecc71; background:rgba(46,204,113,0.1); padding:5px; border-radius:3px;">${tfx("woundsCancelledLog", {
+          name: `<b>${escapeHtml(playerData.name)}</b>`,
+          count: saved,
+          word: saved === 1 ? tx("savedWoundSingular", "рана") : tx("savedWoundPlural", "раны"),
+        }, ({ name, count }) => `Для ${name} отменено ран: ${count}.`)}</div>`);
+        return true;
       }
       case "clear": {
         if (!senderIsGM) return false;

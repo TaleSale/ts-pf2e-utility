@@ -415,6 +415,7 @@ function buildWallData(segment, svgBounds, sceneBounds, textureStyle) {
   if (textureStyle) {
     data.flags[MODULE_ID][WALL_TEXTURE_FLAG] = {
       enabled: true,
+      mode: "wall",
       style: textureStyle,
     };
   }

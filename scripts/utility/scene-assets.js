@@ -1,5 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260813-bastion-grass2";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260813-bastion-grass2";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -16,6 +17,40 @@ const MOVEMENT_STEP_RATIO = 0.1;
 const SIZE_STEP_CELLS = 0.1;
 const MIN_SIZE_CELLS = 0.2;
 const MAX_SIZE_CELLS = 6;
+const LEGACY_ASSET_REDIRECTS = Object.freeze({
+  "scene-assets/bench.webp": "scene-assets/bench-topdown-v2.webp",
+  "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
+  "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v2.webp",
+  "scene-assets/fireplace-brick.webp": "scene-assets/fireplace-brick-v3.webp",
+  "scene-assets/fireplace-brick-v2.webp": "scene-assets/fireplace-brick-v3.webp",
+  "scene-assets/fireplace-brick-v3.webp": "scene-assets/fireplace-brick-wall-topdown-v4.webp",
+  "scene-assets/fireplace-stone.webp": "scene-assets/fireplace-stone-v3.webp",
+  "scene-assets/fireplace-stone-v2.webp": "scene-assets/fireplace-stone-v3.webp",
+  "scene-assets/fireplace-stone-v3.webp": "scene-assets/fireplace-stone-wall-topdown-v4.webp",
+  "scene-assets/forest-deciduous-simple.webp": "scene-assets/forest-deciduous-irregular-a.webp",
+  "scene-assets/forest-pine-simple.webp": "scene-assets/forest-pine-irregular-a.webp",
+  "scene-assets/harp.webp": "scene-assets/harp-topdown-v2.webp",
+  "scene-assets/painting-landscape.webp": "scene-assets/painting-landscape-topdown-v2.webp",
+  "scene-assets/painting-portrait.webp": "scene-assets/painting-portrait-topdown-v2.webp",
+  "scene-assets/painting-still-life.webp": "scene-assets/painting-still-life-topdown-v2.webp",
+  "scene-assets/potted-flowers.webp": "scene-assets/potted-flowers-v2.webp",
+  "scene-assets/potted-herbs.webp": "scene-assets/potted-herbs-v2.webp",
+  "scene-assets/potted-tree.webp": "scene-assets/potted-tree-v2.webp",
+  "scene-assets/round-table.webp": "scene-assets/round-table-four-legs.webp",
+  "scene-assets/stonehenge-trilithon.webp": "scene-assets/stonehenge-trilithon-circle-v2.webp",
+  "scene-assets/stool.webp": "scene-assets/stool-v2.webp",
+  "scene-assets/tableware-feast.webp": "scene-assets/tableware-feast-v2.webp",
+  "scene-floors/forest-deciduous-floor.webp": "scene-assets/forest-deciduous-irregular-a.webp",
+  "scene-floors/forest-mixed-floor.webp": "scene-assets/forest-deciduous-irregular-a.webp",
+  "scene-floors/forest-pine-floor.webp": "scene-assets/forest-pine-irregular-a.webp",
+  "scene-floors/garden-crop-sheet-v2.webp": "scene-floors/garden-cabbage-floor.webp",
+  "scene-floors/garden-rice-mud-v2.webp": "scene-floors/garden-rice-water-v5.png",
+  "scene-floors/garden-rice-natural-v4.webp": "scene-floors/garden-rice-water-v5.png",
+  "scene-floors/garden-rice-water-soft-v3.webp": "scene-floors/garden-rice-water-v5.png",
+  "scene-floors/garden-soil-natural-v4.webp": "scene-floors/garden-soil-soft-v3.webp",
+  "scene-floors/garden-soil-ridges-v2.webp": "scene-floors/garden-soil-soft-v3.webp",
+});
 
 export const LIGHT_PRESETS = Object.freeze({
   torch: Object.freeze({ bright: 20, dim: 40, color: "#ff9b45", alpha: 0.1, angle: 360, negative: false, animation: { type: "torch", speed: 5, intensity: 5 } }),
@@ -25,7 +60,7 @@ export const LIGHT_PRESETS = Object.freeze({
 });
 
 export const ASSETS = Object.freeze({
-  table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1024 / 677),
+  table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1.549),
   chair: asset("Furniture", "Chair", "chair.webp", 0.5, "object", 437 / 512),
   bed: asset("Furniture", "Bed", "bed.webp", 1.8, "object", 521 / 1024),
   bedOak: asset("Furniture", "BedOak", "bed-oak.webp", 1.8, "object", 0.454),
@@ -36,7 +71,7 @@ export const ASSETS = Object.freeze({
   doubleBedRed: asset("Furniture", "DoubleBedRed", "double-bed-red.webp", 2, "object", 0.709),
   doubleBedLinen: asset("Furniture", "DoubleBedLinen", "double-bed-linen.webp", 2, "object", 0.774),
   cabinet: asset("Furniture", "Cabinet", "cabinet.webp", 1.25, "object", 1024 / 362),
-  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow.webp", 0.44, "object", 658 / 693, null, 0, "CabinetSide"),
+  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow-wall-topdown-v2.webp", 0.44, "object", 0.62, null, 0, "CabinetSide"),
   tree: asset("Nature", "Tree", "tree.webp", 2, "overhead", 1142 / 1140),
   ruins: asset("Ruins", "Ruins", "ruins.webp", 1.8, "object", 1100 / 1127),
   corpse: asset("Remains", "Corpse", "corpse.webp", 1.5, "object", 863 / 1024),
@@ -45,12 +80,14 @@ export const ASSETS = Object.freeze({
   wallTorchIron: asset("Lighting", "WallTorchIron", "wall-torch-iron.webp", 0.65, "object", 0.475, "torch"),
   wallTorchBracket: asset("Lighting", "WallTorchBracket", "wall-torch-bracket.webp", 0.65, "object", 0.696, "torch"),
   brazier: asset("Lighting", "Brazier", "brazier.webp", 0.7, "object", 998 / 1017, "brazier"),
-  roundTable: asset("Furniture", "RoundTable", "round-table.webp", 1, "object", 968 / 1024),
-  stool: asset("Furniture", "Stool", "stool.webp", 0.4, "object", 436 / 512),
+  roundTable: asset("Furniture", "RoundTable", "round-table-four-legs.webp", 1, "object", 1),
+  stool: asset("Furniture", "Stool", "stool-v2.webp", 0.4, "object", 0.988),
   chest: asset("Furniture", "Chest", "chest.webp", 0.8, "object", 1024 / 728),
   bookshelf: asset("Furniture", "Bookshelf", "bookshelf.webp", 1.2, "object", 1024 / 378),
-  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow.webp", 0.44, "object", 687 / 789, null, 0, "BookshelfSide"),
+  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow-wall-topdown-v3.webp", 0.44, "object", 0.62, null, 0, "BookshelfSide"),
   barrel: asset("Household", "Barrel", "barrel.webp", 0.6, "object", 644 / 768),
+  barrelSide: asset("Household", "BarrelSide", "barrel-side.webp", 0.9, "object", 1.61),
+  barrelsSideCluster: asset("Household", "BarrelsSideCluster", "barrels-side-cluster.webp", 1.4, "object", 0.615),
   crate: asset("Household", "Crate", "crate.webp", 0.6, "object", 747 / 768),
   sacks: asset("Household", "Sacks", "sacks.webp", 0.9, "object", 1024 / 995),
   tub: asset("Household", "Tub", "tub.webp", 1.1, "object", 1024 / 666),
@@ -89,11 +126,13 @@ export const ASSETS = Object.freeze({
   waterPuddle: asset("Traces", "WaterPuddle", "water-puddle.webp", 1.2, "ground", 1020 / 772),
   ash: asset("Traces", "Ash", "ash.webp", 1.3, "ground", 1024 / 930),
   footprints: asset("Traces", "Footprints", "footprints.webp", 1.5, "ground", 657 / 1024),
-  longTable: asset("Furniture", "LongTable", "long-table.webp", 2, "object", 1024 / 399),
-  banquetTable: asset("Furniture", "BanquetTable", "banquet-table.webp", 2, "object", 1024 / 425),
-  bench: asset("Furniture", "Bench", "bench.webp", 1.5, "object", 1024 / 388),
+  longTable: asset("Furniture", "LongTable", "long-table.webp", 2, "object", 3.556),
+  banquetTable: asset("Furniture", "BanquetTable", "banquet-table.webp", 2, "object", 2.473),
+  barCounterStraight: asset("Furniture", "BarCounterStraight", "bar-counter-straight.webp", 2.4, "object", 3.683),
+  barCounterCorner: asset("Furniture", "BarCounterCorner", "bar-counter-corner.webp", 2.2, "object", 1.13),
+  bench: asset("Furniture", "Bench", "bench-topdown-v2.webp", 1.5, "object", 3.094),
   pew: asset("TempleStage", "Pew", "pew.webp", 2, "object", 1024 / 453),
-  desk: asset("Furniture", "Desk", "desk.webp", 1.3, "object", 1024 / 684),
+  desk: asset("Furniture", "Desk", "desk.webp", 1.3, "object", 1.73),
   throne: asset("TempleStage", "Throne", "throne.webp", 1, "object", 615 / 1024),
   altar: asset("TempleStage", "Altar", "altar.webp", 1.5, "object", 1024 / 598),
   lectern: asset("TempleStage", "Lectern", "lectern.webp", 0.8, "object", 574 / 768),
@@ -106,8 +145,27 @@ export const ASSETS = Object.freeze({
   stairsWoodRustic: asset("Transitions", "StairsWoodRustic", "stairs-wood-rustic.webp", 1, "ground", 1),
   stairsWoodSquare: asset("Transitions", "Wooden stairs — 1×1", "stairs-wood-square.webp", 1, "ground", 1, null, 0, "Choices.StairsWoodSquare"),
   stairsStoneSquare: asset("Transitions", "Stone stairs — 1×1", "stairs-stone-square.webp", 1, "ground", 1, null, 0, "Choices.StairsStoneSquare"),
-  fireplaceStone: asset("Household", "FireplaceStone", "fireplace-stone.webp", 1.5, "object", 1.05, "brazier"),
-  fireplaceBrick: asset("Household", "FireplaceBrick", "fireplace-brick.webp", 1.5, "object", 1.047, "brazier"),
+  fireplaceStone: asset("Household", "FireplaceStone", "fireplace-stone-wall-topdown-v4.webp", 1, "object", 1.15, "brazier"),
+  fireplaceBrick: asset("Household", "FireplaceBrick", "fireplace-brick-wall-topdown-v4.webp", 1, "object", 1.133, "brazier"),
+  pottedFlowers: asset("Household", "PottedFlowers", "potted-flowers-v2.webp", 0.6, "object", 0.95),
+  pottedHerbs: asset("Household", "PottedHerbs", "potted-herbs-v2.webp", 0.6, "object", 0.979),
+  pottedTree: asset("Household", "PottedTree", "potted-tree-v2.webp", 0.75, "object", 0.964),
+  tablewareEmpty: asset("Household", "TablewareEmpty", "tableware-empty.webp", 0.65, "object", 0.965),
+  tablewareStew: asset("Household", "TablewareStew", "tableware-stew.webp", 0.7, "object", 1.364),
+  tablewareRoast: asset("Household", "TablewareRoast", "tableware-roast.webp", 0.7, "object", 0.798),
+  tablewareFish: asset("Household", "TablewareFish", "tableware-fish.webp", 0.75, "object", 1.593),
+  tablewareCheeseFruit: asset("Household", "TablewareCheeseFruit", "tableware-cheese-fruit.webp", 0.7, "object", 0.956),
+  tablewareBreakfast: asset("Household", "TablewareBreakfast", "tableware-breakfast.webp", 0.7, "object", 1.188),
+  tablewareTea: asset("Household", "TablewareTea", "tableware-tea.webp", 0.7, "object", 0.945),
+  tablewareAle: asset("Household", "TablewareAle", "tableware-ale.webp", 0.7, "object", 0.991),
+  tablewareWine: asset("Household", "TablewareWine", "tableware-wine.webp", 0.7, "object", 0.95),
+  tablewareFeast: asset("Household", "TablewareFeast", "tableware-feast-v2.webp", 0.8, "object", 0.955),
+  paintingLandscape: asset("Decor", "PaintingLandscape", "painting-landscape-topdown-v2.webp", 0.9, "object", 4.613),
+  paintingPortrait: asset("Decor", "PaintingPortrait", "painting-portrait-topdown-v2.webp", 0.7, "object", 4.016),
+  paintingStillLife: asset("Decor", "PaintingStillLife", "painting-still-life-topdown-v2.webp", 0.7, "object", 2.893),
+  hayPile: asset("Outdoors", "HayPile", "hay-pile.webp", 1.2, "object", 1.082),
+  hayWindrow: asset("Outdoors", "HayWindrow", "hay-windrow.webp", 1.6, "object", 3.697),
+  hayCluster: asset("Outdoors", "HayCluster", "hay-cluster.webp", 1.4, "object", 1.54),
   trapdoor: asset("Transitions", "Trapdoor", "trapdoor.webp", 0.8, "ground", 744 / 768),
   stairsUp: asset("Transitions", "StairsUp", "stairs-up.webp", 2, "ground", 444 / 1024),
   stairsDown: asset("Transitions", "StairsDown", "stairs-down.webp", 2, "ground", 410 / 1024),
@@ -124,17 +182,23 @@ export const ASSETS = Object.freeze({
   standingStoneBroad: asset("Ruins", "StandingStoneBroad", "standing-stone-broad.webp", 0.65, "object", 1.28, null, 0, "StandingStoneBroad"),
   standingStoneNarrow: asset("Ruins", "StandingStoneNarrow", "standing-stone-narrow.webp", 0.7, "object", 0.3, null, 0, "StandingStoneNarrow"),
   standingStoneCrooked: asset("Ruins", "StandingStoneCrooked", "standing-stone-crooked.webp", 0.7, "object", 0.494, null, 0, "StandingStoneCrooked"),
+  piano: asset("MusicalInstruments", "Piano", "piano.webp", 1, "object", 1.263),
+  grandPiano: asset("MusicalInstruments", "GrandPiano", "grand-piano.webp", 1, "object", 0.755),
+  drums: asset("MusicalInstruments", "Drums", "drums.webp", 1, "object", 0.941),
+  harp: asset("MusicalInstruments", "Harp", "harp-topdown-v2.webp", 1, "object", 1.886),
 });
 
-const CATEGORIES = Object.freeze(["Furniture", "Household", "TempleStage", "Lighting", "Nature", "Outdoors", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
+const CATEGORIES = Object.freeze(["Furniture", "Household", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
 const LAYERS = Object.freeze({ ground: -100, object: 0, overhead: 100 });
 
 function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null) {
+  const source = `modules/${MODULE_ID}/images/scene-assets/${filename}`;
   return Object.freeze({
     category,
     labelKey: `Settings.SceneAssets.${labelPath ?? `Choices.${label}`}`,
     fallback: label,
-    src: `modules/${MODULE_ID}/images/scene-assets/${filename}`,
+    source,
+    get src() { return resolvePresetTexture(source); },
     size,
     aspect,
     layer,
@@ -180,9 +244,142 @@ Hooks.once("init", () => {
   });
 });
 
+function redirectLegacyAssetPath(source) {
+  const normalized = String(source ?? "").replaceAll("\\", "/").split(/[?#]/, 1)[0];
+  const marker = `/modules/${MODULE_ID}/images/`;
+  const absoluteIndex = normalized.toLowerCase().indexOf(marker.toLowerCase());
+  let relative = absoluteIndex >= 0 ? normalized.slice(absoluteIndex + marker.length) : null;
+  if (!relative && normalized.toLowerCase().startsWith(`modules/${MODULE_ID}/images/`.toLowerCase())) {
+    relative = normalized.slice(`modules/${MODULE_ID}/images/`.length);
+  }
+  if (!relative) return null;
+  const replacement = LEGACY_ASSET_REDIRECTS[relative.toLowerCase()];
+  return replacement ? `modules/${MODULE_ID}/images/${replacement}` : null;
+}
+
+function redirectLegacyPathProperty(data, path) {
+  const replacement = redirectLegacyAssetPath(foundry.utils.getProperty(data, path));
+  if (!replacement) return false;
+  foundry.utils.setProperty(data, path, replacement);
+  return true;
+}
+
+function resolvePresetPathProperty(data, path, scene = globalThis.canvas?.scene) {
+  const source = foundry.utils.getProperty(data, path);
+  const replacement = resolvePresetTexture(source, undefined, scene);
+  if (!replacement || replacement === source) return false;
+  foundry.utils.setProperty(data, path, replacement);
+  return true;
+}
+
+function redirectLegacySetPaths(sets) {
+  let changed = false;
+  for (const set of sets) {
+    for (const item of set.items ?? []) {
+      const replacement = redirectLegacyAssetPath(item.texture?.src);
+      if (!replacement) continue;
+      item.texture.src = replacement;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+async function migrateLegacySceneAssetPaths() {
+  if (!game.user?.isGM) return;
+  let migrated = 0;
+  for (const scene of game.scenes ?? []) {
+    const sceneUpdate = {};
+    for (const path of ["background.src", "foreground"]) {
+      const replacement = redirectLegacyAssetPath(foundry.utils.getProperty(scene, path));
+      if (replacement) foundry.utils.setProperty(sceneUpdate, path, resolvePresetTexture(replacement, undefined, scene));
+    }
+    if (Object.keys(sceneUpdate).length) {
+      await scene.update(sceneUpdate);
+      migrated += Object.keys(sceneUpdate).length;
+    }
+    const updates = [];
+    for (const tile of scene.tiles ?? []) {
+      const replacement = redirectLegacyAssetPath(tile.texture?.src);
+      const desired = replacement ? resolvePresetTexture(replacement, undefined, scene) : null;
+      if (desired && desired !== tile.texture?.src) updates.push({ _id: tile.id, "texture.src": desired });
+    }
+    for (let offset = 0; offset < updates.length; offset += 100) {
+      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+    }
+    migrated += updates.length;
+  }
+  const sets = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTING_SETS)?.sets ?? []);
+  if (redirectLegacySetPaths(sets)) {
+    await game.settings.set(MODULE_ID, SETTING_SETS, { version: 1, sets });
+    migrated += 1;
+  }
+  if (migrated) console.info(`${MODULE_ID} | Redirected ${migrated} legacy scene asset path(s)`);
+}
+
+async function synchronizeSceneAssetPresetPaths(targetScene = null) {
+  if (!game.user?.isGM) return;
+  const scenes = targetScene ? [targetScene] : Array.from(game.scenes ?? []);
+  for (const scene of scenes) {
+    const sceneUpdate = {};
+    for (const path of ["background.src", "foreground"]) {
+      const source = foundry.utils.getProperty(scene, path);
+      const desired = resolvePresetTexture(source, undefined, scene);
+      if (desired && desired !== source) foundry.utils.setProperty(sceneUpdate, path, desired);
+    }
+    if (Object.keys(sceneUpdate).length) await scene.update(sceneUpdate);
+    const updates = [];
+    for (const tile of scene.tiles ?? []) {
+      const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      const definition = flag?.key ? ASSETS[flag.key] : null;
+      const desired = resolvePresetTexture(definition?.source ?? tile.texture?.src, undefined, scene);
+      if (desired && desired !== tile.texture?.src) updates.push({ _id: tile.id, "texture.src": desired });
+    }
+    for (let offset = 0; offset < updates.length; offset += 100) {
+      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+    }
+  }
+}
+
+async function synchronizeNarrowAssetDimensions() {
+  if (!game.user?.isGM) return;
+  const keys = new Set(["cabinetNarrow", "bookshelfNarrow"]);
+  for (const scene of game.scenes ?? []) {
+    const updates = [];
+    for (const tile of scene.tiles ?? []) {
+      const key = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.key;
+      if (!keys.has(key)) continue;
+      const definition = ASSETS[key];
+      const maximum = Math.max(Number(tile.width) || 0, Number(tile.height) || 0);
+      if (!maximum) continue;
+      const desiredWidth = Math.max(1, Math.round(maximum * definition.aspect));
+      const desiredHeight = Math.max(1, Math.round(maximum));
+      if (desiredWidth !== Math.round(tile.width) || desiredHeight !== Math.round(tile.height)) {
+        updates.push({ _id: tile.id, width: desiredWidth, height: desiredHeight });
+      }
+    }
+    for (let offset = 0; offset < updates.length; offset += 100) {
+      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+    }
+  }
+}
+
+Hooks.once("ready", async () => {
+  await migrateLegacySceneAssetPaths();
+  await synchronizeSceneAssetPresetPaths();
+  await synchronizeNarrowAssetDimensions();
+});
+
+Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, (_preset, scene) => {
+  rerenderPicker();
+  void synchronizeSceneAssetPresetPaths(scene);
+});
+
 function getSets() {
   const value = game.settings.get(MODULE_ID, SETTING_SETS);
-  return Array.isArray(value?.sets) ? foundry.utils.deepClone(value.sets) : [];
+  const sets = Array.isArray(value?.sets) ? foundry.utils.deepClone(value.sets) : [];
+  redirectLegacySetPaths(sets);
+  return sets;
 }
 
 async function setSets(sets) {
@@ -388,7 +585,7 @@ function renderPicker(element) {
       button.dataset.setId = set.id;
       button.title = set.name;
       button.classList.toggle("selected", set.id === selectedSetId);
-      const thumbs = set.items.slice(0, 4).map((item) => `<img src="${htmlEscape(item.texture?.src ?? "")}" alt="">`).join("");
+      const thumbs = set.items.slice(0, 4).map((item) => `<img src="${htmlEscape(resolvePresetTexture(item.texture?.src ?? ""))}" alt="">`).join("");
       button.innerHTML = `<span class="tsu-set-thumbs">${thumbs}</span><span>${htmlEscape(set.name)}</span><i class="fa-solid fa-trash" data-delete-set title="${localize("DeleteSet", "Delete set")}"></i>`;
       button.addEventListener("click", (event) => {
         if (event.target.closest("[data-delete-set]")) return deleteSet(set.id, set.name);
@@ -873,7 +1070,7 @@ function redrawSetPreview() {
   const container = getPreviewContainer();
   for (const item of set.items) {
     const offset = transformOffset(item.cx * grid, item.cy * grid);
-    const sprite = PIXI.Sprite.from(item.texture.src);
+    const sprite = PIXI.Sprite.from(resolvePresetTexture(item.texture.src));
     sprite.anchor.set(Number(item.texture.anchorX ?? 0.5), Number(item.texture.anchorY ?? 0.5));
     sprite.position.set(cursor.x + offset.x, cursor.y + offset.y);
     sprite.width = item.width * grid * scale * ((Number(item.texture.scaleX ?? 1) < 0) !== flipped ? -1 : 1);
@@ -1047,6 +1244,7 @@ async function placeSet(point) {
       name: item.name,
       texture: {
         ...foundry.utils.deepClone(item.texture),
+        src: resolvePresetTexture(item.texture?.src),
         scaleX: Math.abs(Number(item.texture.scaleX ?? 1)) * ((Number(item.texture.scaleX ?? 1) < 0) !== flipped ? -1 : 1),
       },
       x: Math.round(point.x + offset.x),
@@ -1173,8 +1371,37 @@ Hooks.on("updateTile", (tile, change) => {
   });
 });
 
+Hooks.on("preCreateTile", (tile, data) => {
+  redirectLegacyPathProperty(data, "texture.src");
+  resolvePresetPathProperty(data, "texture.src", tile.parent ?? globalThis.canvas?.scene);
+});
+
+Hooks.on("preCreateScene", (_scene, data) => {
+  redirectLegacyPathProperty(data, "background.src");
+  redirectLegacyPathProperty(data, "foreground");
+  const preset = foundry.utils.getProperty(data, `flags.${MODULE_ID}.texturePreset`);
+  resolvePresetPathProperty(data, "background.src", { flags: { [MODULE_ID]: { texturePreset: preset } } });
+  resolvePresetPathProperty(data, "foreground", { flags: { [MODULE_ID]: { texturePreset: preset } } });
+  for (const tile of data.tiles ?? []) {
+    redirectLegacyPathProperty(tile, "texture.src");
+    resolvePresetPathProperty(tile, "texture.src", { flags: { [MODULE_ID]: { texturePreset: preset } } });
+  }
+});
+
+Hooks.on("preUpdateScene", (scene, change) => {
+  redirectLegacyPathProperty(change, "background.src");
+  redirectLegacyPathProperty(change, "foreground");
+  const presetPath = `flags.${MODULE_ID}.texturePreset`;
+  const pendingPreset = foundry.utils.getProperty(change, presetPath) ?? change[presetPath];
+  const targetScene = pendingPreset == null ? scene : { flags: { [MODULE_ID]: { texturePreset: pendingPreset } } };
+  resolvePresetPathProperty(change, "background.src", targetScene);
+  resolvePresetPathProperty(change, "foreground", targetScene);
+});
+
 Hooks.on("preUpdateTile", (tile, change) => {
   const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+  redirectLegacyPathProperty(change, "texture.src");
+  resolvePresetPathProperty(change, "texture.src", tile.parent ?? globalThis.canvas?.scene);
   if (!flag || game.keyboard?.isModifierActive?.("ALT")) return;
   if ("x" in change || "y" in change) {
     const snapped = snapPlacementPoint({ x: Number(change.x ?? tile.x), y: Number(change.y ?? tile.y) });

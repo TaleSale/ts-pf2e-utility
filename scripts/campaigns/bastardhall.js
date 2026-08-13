@@ -80,9 +80,9 @@ const DEFAULT_NIGHT_PC_RULES = JSON.stringify([
 const DEFAULT_PHANTOM_BONUSES = Object.freeze({
   aron: [
     "В «Покое Орма» ПИ получают бонус предмета +1 к проверкам Проживания.",
-    "Арон получает физическое тело. ПИ могут брать до 2 созданных им напитков в день.",
-    "Арон создаёт более сильные напитки; лимит остаётся равен 2 напиткам в день.",
-    "ПИ могут брать до 3 напитков в день. Арон также может противодействовать недугу со средним модификатором группы.",
+    "Арон получает физическое тело. ПИ могут брать до 2 созданных им напитков в день на всю группу.",
+    "Арон создаёт более сильные напитки; общий лимит остаётся равен 2 напиткам в день на всю группу.",
+    "ПИ могут брать до 3 напитков в день на всю группу. Арон также может противодействовать недугу со средним модификатором группы.",
   ],
   ausken: [
     "Аускен помогает бесплатно наносить или переносить 1 руну в день с ограничением по уровню руны.",
@@ -115,6 +115,13 @@ const DEFAULT_PHANTOM_BONUSES = Object.freeze({
     "Доступно третье воскрешение и ритуал «Укрепляющее варево».",
   ],
 });
+
+const LEGACY_ARON_BONUSES = Object.freeze([
+  "В «Покое Орма» ПИ получают бонус предмета +1 к проверкам Проживания.",
+  "Арон получает физическое тело. ПИ могут брать до 2 созданных им напитков в день.",
+  "Арон создаёт более сильные напитки; лимит остаётся равен 2 напиткам в день.",
+  "ПИ могут брать до 3 напитков в день. Арон также может противодействовать недугу со средним модификатором группы.",
+]);
 
 function defaultPhantomBonuses(phantom) {
   return [...(DEFAULT_PHANTOM_BONUSES[phantom.id] ?? ["", "", "", ""])];
@@ -197,7 +204,7 @@ function createDefaultMementos() {
 
 function createDefaultData() {
   return {
-    version: 6,
+    version: 7,
     inventory: [],
     soulhearts: {
       simple: 0,
@@ -302,7 +309,7 @@ function normalizeData(raw) {
     recursive: true,
     overwrite: true,
   });
-  data.version = 6;
+  data.version = 7;
   data.inventory = stackInventoryEntries(data.inventory);
   if (storedVersion < 6) {
     data.soulhearts.slugs = Object.fromEntries(Object.entries(SOULHEARTS).map(([key, value]) => [key, value.defaultSlugs.join(", ")]));
@@ -327,7 +334,8 @@ function normalizeData(raw) {
       rank: Math.clamp(Number(stored.rank) || 0, 0, 3),
       bonuses: Array.from({ length: 4 }, (_value, index) => {
         const storedBonus = String(bonuses[index] ?? "").trim();
-        const migrateDefault = storedVersion < 5 && (definition.id === "banidjer" || !storedBonus);
+        const migrateAronBonus = storedVersion < 7 && definition.id === "aron" && storedBonus === LEGACY_ARON_BONUSES[index];
+        const migrateDefault = migrateAronBonus || (storedVersion < 5 && (definition.id === "banidjer" || !storedBonus));
         return String(migrateDefault ? defaultPhantomBonuses(definition)[index] : (storedBonus || defaultPhantomBonuses(definition)[index] || ""));
       }),
     };
@@ -693,10 +701,15 @@ async function syncEffect(actor, key, active, sourceFactory) {
     return;
   }
 
-  const currentRules = JSON.stringify(existing.system?.rules ?? []);
+  // Compare against the persisted source. PF2e prepares `system.rules` into
+  // RuleElement instances, so comparing the prepared data with plain sources
+  // can report a change on every reconciliation. Updating a GrantItem effect
+  // then causes PF2e to grant its conditions again unnecessarily.
+  const persistedSystem = existing._source?.system ?? existing.system ?? {};
+  const currentRules = JSON.stringify(persistedSystem.rules ?? []);
   const nextRules = JSON.stringify(source.system.rules ?? []);
-  const currentDescription = String(existing.system?.description?.value ?? "");
-  const tokenIconVisible = existing.system?.tokenIcon?.show !== false;
+  const currentDescription = String(persistedSystem.description?.value ?? "");
+  const tokenIconVisible = persistedSystem.tokenIcon?.show !== false;
   if (existing.name !== source.name || existing.img !== source.img || currentRules !== nextRules || currentDescription !== source.system.description.value || tokenIconVisible) {
     await existing.update({
       name: source.name,
@@ -889,25 +902,107 @@ async function resetBastardhallData() {
   if (remaining) throw new Error(`Не удалось очистить инвентарь: осталось предметов — ${remaining}.`);
 }
 
-let reconcileQueue = Promise.resolve();
-function queueReconcile() {
-  if (!isPrimaryGM()) return;
-  reconcileQueue = reconcileQueue
-    .then(async () => {
-      const data = getData();
-      const enabled = Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING));
-      const nightActive = enabled && !isDaytime(data);
-      const stormActive = enabled && Boolean(data.climate.stormActive);
-      await reconcileActorEffects(data, nightActive, stormActive, enabled);
-      await reconcileSceneDarkness(data, nightActive, stormActive);
-      const collected = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
-      if (enabled) {
-        for (const memento of data.mementos) {
-          if (collected.has(memento.id)) await disableMementoWalls(memento);
-        }
+function actorReconcileSignature(data, nightActive, stormActive, enabled) {
+  const collectedMementos = data.inventory
+    .filter((entry) => entry.category === "memento")
+    .map((entry) => entry.mementoId)
+    .sort();
+  return JSON.stringify({
+    enabled,
+    nightActive,
+    pcNightActive: pcNightPenaltyActive(data, nightActive),
+    stormActive,
+    soulhearts: data.soulhearts,
+    climate: {
+      excludedNpcRefs: data.climate.excludedNpcRefs,
+      nightRules: { pc: data.climate.night.pcRules, npc: data.climate.night.npcRules },
+      stormRules: { pc: data.climate.storm.pcRules, npc: data.climate.storm.npcRules },
+    },
+    collectedMementos,
+    mementos: data.mementos.map(({ id, name, bonus, rules }) => ({ id, name, bonus, rules })),
+    homebrew: data.homebrew,
+    phantoms: data.phantoms.map(({ id, name, found, rank, actorUuid }) => ({ id, name, found, rank, actorUuid })),
+  });
+}
+
+function sceneReconcileSignature(data, nightActive, stormActive) {
+  return JSON.stringify({
+    nightActive,
+    stormActive,
+    sceneRefs: data.climate.sceneRefs,
+    nightDarkness: data.climate.night.darkness,
+    stormDarkness: data.climate.storm.darkness,
+  });
+}
+
+function mementoReconcileSignature(data, enabled) {
+  return JSON.stringify({
+    enabled,
+    collected: data.inventory
+      .filter((entry) => entry.category === "memento")
+      .map((entry) => entry.mementoId)
+      .sort(),
+    walls: data.mementos.map(({ id, wallUuids }) => ({ id, wallUuids })),
+  });
+}
+
+let activeReconcile = null;
+let pendingReconcile = null;
+let lastActorSignature = null;
+let lastSceneSignature = null;
+let lastMementoSignature = null;
+
+async function runReconcile(request) {
+  const data = getData();
+  const enabled = Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING));
+  const nightActive = enabled && !isDaytime(data);
+  const stormActive = enabled && Boolean(data.climate.stormActive);
+
+  const actorSignature = actorReconcileSignature(data, nightActive, stormActive, enabled);
+  if (request.forceActors || actorSignature !== lastActorSignature) {
+    await reconcileActorEffects(data, nightActive, stormActive, enabled);
+    lastActorSignature = actorSignature;
+  }
+
+  const sceneSignature = sceneReconcileSignature(data, nightActive, stormActive);
+  if (request.forceScenes || sceneSignature !== lastSceneSignature) {
+    await reconcileSceneDarkness(data, nightActive, stormActive);
+    lastSceneSignature = sceneSignature;
+  }
+
+  const mementoSignature = mementoReconcileSignature(data, enabled);
+  if (request.forceMementos || mementoSignature !== lastMementoSignature) {
+    const collected = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
+    if (enabled) {
+      for (const memento of data.mementos) {
+        if (collected.has(memento.id)) await disableMementoWalls(memento);
       }
-    })
-    .catch((error) => console.error(`${MODULE_ID} | Bastardhall automation failed`, error));
+    }
+    lastMementoSignature = mementoSignature;
+  }
+}
+
+function queueReconcile({ forceActors = false, forceScenes = false, forceMementos = false } = {}) {
+  if (!isPrimaryGM()) return activeReconcile;
+  pendingReconcile ??= { forceActors: false, forceScenes: false, forceMementos: false };
+  pendingReconcile.forceActors ||= forceActors;
+  pendingReconcile.forceScenes ||= forceScenes;
+  pendingReconcile.forceMementos ||= forceMementos;
+  if (activeReconcile) return activeReconcile;
+
+  activeReconcile = (async () => {
+    while (pendingReconcile) {
+      const request = pendingReconcile;
+      pendingReconcile = null;
+      await runReconcile(request);
+    }
+  })()
+    .catch((error) => console.error(`${MODULE_ID} | Bastardhall automation failed`, error))
+    .finally(() => {
+      activeReconcile = null;
+      if (pendingReconcile) queueReconcile();
+    });
+  return activeReconcile;
 }
 
 function getDocumentFromDrop(data) {
@@ -1081,9 +1176,10 @@ async function useAronDrinks(rank) {
   const actor = (await choosePlayerCharacters("Напитки Арона", 1))[0];
   if (!actor) return;
   const max = rank >= 3 ? 3 : 2;
-  const remaining = Math.max(0, max - dailyUses(actor, "aronDrinks"));
+  const usedByGroup = playerCharacters().reduce((used, character) => used + dailyUses(character, "aronDrinks"), 0);
+  const remaining = Math.max(0, max - usedByGroup);
   if (!remaining) {
-    ui.notifications?.warn?.(`${actor.name} уже получил максимальное число напитков Арона сегодня.`);
+    ui.notifications?.warn?.("Группа уже получила максимальное число напитков Арона сегодня.");
     return;
   }
   const uuids = await choosePhantomItems("Напитки Арона", await phantomItemOptions("drinks", rank), remaining);
@@ -1722,12 +1818,8 @@ Hooks.once("init", () => {
 
 Hooks.on("renderActorDirectory", addActorDirectoryButton);
 Hooks.on("renderEffectsPanel", hideManagedEffectPanelIcons);
-Hooks.on("updateWorldTime", () => {
-  queueReconcile();
-  Object.values(ui.windows ?? {}).find((app) => app?.id === APP_ID)?.render?.(false);
-});
-Hooks.on("canvasReady", queueReconcile);
-Hooks.on("createActor", queueReconcile);
+Hooks.on("updateWorldTime", () => queueReconcile());
+Hooks.on("createActor", () => queueReconcile({ forceActors: true }));
 
 Hooks.once("ready", () => {
   game.socket?.on?.(SOCKET_CHANNEL, async (message) => {
@@ -1742,7 +1834,11 @@ Hooks.once("ready", () => {
 
   const module = game.modules?.get(MODULE_ID);
   if (module) {
-    module.api = { ...(module.api ?? {}), openBastardhallSheet, reconcileBastardhall: queueReconcile };
+    module.api = {
+      ...(module.api ?? {}),
+      openBastardhallSheet,
+      reconcileBastardhall: () => queueReconcile({ forceActors: true, forceScenes: true, forceMementos: true }),
+    };
   }
   queueReconcile();
 });
