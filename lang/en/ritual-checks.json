@@ -1,0 +1,46 @@
+{
+  "TS_PF2E_UTILITY": {
+    "Settings": {
+      "RitualChecks": {
+        "Name": "Ritual Checks",
+        "Hint": "Adds ritual-rank selection and a shared chat workflow for secondary and primary ritual checks, including DCs, circumstance modifiers, degree reductions, and Hero Point rerolls."
+      }
+    },
+    "RitualChecks": {
+      "ChooseRankTitle": "Cast {ritual}",
+      "ChooseRank": "Ritual rank",
+      "ChooseCheckTitle": "Choose ritual caster and check",
+      "CasterAndCheck": "Caster and check",
+      "Cast": "Cast",
+      "Roll": "Roll",
+      "Rank": "Rank {rank}",
+      "DC": "DC {dc}",
+      "DCPair": "Secondary DC {secondary}, primary DC {primary}",
+      "PrimaryCheck": "Primary check",
+      "SecondaryCheck": "Secondary check",
+      "SecondaryChecks": "Secondary checks",
+      "SecondaryProgress": "Secondary checks: {current}/{required}",
+      "NoSecondaryRequired": "No secondary checks are required.",
+      "WaitingForSecondary": "Waiting for secondary casters.",
+      "PrimaryModifier": "Circumstance modifier: {modifier}",
+      "SecondaryBonusLabel": "Secondary ritual checks: critical success",
+      "SecondaryPenaltyLabel": "Secondary ritual checks: failure",
+      "RitualResult": "Ritual result",
+      "HeroReroll": "Hero Point reroll",
+      "RerollHint": "A Hero Point reroll replaces the previous result and recalculates the ritual before the primary check is rolled.",
+      "NoChecksRecognized": "No automated check could be recognized in the ritual text.",
+      "Lore": "Lore",
+      "RollLabel": "{ritual}: {check}",
+      "Outcomes": {
+        "criticalFailure": "Critical Failure",
+        "failure": "Failure",
+        "success": "Success",
+        "criticalSuccess": "Critical Success"
+      },
+      "Notifications": {
+        "GMRequired": "An active GM is required to start a shared ritual workflow.",
+        "NoEligibleCheck": "No controlled caster has an eligible statistic for “{check}”."
+      }
+    }
+  }
+}

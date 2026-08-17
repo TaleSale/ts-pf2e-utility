@@ -4,7 +4,7 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260813-bastion-grass2";
+} from "./texture-presets.js?v=20260816-swamp-floor1";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -30,6 +30,8 @@ const FLOOR_STYLES = Object.freeze({
   "wood-alder": floorStyle("WoodAlder", "Alder boards", "wood-alder-floor.png"),
   "wood-outdoor": floorStyle("WoodOutdoor", "Outdoor boards", "wood-outdoor-brown-v3.png", null, 1.25),
   "grass-meadow": floorStyle("GrassMeadow", "Meadow grass", "grass-meadow-floor.png"),
+  "flowering-shrubs-dense": floorStyle("FloweringShrubsDense", "Dense flowering shrubs", "flowering-shrubs-dense-floor-v1.webp", shrubEdge()),
+  "swamp": floorStyle("Swamp", "Swamp", "swamp-floor-v1.png"),
   "path-dirt": floorStyle("PathDirt", "Dirt path", "path-dirt-floor.png", { kind: "cut", jitter: 4 }),
   "path-cobblestone": floorStyle("PathCobblestone", "Cobblestone path", "path-cobblestone-floor.png", { kind: "stone", jitter: 7, feather: 4 }),
   "carpet-red": floorStyle("CarpetRed", "Red carpet", "carpet-red-floor.png", carpetEdge("red")),
@@ -80,7 +82,7 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
     ...stairStyleKeys("stairs-wood-alder"),
     ...stairStyleKeys("stairs-wood-outdoor"),
   ] }),
-  Object.freeze({ key: "Nature", fallback: "Nature", styles: ["grass-meadow", "forest-deciduous", "forest-pine", "forest-mixed"] }),
+  Object.freeze({ key: "Nature", fallback: "Nature", styles: ["grass-meadow", "flowering-shrubs-dense", "swamp", "forest-deciduous", "forest-pine", "forest-mixed"] }),
   Object.freeze({ key: "Seas", fallback: "Seas", styles: ["sea-shallow", "sea-deep", "sea-stormy"] }),
   Object.freeze({ key: "Roofs", fallback: "Roofs", styles: ["roof-thatch", "roof-shingles", "roof-tiles"] }),
   Object.freeze({ key: "Gardens", fallback: "Gardens", styles: ["garden-cabbage", "garden-carrot", "garden-herbs", "garden-rice"] }),
@@ -208,6 +210,16 @@ function roofEdge(materialType, material, shadow, highlight) {
   });
 }
 
+function shrubEdge() {
+  return Object.freeze({
+    kind: "shrub",
+    shadow: 0x07160b,
+    width: 8,
+    shadowAlpha: 0.28,
+    jitter: 6,
+  });
+}
+
 let activeTool = null;
 let selectedStyle = DEFAULT_STYLE;
 let selectedLevel = 0;
@@ -215,10 +227,12 @@ let currentLevel = 0;
 let draftPoints = [];
 let selectedEdge = null;
 let redrawTimer = null;
+let redrawNeedsFullPass = false;
+const pendingForestFloorIds = new Set();
 let stageBound = null;
 let lastClick = null;
-let renderWallSegments = [];
-let forestRenderSignature = null;
+const forestRenderSignatures = new Map();
+const trackedWallStates = new Map();
 let gardenAssetsReady = false;
 let gardenAssetPromise = null;
 let gardenAssetRevision = 0;
@@ -885,16 +899,29 @@ function getEditorContainer(create = true) {
 
 function clearContainer(container) {
   if (!container) return;
-  for (const child of container.removeChildren()) {
-    const ownedTextures = new Set();
-    const collect = (displayObject) => {
-      if (displayObject?._tsuOwnedTexture) ownedTextures.add(displayObject._tsuOwnedTexture);
-      for (const nested of displayObject?.children ?? []) collect(nested);
-    };
-    collect(child);
-    child.destroy?.({ children: true });
-    for (const texture of ownedTextures) texture.destroy?.(true);
-  }
+  for (const child of container.removeChildren()) destroyDisplayObject(child);
+}
+
+function destroyDisplayObject(displayObject) {
+  const ownedTextures = new Set();
+  const collect = (child) => {
+    if (child?._tsuOwnedTexture) ownedTextures.add(child._tsuOwnedTexture);
+    for (const nested of child?.children ?? []) collect(nested);
+  };
+  collect(displayObject);
+  displayObject?.destroy?.({ children: true });
+  for (const texture of ownedTextures) texture.destroy?.(true);
+}
+
+function findForestLayer(container, floorId) {
+  return container?.children?.find((child) => child._tsuForestFloorId === floorId) ?? null;
+}
+
+function removeForestLayer(container, floorId) {
+  const layer = findForestLayer(container, floorId);
+  if (!layer) return;
+  container.removeChild(layer);
+  destroyDisplayObject(layer);
 }
 
 function newGraphics() {
@@ -934,43 +961,48 @@ function drawClosedStroke(graphics, points, color, width, alpha = 1, join = "rou
   graphics.lineTo(points[0].x, points[0].y);
 }
 
-function redrawFloors() {
-  const container = getFloorContainer();
+function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
+  const container = getFloorContainer(!forestOnly);
   const forestContainer = getForestContainer();
-  clearContainer(container);
+  const targetedForestIds = forestOnly ? new Set(forestFloorIds) : null;
+  if (!forestOnly) clearContainer(container);
   if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) {
     clearContainer(forestContainer);
-    forestRenderSignature = null;
+    forestRenderSignatures.clear();
     return;
   }
-  renderWallSegments = blockingWallSegments();
   const sceneData = getSceneData();
   const gridSize = Number(canvas?.dimensions?.size ?? 100);
-  const nextForestSignature = JSON.stringify({
-    currentLevel,
-    gridSize,
-    walls: renderWallSegments,
-    forests: sceneData.floors.filter((floor) => FLOOR_STYLES[floor.style]?.forest)
-      .map((floor) => ({ id: floor.id, style: floor.style, level: floor.level, points: floor.points })),
-  });
-  const redrawForest = nextForestSignature !== forestRenderSignature;
-  if (redrawForest) clearContainer(forestContainer);
+  const texturePreset = currentTexturePreset();
+  const blockingWalls = blockingWallSegments();
+  const visibleForestIds = new Set();
 
   for (const floor of sceneData.floors) {
     if (Number(floor.level ?? 0) > currentLevel) continue;
     const points = normalizePolygon(floor.points);
     if (points.length < 3) continue;
     const style = FLOOR_STYLES[floor.style] ?? FLOOR_STYLES[DEFAULT_STYLE];
+    if (style.forest) {
+      if (targetedForestIds && !targetedForestIds.has(floor.id)) continue;
+      visibleForestIds.add(floor.id);
+      const nearbyWalls = forestWallSegments(points, style.forest, blockingWalls);
+      const signature = JSON.stringify({ gridSize, texturePreset, style: floor.style, level: floor.level, points, walls: nearbyWalls });
+      if (forestRenderSignatures.get(floor.id) === signature && findForestLayer(forestContainer, floor.id)) continue;
+      removeForestLayer(forestContainer, floor.id);
+      const floorLayer = new PIXI.Container();
+      floorLayer.eventMode = "none";
+      floorLayer.zIndex = Number(floor.level ?? 0);
+      floorLayer._tsuForestFloorId = floor.id;
+      forestContainer?.addChild(floorLayer);
+      const forest = createForestFill(points, style.forest, `${floor.id}:${floor.style}`, nearbyWalls);
+      if (forest) floorLayer.addChild(forest);
+      forestRenderSignatures.set(floor.id, signature);
+      continue;
+    }
+    if (forestOnly) continue;
     const floorLayer = new PIXI.Container();
     floorLayer.eventMode = "none";
     floorLayer.zIndex = Number(floor.level ?? 0);
-    if (style.forest) {
-      if (!redrawForest) continue;
-      forestContainer?.addChild(floorLayer);
-      const forest = createForestFill(points, style.forest, `${floor.id}:${floor.style}`);
-      if (forest) floorLayer.addChild(forest);
-      continue;
-    }
     container.addChild(floorLayer);
     const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
     const renderPoints = style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, boundarySeed, style.edge) : points;
@@ -1012,14 +1044,71 @@ function redrawFloors() {
     const edgeGraphic = style.edge ? createFloorEdge(renderPoints, style.edge, `${floor.id}:${floor.style}`) : null;
     if (edgeGraphic) floorLayer.addChild(edgeGraphic);
   }
-  if (redrawForest) forestRenderSignature = nextForestSignature;
+  if (!forestOnly) {
+    for (const floorId of [...forestRenderSignatures.keys()]) {
+      if (visibleForestIds.has(floorId)) continue;
+      removeForestLayer(forestContainer, floorId);
+      forestRenderSignatures.delete(floorId);
+    }
+  }
 }
 
 function isNaturalPathEdge(edge) {
   return edge?.kind === "dirt" || edge?.kind === "stone";
 }
 
-function createForestFill(points, forest, seed) {
+function forestMaxWallClearance(forest) {
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  return (forest?.assets ?? []).reduce((maximum, asset) => {
+    const aspect = Math.max(0.1, Number(asset.aspect ?? 1));
+    const width = grid * Number(asset.maxSize ?? 1.5);
+    const height = width / aspect;
+    return Math.max(maximum, Math.max(0, Math.max(width, height) * 0.46 - grid * 0.1));
+  }, 0);
+}
+
+function forestWallSegments(points, forest, walls) {
+  const clearance = forestMaxWallClearance(forest);
+  const unique = new Map();
+  for (const wall of walls) {
+    if (!segmentWithinPolygonClearance(wall, points, clearance)) continue;
+    const segment = canonicalWallSegment(wall);
+    unique.set(wallSegmentKey(segment), segment);
+  }
+  return [...unique.values()].sort((left, right) => wallSegmentKey(left).localeCompare(wallSegmentKey(right)));
+}
+
+function canonicalWallSegment(segment) {
+  const ordered = segment.a.x < segment.b.x || (segment.a.x === segment.b.x && segment.a.y <= segment.b.y);
+  return ordered ? segment : { a: segment.b, b: segment.a };
+}
+
+function wallSegmentKey(segment) {
+  return `${segment.a.x},${segment.a.y}:${segment.b.x},${segment.b.y}`;
+}
+
+function segmentWithinPolygonClearance(segment, points, clearance) {
+  const bounds = polygonBounds(points);
+  const segmentLeft = Math.min(segment.a.x, segment.b.x);
+  const segmentRight = Math.max(segment.a.x, segment.b.x);
+  const segmentTop = Math.min(segment.a.y, segment.b.y);
+  const segmentBottom = Math.max(segment.a.y, segment.b.y);
+  if (segmentRight < bounds.x - clearance || segmentLeft > bounds.x + bounds.width + clearance
+      || segmentBottom < bounds.y - clearance || segmentTop > bounds.y + bounds.height + clearance) return false;
+  if (pointInPolygon(segment.a, points) || pointInPolygon(segment.b, points)) return true;
+  for (let index = 0; index < points.length; index += 1) {
+    const a = points[index];
+    const b = points[(index + 1) % points.length];
+    if (segmentIntersection(segment.a, segment.b, a, b)
+        || pointSegmentDistance(segment.a, a, b) <= clearance
+        || pointSegmentDistance(segment.b, a, b) <= clearance
+        || pointSegmentDistance(a, segment.a, segment.b) <= clearance
+        || pointSegmentDistance(b, segment.a, segment.b) <= clearance) return true;
+  }
+  return false;
+}
+
+function createForestFill(points, forest, seed, nearbyWalls) {
   const container = new PIXI.Container();
   container.eventMode = "none";
   container.interactive = false;
@@ -1056,7 +1145,7 @@ function createForestFill(points, forest, seed) {
           x: (cellX + inset + random() * (1 - inset * 2)) * grid,
           y: (cellY + inset + random() * (1 - inset * 2)) * grid,
         };
-        const clearsWalls = renderWallSegments.every((wall) => pointSegmentDistance(candidate, wall.a, wall.b) >= wallClearance);
+        const clearsWalls = nearbyWalls.every((wall) => pointSegmentDistance(candidate, wall.a, wall.b) >= wallClearance);
         if (pointInPolygon(candidate, points) && clearsWalls) {
           point = candidate;
           break;
@@ -1288,6 +1377,18 @@ function createFloorEdge(points, edge, seed) {
   if (edge.kind === "roof") {
     return drawRoofEdge(graphics, points, edge, seed);
   }
+  if (edge.kind === "shrub") {
+    drawClosedStroke(
+      graphics,
+      points,
+      Number(edge.shadow ?? 0x07160b),
+      Number(edge.width ?? 8),
+      Number(edge.shadowAlpha ?? 0.28),
+    );
+    graphics.eventMode = "none";
+    graphics.interactive = false;
+    return graphics;
+  }
   const alpha = edge.kind === "garden" ? 0.6 : 0.72;
   const edgeWidth = Number(edge.width ?? FLOOR_EDGE_WIDTH);
   points.forEach((point, index) => drawLine(graphics, point, points[(index + 1) % points.length], edge.color, edgeWidth, alpha));
@@ -1466,27 +1567,78 @@ function drawEditorData(data, cursor = null) {
   container.addChild(graphics);
 }
 
-function scheduleRedraw() {
+function scheduleRedraw({ forestOnly = false, forestFloorIds = [] } = {}) {
+  if (!forestOnly) redrawNeedsFullPass = true;
+  else for (const floorId of forestFloorIds) pendingForestFloorIds.add(floorId);
   clearTimeout(redrawTimer);
   redrawTimer = setTimeout(async () => {
-    await ensureGardenAssets();
-    redrawFloors();
-    redrawEditor();
+    redrawTimer = null;
+    const fullPass = redrawNeedsFullPass;
+    const targetedForestIds = [...pendingForestFloorIds];
+    redrawNeedsFullPass = false;
+    pendingForestFloorIds.clear();
+    if (fullPass) await ensureGardenAssets();
+    redrawFloors({ forestOnly: !fullPass, forestFloorIds: targetedForestIds });
+    if (fullPass) redrawEditor();
   }, 100);
+}
+
+function snapshotWallState(wall) {
+  const coords = Array.isArray(wall?.c) ? wall.c.slice(0, 4).map(Number) : [];
+  return { id: wall?.id ?? null, c: coords, move: Number(wall?.move ?? 0) };
+}
+
+function wallBelongsToCanvasScene(wall) {
+  return Boolean(wall?.parent && canvas?.scene
+    && (wall.parent === canvas.scene || wall.parent.id === canvas.scene.id));
+}
+
+function blockingSegmentFromWallState(state) {
+  const noRestriction = globalThis.CONST?.WALL_SENSE_TYPES?.NONE ?? 0;
+  if (!state || Number(state.move ?? noRestriction) === noRestriction || state.c.length < 4) return null;
+  const segment = { a: { x: state.c[0], y: state.c[1] }, b: { x: state.c[2], y: state.c[3] } };
+  return distance(segment.a, segment.b) > EPSILON ? segment : null;
+}
+
+function affectedVisibleForestIds(states) {
+  const affected = new Set();
+  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) return affected;
+  const segments = states.map(blockingSegmentFromWallState).filter(Boolean);
+  if (!segments.length) return affected;
+  for (const floor of getSceneData().floors) {
+    if (Number(floor.level ?? 0) > currentLevel) continue;
+    const forest = FLOOR_STYLES[floor.style]?.forest;
+    if (!forest) continue;
+    const points = normalizePolygon(floor.points);
+    if (points.length < 3) continue;
+    const clearance = forestMaxWallClearance(forest);
+    if (segments.some((segment) => segmentWithinPolygonClearance(segment, points, clearance))) affected.add(floor.id);
+  }
+  return affected;
+}
+
+function trackSceneWallStates() {
+  trackedWallStates.clear();
+  for (const wall of canvas?.scene?.walls ?? []) trackedWallStates.set(wall.id, snapshotWallState(wall));
 }
 
 Hooks.on("canvasReady", () => {
   currentLevel = canvas?.level ? getFloorNumberForNativeLevel(canvas.level) : 0;
   selectedLevel = currentLevel;
+  trackSceneWallStates();
   bindStageEvents();
   scheduleRedraw();
 });
 Hooks.on("canvasTearDown", () => {
+  clearTimeout(redrawTimer);
+  redrawTimer = null;
+  redrawNeedsFullPass = false;
+  pendingForestFloorIds.clear();
   clearContainer(getFloorContainer(false));
   clearContainer(getForestContainer(false));
   clearContainer(getEditorContainer(false));
-  renderWallSegments = [];
-  forestRenderSignature = null;
+  forestRenderSignatures.clear();
+  trackedWallStates.clear();
   draftPoints = [];
   selectedEdge = null;
   lastClick = null;
@@ -1498,14 +1650,30 @@ Hooks.on("updateScene", (_scene, change) => {
       || foundry.utils.hasProperty(change, "width")
       || foundry.utils.hasProperty(change, "height")) scheduleRedraw();
 });
-Hooks.on("createWall", scheduleRedraw);
-Hooks.on("updateWall", (_wall, change) => {
-  if (foundry.utils.hasProperty(change, "c")
-      || foundry.utils.hasProperty(change, "move")
-      || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.wallTexture.style`)
-      || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.wallTexture.mode`)) scheduleRedraw();
+Hooks.on("createWall", (wall) => {
+  if (!wallBelongsToCanvasScene(wall)) return;
+  const current = snapshotWallState(wall);
+  trackedWallStates.set(wall.id, current);
+  const forestFloorIds = affectedVisibleForestIds([current]);
+  if (forestFloorIds.size) scheduleRedraw({ forestOnly: true, forestFloorIds });
 });
-Hooks.on("deleteWall", scheduleRedraw);
+Hooks.on("updateWall", (wall, change) => {
+  if (!wallBelongsToCanvasScene(wall)) return;
+  const previous = trackedWallStates.get(wall.id);
+  const current = snapshotWallState(wall);
+  trackedWallStates.set(wall.id, current);
+  if (foundry.utils.hasProperty(change, "c") || foundry.utils.hasProperty(change, "move")) {
+    const forestFloorIds = affectedVisibleForestIds([previous, current]);
+    if (forestFloorIds.size) scheduleRedraw({ forestOnly: true, forestFloorIds });
+  }
+});
+Hooks.on("deleteWall", (wall) => {
+  if (!wallBelongsToCanvasScene(wall)) return;
+  const previous = trackedWallStates.get(wall.id) ?? snapshotWallState(wall);
+  trackedWallStates.delete(wall.id);
+  const forestFloorIds = affectedVisibleForestIds([previous]);
+  if (forestFloorIds.size) scheduleRedraw({ forestOnly: true, forestFloorIds });
+});
 
 function wallSegments() {
   return (canvas?.scene?.walls ?? []).map((wall) => wall.c).filter((c) => Array.isArray(c) && c.length >= 4)

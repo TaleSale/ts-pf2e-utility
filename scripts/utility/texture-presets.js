@@ -14,8 +14,8 @@ export const TEXTURE_PRESETS = Object.freeze({
     fallback: "Base",
   }),
   [BASTION_TEXTURE_PRESET]: Object.freeze({
-    labelKey: "Settings.TexturePreset.Choices.BastionBlasphemy",
-    fallback: "Bastion of Blasphemy",
+    labelKey: "Settings.TexturePreset.Choices.DarkFantasy",
+    fallback: "Dark Fantasy",
   }),
 });
 
@@ -127,6 +127,8 @@ const BASTION_TEXTURES = new Set([
   "scene-floors/garden-rice-water-v5.png",
   "scene-floors/garden-soil-soft-v3.webp",
   "scene-floors/grass-meadow-floor.png",
+  "scene-floors/swamp-floor-v1.png",
+  "scene-floors/flowering-shrubs-dense-floor-v1.webp",
   "scene-floors/path-cobblestone-floor.png",
   "scene-floors/path-dirt-floor.png",
   "scene-floors/roof-shingles-floor.webp",
@@ -154,6 +156,8 @@ const BASTION_TEXTURES = new Set([
 // alpha channel while replacing only that matte-contaminated colour data.
 const BASTION_TEXTURE_REDIRECTS = Object.freeze({
   "scene-floors/grass-meadow-floor.png": "scene-floors/grass-meadow-floor-bastion-v7.png",
+  "scene-floors/swamp-floor-v1.png": "scene-floors/swamp-floor-bastion-v1.png",
+  "scene-floors/path-dirt-floor.png": "scene-floors/path-dirt-floor-dark-fantasy-v4.png",
   "scene-assets/bar-counter-corner.webp": "scene-assets/bar-counter-corner-fixed.webp",
   "scene-assets/bar-counter-straight.webp": "scene-assets/bar-counter-straight-fixed.webp",
   "scene-assets/barrels-side-cluster.webp": "scene-assets/barrels-side-cluster-fixed.webp",
@@ -207,6 +211,8 @@ const PRESET_TEXTURE_CANONICAL_PATHS = Object.freeze(Object.fromEntries(
 ));
 
 const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
+  "scene-floors/path-dirt-floor-dark-fantasy-v2.png": "scene-floors/path-dirt-floor.png",
+  "scene-floors/path-dirt-floor-dark-fantasy-v3.png": "scene-floors/path-dirt-floor.png",
   "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
   "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
   "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v2.webp",

@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260813-bastion-grass2";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260813-bastion-grass2";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260816-swamp-floor1";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260816-swamp-floor1";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";

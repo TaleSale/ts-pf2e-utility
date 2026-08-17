@@ -120,7 +120,7 @@
         "Hint": "Selects a coordinated texture set for this scene only. Clients request only the set used by the active scene.",
         "Choices": {
           "Base": "Base",
-          "BastionBlasphemy": "Bastion of Blasphemy"
+          "DarkFantasy": "Dark Fantasy"
         }
       },
       "FloorTextures": {
@@ -176,6 +176,8 @@
           "WoodAlder": "Alder boards",
           "WoodOutdoor": "Outdoor boards",
           "GrassMeadow": "Meadow grass",
+          "FloweringShrubsDense": "Dense flowering shrubs",
+          "Swamp": "Swamp",
           "PathDirt": "Dirt path",
           "PathCobblestone": "Cobblestone path",
           "CarpetRed": "Red carpet",

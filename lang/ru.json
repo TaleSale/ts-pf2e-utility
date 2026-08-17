@@ -120,7 +120,7 @@
         "Hint": "Выбирает единый набор текстур только для этой сцены. Клиенты загружают только набор активной сцены.",
         "Choices": {
           "Base": "Базовый",
-          "BastionBlasphemy": "Бастион богохульства"
+          "DarkFantasy": "Dark Fantasy"
         }
       },
       "FloorTextures": {
@@ -176,6 +176,8 @@
           "WoodAlder": "Ольховые доски",
           "WoodOutdoor": "Уличные доски",
           "GrassMeadow": "Луговая трава",
+          "FloweringShrubsDense": "Густые цветущие кусты",
+          "Swamp": "Болото",
           "PathDirt": "Земляная тропинка",
           "PathCobblestone": "Булыжная тропинка",
           "CarpetRed": "Красный ковёр",

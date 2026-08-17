@@ -8,6 +8,7 @@ const LOCALIZATION_FILES = Object.freeze([
   "devils-pin.json",
   "duel-combat.json",
   "kuboker.json",
+  "ritual-checks.json",
 ]);
 
 async function mergeLocalizationFile(lang, file, target) {

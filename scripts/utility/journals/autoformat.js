@@ -20,6 +20,8 @@ const TS_SECTION_MENU_ENTRIES = Object.freeze([
     className: "\u0411\u043b\u043e\u043a\u0421\u0442\u0430\u0442",
   },
   { action: "tsu-wrap-insite", title: "insite", className: "insite" },
+  { action: "tsu-wrap-side-quest", title: "side-quest", className: "side-quest" },
+  { action: "tsu-wrap-research", title: "research", className: "research" },
   { action: "tsu-wrap-read", title: "read", className: "read" },
 ]);
 
@@ -262,6 +264,32 @@ function wrapSelectionInSection(view, className) {
   return true;
 }
 
+function markContainingSideQuestSection(view) {
+  const editorRoot = view?.dom;
+  const selection = typeof view?.root?.getSelection === "function"
+    ? view.root.getSelection()
+    : globalThis.getSelection?.();
+  if (!(editorRoot instanceof HTMLElement) || !selection?.rangeCount) return false;
+  const range = selection.getRangeAt(0);
+  const startElement = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+  const endElement = range.endContainer instanceof Element ? range.endContainer : range.endContainer.parentElement;
+  const section = startElement?.closest?.("section");
+  if (!(section instanceof HTMLElement) || !editorRoot.contains(section) || !section.contains(endElement)) return false;
+
+  const sectionPath = getNodePath(editorRoot, section);
+  const editorClone = editorRoot.cloneNode(true);
+  if (!sectionPath || !(editorClone instanceof HTMLElement)) return false;
+  const clonedSection = resolveNodePath(editorClone, sectionPath);
+  if (!(clonedSection instanceof HTMLElement)) return false;
+  if (clonedSection.classList.contains("side-quest")) return true;
+  clonedSection.classList.add("side-quest");
+  return replaceEditorHtml(view, editorClone.innerHTML);
+}
+
+function applySideQuestSection(view) {
+  return markContainingSideQuestSection(view) || wrapSelectionInSection(view, "side-quest");
+}
+
 function autoformatJournalHtml(view) {
   const currentHtml = view?.dom?.innerHTML;
   if (typeof currentHtml !== "string" || !currentHtml.length) return false;
@@ -292,7 +320,8 @@ Hooks.on("getProseMirrorMenuDropDowns", (menu, dropdowns) => {
       title,
       priority: 3,
       cmd: (_state, _dispatch, view) => {
-        wrapSelectionInSection(view, className);
+        if (className === "side-quest") applySideQuestSection(view);
+        else wrapSelectionInSection(view, className);
       },
     })),
   });

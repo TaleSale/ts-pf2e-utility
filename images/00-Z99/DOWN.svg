@@ -1,0 +1,19 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Arrow -->
+  <path
+    d="M128 232L208 152H164V64H92V152H48L128 232Z"
+    fill="white"
+  />
+
+  <!-- Text -->
+  <text
+    x="128"
+    y="48"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="40"
+    font-weight="700"
+    fill="white">
+    DOWN
+  </text>
+</svg>

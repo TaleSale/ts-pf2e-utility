@@ -27,7 +27,11 @@
   {{#unless showConfig}}
     <nav class="bh-view-tabs">
       <button type="button" class="{{#if showMain}}active{{/if}}" data-view="main"><i class="fa-solid fa-landmark"></i> Главная</button>
+      {{#if showCookingTab}}<button type="button" class="{{#if showCooking}}active{{/if}}" data-view="cooking"><i class="fa-solid fa-utensils"></i> Готовка и Блага</button>{{/if}}
       <button type="button" class="{{#if showInventory}}active{{/if}}" data-view="inventory"><i class="fa-solid fa-box-archive"></i> Инвентарь</button>
+      <button type="button" class="{{#if showInvestigations}}active{{/if}}" data-view="investigations"><i class="fa-solid fa-magnifying-glass-chart"></i> Изыскания</button>
+      <button type="button" class="{{#if showSideQuests}}active{{/if}}" data-view="side-quests"><i class="fa-solid fa-list-check"></i> Сайд-квесты</button>
+      <button type="button" class="{{#if showFamilyTree}}active{{/if}}" data-view="family-tree"><i class="fa-solid fa-people-roof"></i> Древо Арудора</button>
     </nav>
   {{/unless}}
 
@@ -42,6 +46,17 @@
           <div class="bh-day-range"><span>Восход — закат</span><strong>{{climateStage.sunriseLabel}} — {{climateStage.sunsetLabel}}</strong></div>
           <div class="bh-day-length"><span>День: {{climateStage.dayDurationLabel}} ч.</span><span>Ночь: {{climateStage.nightDurationLabel}} ч.</span></div>
           <div class="bh-weather-status"><i class="fa-solid {{#if daytime}}fa-sun{{else}}fa-moon{{/if}}"></i><span>Сейчас: <strong>{{climateLabel}}</strong></span></div>
+          {{#if hasOutdoorPenalty}}
+            <div class="bh-outdoor-penalty {{#if data.climate.outdoorPenaltyActive}}is-active{{/if}}">
+              <label title="{{outdoorPenaltyDescription}}"><input type="checkbox" name="outdoorPenaltyActive" {{#if data.climate.outdoorPenaltyActive}}checked{{/if}} {{#unless isGM}}disabled{{/unless}}> <strong>Непогода на улице</strong></label>
+              <span>{{outdoorPenaltyDescription}}</span>
+            </div>
+          {{/if}}
+          {{#if climateStage.lightning}}
+            {{#if isGM}}
+              <button type="button" class="bh-lightning-button" data-action="tower-lightning"><i class="fa-solid fa-bolt-lightning"></i> Удар молнии</button>
+            {{/if}}
+          {{/if}}
           {{#if data.climate.stormActive}}
             <div class="bh-storm-info"><i class="fa-solid fa-cloud-bolt"></i><div><strong>Шторм</strong>{{#if data.climate.storm.description}}<p>{{data.climate.storm.description}}</p>{{/if}}</div></div>
           {{/if}}
@@ -62,12 +77,23 @@
             {{#each research}}
               <div class="bh-research-row">
                 <span title="{{#if ../isGM}}{{name}}{{else}}{{displayName}}{{/if}}">{{displayName}}</span>
-                {{#if ../isGM}}<button type="button" data-research-step="-1" data-index="{{index}}"><i class="fa-solid fa-caret-down"></i></button>{{/if}}
+                {{#if ../isGM}}{{#if managedByInvestigation}}<span class="bh-research-linked" title="Сумма счётчиков источников во вкладке «Изыскания»"><i class="fa-solid fa-link"></i></span>{{else}}<button type="button" data-research-step="-1" data-index="{{index}}"><i class="fa-solid fa-caret-down"></i></button>{{/if}}{{/if}}
                 <strong>{{pointsLabel}}</strong>
-                {{#if ../isGM}}<button type="button" data-research-step="1" data-index="{{index}}"><i class="fa-solid fa-caret-up"></i></button>{{/if}}
+                {{#if ../isGM}}{{#if managedByInvestigation}}<span class="bh-research-linked" title="Изменяется только мастером у источников изыскания"><i class="fa-solid fa-link"></i></span>{{else}}<button type="button" data-research-step="1" data-index="{{index}}"><i class="fa-solid fa-caret-up"></i></button>{{/if}}{{/if}}
               </div>
             {{/each}}
           </div>
+          {{#if researchBonuses}}
+            <div class="bh-research-bonuses">
+              <h3><i class="fa-solid fa-award"></i> Открытые бонусы</h3>
+              {{#each researchBonuses}}
+                <article>
+                  <header><strong>{{topicName}}</strong><span>{{threshold}} ОИ</span></header>
+                  <p>{{description}}</p>
+                </article>
+              {{/each}}
+            </div>
+          {{/if}}
         </section>
       </div>
 
@@ -84,16 +110,9 @@
                     {{#if ../isGM}}<button type="button" data-action="toggle-phantom" data-index="{{phantomIndex}}" title="{{#if found}}Отметить ненайденным{{else}}Разблокировать фантома{{/if}}"><i class="fa-solid {{#if found}}fa-lock{{else}}fa-lock-open{{/if}}"></i></button>{{/if}}
                   </div>
                 </header>
-                {{#if canAronDrinks}}
+                {{#if canAuskenRunes}}
                   <div class="bh-phantom-actions">
-                    <button type="button" data-phantom-action="aron-drinks" data-phantom="{{id}}" title="Получить до {{aronDrinkLimit}} напитков Арона в день на всю группу"><i class="fa-solid fa-mug-hot"></i><span>Напитки ×{{aronDrinkLimit}}</span></button>
-                    {{#if canAronCounteract}}<button type="button" data-phantom-action="aron-counteract" data-phantom="{{id}}" title="Проверка противодействия со средним модификатором группы"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Противодействие</span></button>{{/if}}
-                  </div>
-                {{/if}}
-                {{#if canAuskenBlessing}}
-                  <div class="bh-phantom-actions">
-                    <button type="button" data-phantom-action="ausken-blessing" data-phantom="{{id}}" title="Выдать Благословение шерифа на 24 часа; целей: {{auskenBlessingTargets}}"><i class="fa-solid fa-star"></i><span>Благословение ×{{auskenBlessingTargets}}</span></button>
-                    {{#if canAuskenRunes}}<button type="button" data-phantom-action="ausken-runes" data-phantom="{{id}}" title="Получить до {{auskenRuneLimit}} рун Аускена в день"><i class="fa-solid fa-hammer"></i><span>Руны ×{{auskenRuneLimit}}</span></button>{{/if}}
+                    <button type="button" data-phantom-action="ausken-runes" data-phantom="{{id}}" title="Получить до {{auskenRuneLimit}} рун Аускена в день"><i class="fa-solid fa-hammer"></i><span>Руны ×{{auskenRuneLimit}}</span></button>
                   </div>
                 {{/if}}
                 {{#if canEsmiraBooks}}
@@ -116,10 +135,112 @@
             {{/each}}
           </div>
         </section>
+
+        {{#if showServantBlock}}
+        <section class="bh-panel bh-servant-panel">
+          <h2><i class="fa-solid fa-bell-concierge"></i> Фантомы-Слуги</h2>
+          <div class="bh-servant-list">
+            {{#each visibleServantPhantoms}}
+              <article class="bh-servant {{#if active}}is-active{{/if}}">
+                <header>
+                  <div><strong>{{name}}</strong><small>{{location}}</small></div>
+                  {{#if ../isGM}}
+                    <label class="bh-servant-toggle"><input type="checkbox" data-action="toggle-servant" data-servant="{{id}}" {{#if active}}checked{{/if}}> <span>Активны для игроков</span></label>
+                  {{else}}
+                    <span class="bh-servant-ready"><i class="fa-solid fa-circle-check"></i> Помогают группе</span>
+                  {{/if}}
+                </header>
+                <p>{{description}}</p>
+              </article>
+            {{/each}}
+          </div>
+        </section>
+        {{/if}}
       </div>
     </div>
 
     {{else}}
+      {{#if showCooking}}
+      <div class="bh-cooking-view">
+        <header class="bh-cooking-heading">
+          <div><p>Ежедневные приготовления Бастардхолла</p><h2>Готовка и Блага</h2></div>
+          <span><i class="fa-solid fa-sun"></i> Состояние обновляется по мировому дню</span>
+        </header>
+
+        <section class="bh-daily-section">
+          <div class="bh-section-title"><i class="fa-solid fa-utensils"></i><div><h2>Готовка</h2><p>Выберите получателя для каждого доступного помощника. Очередь блюд можно менять до выдачи.</p></div></div>
+          <div class="bh-daily-grid">
+            {{#if aronCooking}}
+              <article class="bh-daily-card is-active">
+                <header><div><strong>Арон Мордримус</strong><small>Трактирщик · ранг {{aronCooking.rank}}</small></div><span>{{#if aronCooking.canDrinks}}до {{aronCooking.limit}} в день{{else}}Напитки не открыты{{/if}}</span></header>
+                {{#if aronCooking.canDrinks}}
+                  <label class="bh-recipient"><span>Получатель</span><select data-preparation-target="aron"><option value="">— персонаж не выбран —</option>{{#each recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>
+                  <div class="bh-aron-selections">
+                    {{#each aronCooking.selections}}<label><span>Напиток {{index}}</span><select data-aron-item><option value="">Загрузка списка…</option></select></label>{{/each}}
+                  </div>
+                  <p class="bh-daily-note">Напитки получают признак «насыщенный». Общий лимит действует на всю группу.</p>
+                {{else}}
+                  <p class="bh-daily-note">Арон начнёт готовить напитки после достижения 1-го ранга.</p>
+                {{/if}}
+                {{#if aronCooking.canCounteract}}
+                  <div class="bh-phantom-actions bh-aron-actions">
+                    <button type="button" data-phantom-action="aron-counteract" data-phantom="aron" title="Проверка противодействия со средним модификатором группы"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Противодействие Арона</span></button>
+                  </div>
+                {{/if}}
+              </article>
+            {{/if}}
+
+            {{#each visibleServantPhantoms}}
+              <article class="bh-daily-card {{#if active}}is-active{{else}}is-locked{{/if}}">
+                <header><div><strong>{{name}}</strong><small>{{location}}</small></div><span>{{#if active}}{{#if grantedToday}}Сегодня выдано{{else}}Готовы{{/if}}{{else}}Не открыты{{/if}}</span></header>
+                <p>{{description}}</p>
+                {{#if currentProduct}}<div class="bh-current-product"><i class="fa-solid fa-cookie-bite"></i><span>{{currentProduct}}</span><small>насыщенные</small></div>{{/if}}
+                {{#if recipeRows.length}}
+                  <ol class="bh-recipe-order">
+                    {{#each recipeRows}}
+                      <li><b>{{@index}}</b><span><strong>{{name}}</strong><small>{{englishName}}</small></span><div>
+                        <button type="button" data-action="move-recipe" data-servant="{{../id}}" data-recipe="{{id}}" data-direction="-1" title="Поднять в очереди" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-chevron-up"></i></button>
+                        <button type="button" data-action="move-recipe" data-servant="{{../id}}" data-recipe="{{id}}" data-direction="1" title="Опустить в очереди" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-chevron-down"></i></button>
+                      </div></li>
+                    {{/each}}
+                  </ol>
+                {{/if}}
+                {{#if exhausted}}<div class="bh-ingredients-empty"><i class="fa-solid fa-basket-shopping"></i> У {{emptyLabel}} закончились ингредиенты</div>{{/if}}
+                {{#if ../isGM}}{{#if exhausted}}<button type="button" class="bh-reset-ingredients" data-action="reset-servant-recipes" data-servant="{{id}}"><i class="fa-solid fa-arrow-rotate-left"></i> Восстановить готовку</button>{{/if}}{{/if}}
+                <label class="bh-recipient"><span>Получатель</span><select data-preparation-target="{{id}}" {{#unless active}}disabled{{/unless}}><option value="">— персонаж не выбран —</option>{{#each @root.recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>
+              </article>
+            {{/each}}
+          </div>
+          {{#if hasCookingProviders}}<button type="button" class="bh-daily-submit" data-action="grant-daily-cooking"><i class="fa-solid fa-bowl-food"></i> Выдать ежедневную готовку</button>{{else}}<p class="bh-empty">Помощники для ежедневной готовки пока не открыты.</p>{{/if}}
+        </section>
+
+        <hr class="bh-cooking-divider">
+
+        <section class="bh-daily-section bh-boons-section">
+          <div class="bh-section-title"><i class="fa-solid fa-hands-praying"></i><div><h2>Блага</h2><p>Настройте доступные ежедневные благословения и выдайте их персонажам игроков.</p></div></div>
+          <div class="bh-daily-grid">
+            {{#if auskenBoon}}
+              <article class="bh-daily-card is-active">
+                <header><div><strong>Благословение шерифа</strong><small>Аускен Даст · ранг {{auskenBoon.rank}}</small></div><span>{{#if auskenBoon.grantedToday}}Сегодня выдано{{else}}до {{auskenBoon.maxTargets}} ПИ{{/if}}</span></header>
+                <p>На 24 часа даёт бонус состояния +1 к спасброскам против страха и уменьшает Испуг на 1. С ранга 2 успех против страха становится критическим успехом.</p>
+                <div class="bh-recipient-checks" data-recipient-group="ausken" data-max-targets="{{auskenBoon.maxTargets}}">{{#each recipientCharacters}}<label><input type="checkbox" value="{{id}}"> <span>{{name}}</span></label>{{/each}}</div>
+              </article>
+            {{/if}}
+
+            {{#if showShelynBoon}}
+              <article class="bh-daily-card {{#if data.boons.shelyn.active}}is-active{{else}}is-locked{{/if}}">
+                <header><div><strong>Благодать Шелин</strong><small>C45 · одна из трёх статуй</small></div><span>{{#if data.boons.shelyn.active}}{{#if shelynGrantedToday}}Сегодня выдано{{else}}До заката{{/if}}{{else}}Не найдена{{/if}}</span></header>
+                {{#if isGM}}<label class="bh-shelyn-toggle"><input type="checkbox" data-action="toggle-shelyn" {{#if data.boons.shelyn.active}}checked{{/if}}> Благо найдено и доступно игрокам</label>{{/if}}
+                <label class="bh-recipient"><span>Выбранное благо</span><select data-shelyn-choice {{#unless data.boons.shelyn.active}}disabled{{/unless}}>{{#each shelynBlessings}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} — {{spell}}</option>{{/each}}</select></label>
+                <div class="bh-group-recipient"><i class="fa-solid fa-people-group"></i><span><strong>Получатели: все ПИ</strong><small>Выбранное благо автоматически применяется ко всей группе.</small></span></div>
+                <p class="bh-daily-note">Выбранный бонус предмета +1 действует у всех ПИ до текущего заката — оставшееся дневное время, а не фиксированные 8 часов.</p>
+              </article>
+            {{/if}}
+          </div>
+          {{#if hasBoonProviders}}<button type="button" class="bh-daily-submit" data-action="grant-daily-boons"><i class="fa-solid fa-sparkles"></i> Выдать ежедневные блага</button>{{else}}<p class="bh-empty">Ежедневные блага пока не открыты.</p>{{/if}}
+        </section>
+      </div>
+      {{else}}
       {{#if showInventory}}
       <div class="bh-inventory-view">
         <section class="bh-inventory-drop">
@@ -172,30 +293,231 @@
         </div>
       </div>
       {{else}}
+      {{#if showFamilyTree}}
+      <div class="bh-family-tree-view">
+        <header class="bh-family-tree-heading">
+          <div>
+            <p>Родословная владельцев Бастардхолла</p>
+            <h2>Древо Арудора</h2>
+          </div>
+          {{#if canEditFamilyTree}}<span><i class="fa-solid fa-hand"></i> Перетащите актёра на портрет</span>{{/if}}
+        </header>
+
+        <section class="bh-family-stage" aria-label="Пять поколений семьи Арудора">
+          <article class="bh-family-crest">
+            <div class="bh-family-crest-image">
+              <img src="modules/ts-pf2e-utility/layout/BoB/audora-family.webp" alt="Герб Арудора">
+            </div>
+          </article>
+
+          <svg class="bh-family-lines" viewBox="0 0 1000 1300" preserveAspectRatio="none" aria-hidden="true">
+            <g>
+              <path d="M485 300 H515 M500 300 V410 H420 V435" />
+              <path d="M485 520 H515 M500 520 V630 H420 V655" />
+              <path d="M485 740 H515 M500 740 V850 H210 V875 M500 850 H410 V875" />
+              <path d="M475 960 H515" />
+              <path d="M210 1040 V1095" />
+              <path d="M495 960 V1070 H410 V1095 M495 1070 H580 V1095" />
+              <path d="M790 1040 V1095" />
+            </g>
+          </svg>
+
+          {{#each familyTreeGenerations}}
+            <div class="bh-family-shelf" style="--bh-shelf-y: {{shelfY}}px"><span>{{label}}</span></div>
+          {{/each}}
+
+          {{#each familyTreeSlots}}
+            <article class="bh-family-member {{#if assigned}}is-assigned{{else}}is-empty{{/if}} {{#if crowned}}is-crowned{{/if}}" data-drop-kind="family-tree" data-family-section="slots" data-slot-id="{{id}}" style="--bh-family-x: {{xPercent}}%; --bh-family-y: {{y}}px">
+              <div class="bh-family-photo">{{#if assigned}}{{#if img}}<img src="{{img}}" alt="{{name}}">{{/if}}{{/if}}</div>
+              <img class="bh-family-frame" src="modules/ts-pf2e-utility/layout/BoB/audora-family-frame.png" alt="">
+              {{#if crowned}}<i class="fa-solid fa-crown bh-family-crown" title="Владелец замка на момент начала проклятия"></i>{{/if}}
+              <div class="bh-family-name">{{#if assigned}}{{name}}{{/if}}</div>
+              {{#if @root.canEditFamilyTree}}{{#if assigned}}<button type="button" class="bh-family-clear" data-action="clear-family-slot" data-family-section="slots" data-slot-id="{{id}}" title="Очистить портрет"><i class="fa-solid fa-xmark"></i></button>{{/if}}{{/if}}
+              {{#if assigned}}<div class="bh-family-tooltip"><b>{{name}}</b><p>{{#if notes}}{{notes}}{{else}}Описание в заметках актёра отсутствует.{{/if}}</p></div>{{/if}}
+            </article>
+          {{/each}}
+        </section>
+
+        {{#if familyTreeHeirs}}
+          <section class="bh-family-custom">
+            {{#if isGM}}<p>Эти восемь мест скрыты от игроков. Каждое открывается автоматически, когда вы переносите сюда актёра.</p>{{/if}}
+            <div class="bh-family-heir-stage">
+              <div class="bh-family-shelf" style="--bh-shelf-y: 209px"></div>
+              <div class="bh-family-shelf" style="--bh-shelf-y: 419px"></div>
+              {{#each familyTreeHeirs}}
+                <article class="bh-family-member bh-family-heir {{#if assigned}}is-assigned{{else}}is-empty{{/if}}" data-drop-kind="family-tree" data-family-section="customHeirs" data-slot-id="{{id}}" style="--bh-family-x: {{xPercent}}%; --bh-family-y: {{y}}px">
+                  <div class="bh-family-photo">{{#if assigned}}{{#if img}}<img src="{{img}}" alt="{{name}}">{{/if}}{{/if}}</div>
+                  <img class="bh-family-frame" src="modules/ts-pf2e-utility/layout/BoB/audora-family-frame.png" alt="">
+                  <div class="bh-family-name">{{#if assigned}}{{name}}{{/if}}</div>
+                  {{#if @root.canEditFamilyTree}}{{#if assigned}}<button type="button" class="bh-family-clear" data-action="clear-family-slot" data-family-section="customHeirs" data-slot-id="{{id}}" title="Скрыть и очистить наследника"><i class="fa-solid fa-xmark"></i></button>{{/if}}{{/if}}
+                  {{#if assigned}}<div class="bh-family-tooltip"><b>{{name}}</b><p>{{#if notes}}{{notes}}{{else}}Описание в заметках актёра отсутствует.{{/if}}</p></div>{{/if}}
+                </article>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
+      </div>
+      {{else}}
+      {{#if showInvestigations}}
+      <div class="bh-investigation-view">
+        <aside class="bh-panel bh-investigation-sidebar">
+          <header class="bh-sidequest-list-header">
+            {{#if isGM}}<button type="button" class="bh-sidequest-icon-button" data-action="refresh-investigations" title="Обновить связанные изыскания из журналов" aria-label="Обновить связанные изыскания из журналов"><i class="fa-solid fa-arrows-rotate"></i></button>{{/if}}
+            <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Изыскания</h2>
+          </header>
+          <div class="bh-investigation-list">
+            {{#each investigations}}
+              <article class="bh-investigation-list-item {{#if selected}}is-selected{{/if}}" data-investigation-id="{{id}}">
+                <button type="button" class="bh-investigation-select" data-action="select-investigation" data-investigation-id="{{id}}">
+                  <span><strong>{{title}}</strong>{{#if hasLevel}}<small>ур. {{level}}</small>{{/if}}</span><b>{{totalPoints}} / {{maxPoints}} ОИ</b>
+                </button>
+                {{#if selected}}
+                  <div class="bh-investigation-source-counters">
+                    {{#each sources}}
+                      <div class="bh-investigation-source-counter">
+                        <span title="{{name}}">{{name}}</span>
+                        {{#if ../../isGM}}<button type="button" data-action="step-investigation-source" data-investigation-id="{{../id}}" data-source-id="{{id}}" data-step="-1" title="Уменьшить ОИ" {{#unless canDecrease}}disabled{{/unless}}><i class="fa-solid fa-caret-down"></i></button>{{/if}}
+                        <strong>{{points}} / {{maxPoints}}</strong>
+                        {{#if ../../isGM}}<button type="button" data-action="step-investigation-source" data-investigation-id="{{../id}}" data-source-id="{{id}}" data-step="1" title="Увеличить ОИ" {{#unless canIncrease}}disabled{{/unless}}><i class="fa-solid fa-caret-up"></i></button>{{/if}}
+                      </div>
+                    {{/each}}
+                  </div>
+                {{/if}}
+                {{#if selected}}
+                  <footer>
+                    <button type="button" class="bh-sidequest-icon-button bh-sidequest-source" data-action="open-investigation-source" data-investigation-id="{{id}}" title="Открыть источник в журнале" aria-label="Открыть источник в журнале"><i class="fa-solid fa-book-open"></i></button>
+                    {{#if ../isGM}}<button type="button" class="bh-sidequest-icon-button bh-sidequest-delete" data-action="delete-investigation" data-investigation-id="{{id}}" title="Удалить изыскание" aria-label="Удалить изыскание"><i class="fa-solid fa-trash"></i></button>{{/if}}
+                  </footer>
+                {{/if}}
+              </article>
+            {{else}}
+              <p class="bh-empty">Изысканий пока нет. Откройте журнал и нажмите кнопку у заголовка <code>section.research</code>.</p>
+            {{/each}}
+          </div>
+        </aside>
+
+        <section class="bh-panel bh-investigation-detail">
+          {{#if selectedInvestigation}}
+            <header>
+              <div><p>Изыскание</p><h2>{{selectedInvestigation.title}}</h2></div>
+              <div class="bh-investigation-summary">
+                {{#if selectedInvestigation.hasLevel}}<span title="Рекомендуемый уровень сложности проверок">Проверки · ур. {{selectedInvestigation.level}}</span>{{/if}}
+                <strong>{{selectedInvestigation.totalPoints}} / {{selectedInvestigation.maxPoints}} ОИ</strong>
+              </div>
+            </header>
+            <div class="bh-investigation-sources">
+              {{#each selectedInvestigation.sources}}
+                <article>
+                  <header><h3>{{name}}</h3><span>{{points}} / {{maxPoints}} ОИ</span></header>
+                  {{#if description}}<div class="bh-investigation-description">{{{description}}}</div>{{/if}}
+                  {{#if checks}}<div class="bh-investigation-checks"><h4><i class="fa-solid fa-dice-d20"></i> Проверки изыскания</h4>{{{checks}}}</div>{{/if}}
+                </article>
+              {{else}}
+                <p class="bh-empty">В журнале нет вложенных секций <code>section.read</code>.</p>
+              {{/each}}
+            </div>
+            <section class="bh-investigation-revelations">
+              <h3><i class="fa-solid fa-lightbulb"></i> Откровения</h3>
+              <div class="bh-investigation-revelation-list">
+                {{#each selectedInvestigation.revelations}}
+                  <article class="{{#unless unlocked}}is-locked{{/unless}}"><strong>{{threshold}} ОИ</strong><div>{{#if unlocked}}{{{content}}}{{else}}<i class="fa-solid fa-lock"></i> Пока не открыто{{/if}}</div></article>
+                {{else}}
+                  <p class="bh-empty">Открытых откровений пока нет.</p>
+                {{/each}}
+              </div>
+            </section>
+          {{else}}
+            <div class="bh-sidequest-empty-detail"><i class="fa-solid fa-magnifying-glass-chart"></i><p>Выберите изыскание слева.</p></div>
+          {{/if}}
+        </section>
+      </div>
+      {{else}}
+      {{#if showSideQuests}}
+      <div class="bh-sidequest-view">
+        <aside class="bh-panel bh-sidequest-sidebar">
+          <header class="bh-sidequest-list-header">
+            <button type="button" class="bh-sidequest-icon-button" data-action="add-side-quest" title="Добавить сайд-квест" aria-label="Добавить сайд-квест"><i class="fa-solid fa-plus"></i></button>
+            {{#if isGM}}
+              <button type="button" class="bh-sidequest-icon-button" data-action="refresh-side-quests" title="Обновить связанные квесты из журналов" aria-label="Обновить связанные квесты из журналов"><i class="fa-solid fa-arrows-rotate"></i></button>
+            {{/if}}
+            <h2><i class="fa-solid fa-list-check"></i> Сайд-квесты</h2>
+          </header>
+          <div class="bh-sidequest-list">
+            {{#each sideQuests}}
+              {{#if hasDividerBefore}}
+                <div class="bh-sidequest-list-divider" aria-hidden="true"></div>
+              {{/if}}
+              <article class="bh-sidequest-list-item {{#if selected}}is-selected{{/if}} {{#if hidden}}is-hidden{{/if}} {{#if completed}}is-completed{{/if}} {{#if failed}}is-failed{{/if}}" data-action="select-side-quest" data-quest-id="{{id}}">
+                <button type="button" class="bh-sidequest-select" data-action="select-side-quest" data-quest-id="{{id}}">
+                  <span>{{#if hidden}}<i class="fa-solid fa-eye-slash" title="Скрыт от игроков"></i>{{/if}}<strong>{{title}}</strong></span>
+                </button>
+                <div class="bh-sidequest-item-footer">
+                  <small>Заметок: {{noteCount}}</small>
+                  <div class="bh-sidequest-actions">
+                    {{#if sourceUuid}}
+                      <button type="button" class="bh-sidequest-icon-button bh-sidequest-source" data-action="open-side-quest-source" data-quest-id="{{id}}" title="Открыть источник в журнале" aria-label="Открыть источник в журнале"><i class="fa-solid fa-book-open"></i></button>
+                    {{/if}}
+                    <button type="button" class="bh-sidequest-icon-button bh-sidequest-completed {{#if completed}}is-completed{{/if}}" data-action="toggle-side-quest-completed" data-quest-id="{{id}}" data-completed="{{completed}}" title="{{#if completed}}Вернуть в активные{{else}}Отметить выполненным{{/if}}" aria-label="{{#if completed}}Вернуть в активные{{else}}Отметить выполненным{{/if}}"><i class="{{#if completed}}fa-solid fa-square-check{{else}}fa-regular fa-square{{/if}}"></i></button>
+                    <button type="button" class="bh-sidequest-icon-button bh-sidequest-failed {{#if failed}}is-failed{{/if}}" data-action="toggle-side-quest-failed" data-quest-id="{{id}}" data-failed="{{failed}}" title="{{#if failed}}Вернуть в активные{{else}}Отметить квест проваленным{{/if}}" aria-label="{{#if failed}}Вернуть в активные{{else}}Отметить квест проваленным{{/if}}"><i class="fa-solid {{#if failed}}fa-square-xmark{{else}}fa-xmark{{/if}}"></i></button>
+                    {{#if ../isGM}}
+                      <button type="button" class="bh-sidequest-icon-button bh-sidequest-visibility {{#if hidden}}is-hidden{{/if}}" data-action="toggle-side-quest-visibility" data-quest-id="{{id}}" title="{{#if hidden}}Показать игрокам{{else}}Скрыть от игроков{{/if}}" aria-label="{{#if hidden}}Показать игрокам{{else}}Скрыть от игроков{{/if}}"><i class="fa-solid {{#if hidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
+                      <button type="button" class="bh-sidequest-icon-button" data-action="edit-side-quest" data-quest-id="{{id}}" title="Редактировать сайд-квест" aria-label="Редактировать сайд-квест"><i class="fa-solid fa-pencil"></i></button>
+                      <button type="button" class="bh-sidequest-icon-button bh-sidequest-delete" data-action="delete-side-quest" data-quest-id="{{id}}" title="Удалить сайд-квест" aria-label="Удалить сайд-квест"><i class="fa-solid fa-trash"></i></button>
+                    {{/if}}
+                  </div>
+                </div>
+              </article>
+            {{else}}
+              <p class="bh-empty">Сайд-квестов пока нет.</p>
+            {{/each}}
+          </div>
+        </aside>
+
+        <section class="bh-panel bh-sidequest-detail {{#if selectedSideQuest.completed}}is-completed{{/if}} {{#if selectedSideQuest.failed}}is-failed{{/if}}">
+          {{#if selectedSideQuest}}
+            <header>
+              <div>
+                <h2>{{selectedSideQuest.title}}</h2>
+                {{#if selectedSideQuest.hidden}}<span class="bh-sidequest-hidden-badge"><i class="fa-solid fa-eye-slash"></i> Скрыт от игроков</span>{{/if}}
+              </div>
+              <button type="button" class="bh-sidequest-note-button" data-action="add-side-quest-note" data-quest-id="{{selectedSideQuest.id}}"><i class="fa-solid fa-note-sticky"></i> Добавить заметку</button>
+            </header>
+            {{#if selectedSideQuest.description}}
+              <p class="bh-sidequest-description">{{selectedSideQuest.description}}</p>
+            {{else}}
+              <p class="bh-empty">Описание не добавлено.</p>
+            {{/if}}
+            <div class="bh-sidequest-notes-heading"><h3>Заметки</h3><span>{{selectedSideQuest.noteCount}}</span></div>
+            <div class="bh-sidequest-notes">
+              {{#each selectedSideQuest.notes}}
+                <article>
+                  <header><strong>{{authorName}}</strong>{{#if createdLabel}}<time>{{createdLabel}}</time>{{/if}}</header>
+                  <p>{{text}}</p>
+                </article>
+              {{else}}
+                <p class="bh-empty">Заметок пока нет. Игроки и мастер могут добавить первую.</p>
+              {{/each}}
+            </div>
+          {{else}}
+            <div class="bh-sidequest-empty-detail"><i class="fa-solid fa-scroll"></i><p>Выберите сайд-квест слева.</p></div>
+          {{/if}}
+        </section>
+      </div>
+      {{else}}
       <div class="bh-config-view">
         <form class="bh-config-form">
           <section class="bh-panel bh-climate-config">
             <h2><i class="fa-solid fa-clock"></i> Климат и карты</h2>
-            <p class="bh-note">Этап выбирается автоматически: начало кампании → найдены все 6 фантомов → возвращён предмет <code>jinniveres-riding-crop</code>.</p>
+            <p class="bh-note">Этап выбирается автоматически по найденным фантомам и возвращённым реликвиям вплоть до вечной ночи в Башнях.</p>
             <div class="bh-climate-stage-settings">
+              {{#each climateStages}}
               <fieldset>
-                <legend>Береговая Линия</legend>
-                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.initial.sunrise" value="{{data.climate.stages.initial.sunrise}}"></label>
-                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.initial.sunset" value="{{data.climate.stages.initial.sunset}}"></label>
-                <label><span>Описание</span><textarea rows="5" name="climate.stages.initial.description">{{data.climate.stages.initial.description}}</textarea></label>
+                <legend>{{label}}</legend>
+                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.{{key}}.sunrise" value="{{sunrise}}"></label>
+                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.{{key}}.sunset" value="{{sunset}}"></label>
+                <label><span>Описание</span><textarea rows="6" name="climate.stages.{{key}}.description">{{description}}</textarea></label>
               </fieldset>
-              <fieldset>
-                <legend>Замковые Территории</legend>
-                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.phantoms.sunrise" value="{{data.climate.stages.phantoms.sunrise}}"></label>
-                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.phantoms.sunset" value="{{data.climate.stages.phantoms.sunset}}"></label>
-                <label><span>Описание</span><textarea rows="5" name="climate.stages.phantoms.description">{{data.climate.stages.phantoms.description}}</textarea></label>
-              </fieldset>
-              <fieldset>
-                <legend>Подвал</legend>
-                <label><span>Восход</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.jinnivere.sunrise" value="{{data.climate.stages.jinnivere.sunrise}}"></label>
-                <label><span>Закат</span><input type="number" min="0" max="23.99" step="0.25" name="climate.stages.jinnivere.sunset" value="{{data.climate.stages.jinnivere.sunset}}"></label>
-                <label><span>Описание</span><textarea rows="5" name="climate.stages.jinnivere.description">{{data.climate.stages.jinnivere.description}}</textarea></label>
-              </fieldset>
+              {{/each}}
             </div>
             <div class="bh-document-drop" data-drop-kind="scene">
               <i class="fa-solid fa-map"></i>
@@ -259,10 +581,17 @@
             </div>
           </section>
 
-          <section class="bh-panel">
-            <h2><i class="fa-solid fa-box-open"></i> Памятные вещи, зоны и стены</h2>
-            <p class="bh-note">В «Списке бордюров» указываются UUID стен вида <code>Scene.ID.Wall.ID</code>. После возврата вещи модуль отключит у них текстуру стены.</p>
-            <div class="bh-config-mementos">
+           <section class="bh-panel">
+             <h2><i class="fa-solid fa-box-open"></i> Памятные вещи, зоны и стены</h2>
+             <p class="bh-note">Стены и регионы можно назначать прямо в их настройках через «Блок доступа». После выбора этапа они автоматически появятся в нужной памятной вещи.</p>
+             {{#each accessBlocks}}
+               <article class="bh-config-access-block">
+                 <header><b>{{label}}</b><span class="{{#if open}}collected{{/if}}">{{#if open}}Открыто{{else}}Закрыто{{/if}}</span></header>
+                 <label><span>Стены</span><textarea rows="2" name="accessBlocks.{{@index}}.wallUuids">{{wallUuids}}</textarea></label>
+                 <label><span>Регионы</span><textarea rows="2" name="accessBlocks.{{@index}}.regionUuids">{{regionUuids}}</textarea></label>
+               </article>
+             {{/each}}
+             <div class="bh-config-mementos">
               {{#each mementos}}
                 <article>
                   <header><b>{{displayIndex}}</b><input type="text" name="mementos.{{index}}.name" value="{{name}}" aria-label="Название"><span class="{{#if collected}}collected{{/if}}">{{#if collected}}Возвращена{{else}}Не найдена{{/if}}</span></header>
@@ -273,10 +602,8 @@
                   </div>
                   <label><span>Постоянное благо</span><textarea rows="3" name="mementos.{{index}}.bonus">{{bonus}}</textarea></label>
                   <label class="bh-rule-drop" data-rule-path="mementos.{{index}}.rules"><span>PF2e Rule Elements для ПИ <em>перетащите Effect</em></span><textarea class="code" rows="5" name="mementos.{{index}}.rules">{{rules}}</textarea></label>
-                  {{#if isMedallion}}
-                    <label class="bh-medallion-homebrew"><input type="hidden" name="homebrew.medallionUnarmed" value="false"><span><input type="checkbox" name="homebrew.medallionUnarmed" value="true" {{#if @root.data.homebrew.medallionUnarmed}}checked{{/if}}> Хоумбрю: дополнительный духовный урон действует и на безоружные атаки</span></label>
-                  {{/if}}
-                  <label><span>Список бордюров — зелёный туман</span><textarea rows="3" name="mementos.{{index}}.wallUuids">{{wallUuids}}</textarea></label>
+                   <label><span>Список стен — зелёный туман</span><textarea rows="3" name="mementos.{{index}}.wallUuids">{{wallUuids}}</textarea></label>
+                   <label><span>Список регионов — блок доступа</span><textarea rows="3" name="mementos.{{index}}.regionUuids">{{regionUuids}}</textarea></label>
                 </article>
               {{/each}}
             </div>
@@ -285,6 +612,10 @@
           <button type="submit" class="bh-save"><i class="fa-solid fa-floppy-disk"></i> Сохранить настройки Бастардхолла</button>
         </form>
       </div>
+      {{/if}}
+      {{/if}}
+      {{/if}}
+      {{/if}}
       {{/if}}
     {{/if}}
   </section>

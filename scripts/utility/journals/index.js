@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../../core.js";
 import "./autoformat.js";
 import "./image-sections.js";
+import "./side-quests.js";
 import { AoAJournalSheet } from "./AoA.js";
 import { BoBJournalSheet } from "./BoB.js";
 import { CCJournalSheet } from "./CC.js";

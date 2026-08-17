@@ -1,10 +1,57 @@
 import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
+import {
+  BASTION_TEXTURE_PRESET,
+  TEXTURE_PRESET_FLAG,
+} from "../utility/texture-presets.js?v=20260816-swamp-floor1";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";
 const EFFECT_FLAG = "bastardhallEffect";
 const DARKNESS_FLAG = "bastardhallDarkness";
+const NIGHT_TEXTURE_PRESET_FLAG = "bastardhallNightTexturePreset";
+const ACCESS_BLOCK_FLAG = "bastardhallAccess";
+const pendingRegionAccessChanges = new WeakMap();
 const APP_ID = "tsu-bastardhall-sheet";
+const VIEW_SELECTORS = Object.freeze([
+  ".bh-tracker-tab",
+  ".bh-cooking-view",
+  ".bh-inventory-view",
+  ".bh-investigation-view",
+  ".bh-sidequest-view",
+  ".bh-family-tree-view",
+  ".bh-config-view",
+]);
+
+const FAMILY_TREE_SLOTS = Object.freeze([
+  { id: "generation-1-husband", generation: 1, x: 420, y: 215 },
+  { id: "generation-1-wife", generation: 1, x: 580, y: 215 },
+  { id: "generation-2-son", generation: 2, x: 420, y: 435 },
+  { id: "generation-2-wife", generation: 2, x: 580, y: 435 },
+  { id: "generation-3-son", generation: 3, x: 420, y: 655 },
+  { id: "generation-3-wife", generation: 3, x: 580, y: 655 },
+  { id: "generation-4-daughter", generation: 4, x: 210, y: 875 },
+  { id: "generation-4-son", generation: 4, x: 410, y: 875, crowned: true },
+  { id: "generation-4-son-wife", generation: 4, x: 580, y: 875 },
+  { id: "generation-4-unknown", generation: 4, x: 790, y: 875 },
+  { id: "generation-5-daughter-son", generation: 5, x: 210, y: 1095 },
+  { id: "generation-5-son-son", generation: 5, x: 410, y: 1095 },
+  { id: "generation-5-son-daughter", generation: 5, x: 580, y: 1095 },
+  { id: "generation-5-unknown-heir", generation: 5, x: 790, y: 1095 },
+]);
+
+const FAMILY_TREE_HEIRS = Object.freeze(Array.from({ length: 8 }, (_value, index) => ({
+  id: `custom-heir-${index + 1}`,
+  x: 200 + ((index % 4) * 200),
+  y: index < 4 ? 42 : 252,
+})));
+
+const FAMILY_TREE_GENERATIONS = Object.freeze([
+  { number: 1, label: "I поколение", shelfY: 382 },
+  { number: 2, label: "II поколение", shelfY: 602 },
+  { number: 3, label: "III поколение", shelfY: 822 },
+  { number: 4, label: "IV поколение", shelfY: 1042 },
+  { number: 5, label: "V поколение", shelfY: 1262 },
+]);
 
 const AREA_NAMES = Object.freeze([
   "Береговая Линия",
@@ -17,6 +64,18 @@ const AREA_NAMES = Object.freeze([
   "Катакомбы",
   "Башни",
 ]);
+
+const CLIMATE_STAGE_LABELS = Object.freeze({
+  initial: "Береговая Линия",
+  phantoms: "Замковые Территории",
+  jinnivere: "Подвал",
+  augsten: "Приёмные Залы",
+  alisendra: "Подземелье",
+  dazerien: "Личные Залы",
+  raudltz: "Храм",
+  ryhasphinea: "Катакомбы",
+  irrokcis: "Башни",
+});
 
 const COLLECTIONS = Object.freeze({
   arts: { label: "Произведения искусства", slugs: ["arts"] },
@@ -60,12 +119,110 @@ const PHANTOMS = Object.freeze([
   { id: "shireyl", name: "Ширейл Анимендер", role: "Жрица" },
 ]);
 
-const DEFAULT_RESEARCH_TOPICS = Object.freeze([
+const SERVANT_PHANTOMS = Object.freeze([
+  {
+    id: "bakers",
+    name: "Фантомы-пекари",
+    location: "C18. Пекарня",
+    description: "Каждый день готовят 2 Пончика поэта. После открытия Храма используют средний рецепт вместо малого.",
+  },
+  {
+    id: "cooks",
+    name: "Фантомы-повара",
+    location: "C40. Главная кухня",
+    description: "Каждый день готовят 1d4 порции следующего блюда из выбранной очереди. Каждый рецепт доступен только один раз.",
+  },
+  {
+    id: "brewers",
+    name: "Фантомы-пивовары",
+    location: "C46. Пивоварня",
+    description: "Каждый день готовят 1d4 порции следующего напитка из выбранной очереди. Каждый рецепт доступен только один раз.",
+  },
+]);
+
+const SERVANT_RECIPES = Object.freeze({
+  cooks: Object.freeze([
+    { id: "egg-cream-fizz", name: "Шипучий яичный коктейль", englishName: "Egg Cream Fizz", slug: "egg-cream-fizz" },
+    { id: "galvanic-chew", name: "Гальваническая жвачка", englishName: "Galvanic Chew", slug: "galvanic-chew" },
+    { id: "cooperative-waffles-greater", name: "Вафли товарищества [Большие]", englishName: "Cooperative Waffles (Greater)", slug: "cooperative-waffles-greater" },
+    { id: "diplomats-charcuterie", name: "Шаркутери дипломата", englishName: "Diplomat's Charcuterie", slug: "diplomats-charcuterie" },
+  ]),
+  brewers: Object.freeze([
+    { id: "fury-cocktail-lesser", name: "Коктейль «Ярость» [Малый] — скорбный", englishName: "Fury Cocktail (Lesser) — Mournful", slug: "fury-cocktail-lesser", variant: "mournful", suffix: "Скорбный" },
+    { id: "soothing-toddy", name: "Успокаивающий коктейль — виски", englishName: "Soothing Toddy — Whiskey", slug: "soothing-toddy", variant: "whiskey", suffix: "Виски" },
+    { id: "silvertongue-mutagen-moderate", name: "Мутаген красноречия [Средний]", englishName: "Silvertongue Mutagen (Moderate)", slug: "silvertongue-mutagen-moderate" },
+    { id: "bottled-catharsis-moderate", name: "Катарсис в бутылке [Средний]", englishName: "Bottled Catharsis (Moderate)", slug: "bottled-catharsis-moderate" },
+  ]),
+});
+
+const SHELYN_BLESSINGS = Object.freeze([
+  { id: "tangy", name: "Танцующая Шелин", spell: "Уверенность в ногах / Sure Footing", selector: "acrobatics", check: "проверкам Акробатики" },
+  { id: "contemplative", name: "Созерцающая Шелин", spell: "Ясный ум / Clear Mind", selector: "crafting", check: "проверкам Ремесла" },
+  { id: "sleeping", name: "Спящая Шелин", spell: "Здоровое тело / Sound Body", selector: "fortitude", check: "спасброскам Стойкости" },
+]);
+
+function createDefaultServantPhantoms() {
+  return SERVANT_PHANTOMS.map((servant) => ({
+    id: servant.id,
+    active: false,
+    lastGrantedDay: null,
+    recipeOrder: (SERVANT_RECIPES[servant.id] ?? []).map((recipe) => recipe.id),
+    usedRecipeIds: [],
+  }));
+}
+
+const LEGACY_RESEARCH_TOPICS = Object.freeze([
   "Бастардхолл",
   "Проклятие",
   "Семья Арудора",
   "Флорин Киндлер",
   ...Array.from({ length: 14 }, (_value, index) => `Тема изыскания ${index + 5}`),
+]);
+
+const DEFAULT_RESEARCH_TOPICS = Object.freeze([
+  "Семья Арудора",
+  "Бастардхолл",
+  "Деметрис Арудора",
+  "Эрагейл Арудора",
+  "Джиннивер Арудора",
+  "Ниша Арудора",
+  "Тасифини Арудора",
+  "Заша Арудора",
+  "Аугстен Арудора",
+  "Алисендра Арудора",
+  "Проклятие",
+  "Дазериэн Арудора",
+  "Флорин Киндлер",
+  "Раудльц Арудора",
+  "Рихасфинея Арудора",
+  "Кейдсеррис Арудора",
+  "Иррокцис Арудора",
+  "Великарн",
+]);
+
+const RESEARCH_V14_SOURCE_ORDER = Object.freeze([2, 0, 4, 5, 6, 7, 8, 9, 10, 11, 1, 12, 3, 13, 14, 15, 16, 17]);
+
+const RESEARCH_BONUSES = Object.freeze([
+  {
+    topicIndex: 1,
+    threshold: 11,
+    description: "Вы получаете бонус обстоятельства +2 к проверкам Восприятия при Поиске потайных дверей или скрытых тайников в замке.",
+  },
+  {
+    topicIndex: 10,
+    threshold: 8,
+    description: "Вы получаете бонус обстоятельства +2 к проверкам Противодействия против проклятий.",
+  },
+  {
+    topicIndex: 10,
+    threshold: 12,
+    description: "Вы получаете бонус обстоятельства +1 к спасброскам против проклятий.",
+  },
+  {
+    topicIndex: 10,
+    threshold: 21,
+    description: "Вы получаете бонус обстоятельства +4 к спасброскам против проклятий.",
+  },
 ]);
 
 const DEFAULT_NIGHT_NPC_RULES = JSON.stringify([
@@ -187,7 +344,7 @@ function createDefaultMementos() {
       slug: "irrokciss-medallion",
       foundArea: "Катакомбы",
       area: "Башни",
-      bonus: "Все Удары оружием персонажей игроков наносят 1 дополнительный духовный урон до конца Пути Приключений.",
+      bonus: "Все Удары персонажей игроков наносят 1 дополнительный духовный урон до конца Пути Приключений.",
       rules: JSON.stringify([{
         key: "FlatModifier",
         selector: "strike-damage",
@@ -195,17 +352,23 @@ function createDefaultMementos() {
         value: 1,
         damageType: "spirit",
         slug: "irrokcis-medallion-damage",
-        predicate: ["item:type:weapon", { not: "item:category:unarmed" }],
       }], null, 2),
     },
   ];
-  return definitions.map((entry) => ({ rules: "[]", wallUuids: "", ...entry }));
+  return definitions.map((entry) => ({ rules: "[]", wallUuids: "", regionUuids: "", ...entry }));
 }
 
 function createDefaultData() {
   return {
-    version: 7,
+    version: 21,
     inventory: [],
+    sideQuests: [],
+    investigations: [],
+    familyTree: {
+      crest: { id: "crest", actorUuid: "", name: "", img: "", notes: "" },
+      slots: FAMILY_TREE_SLOTS.map(({ id }) => ({ id, actorUuid: "", name: "", img: "", notes: "" })),
+      customHeirs: FAMILY_TREE_HEIRS.map(({ id }) => ({ id, actorUuid: "", name: "", img: "", notes: "" })),
+    },
     soulhearts: {
       simple: 0,
       greater: 0,
@@ -214,10 +377,15 @@ function createDefaultData() {
       slugs: Object.fromEntries(Object.entries(SOULHEARTS).map(([key, value]) => [key, value.defaultSlugs.join(", ")])),
     },
     collections: { arts: 0, gears: 0, remnants: 0 },
-    homebrew: { medallionUnarmed: false },
     research: DEFAULT_RESEARCH_TOPICS.map((name, index) => ({ id: `research-${index + 1}`, name, points: -1 })),
     phantoms: PHANTOMS.map((phantom) => ({ ...phantom, found: false, rank: 0, actorUuid: "", bonuses: defaultPhantomBonuses(phantom) })),
+    servantPhantoms: createDefaultServantPhantoms(),
+    boons: {
+      ausken: { lastGrantedDay: null },
+      shelyn: { active: false, choice: "tangy", lastGrantedDay: null },
+    },
     mementos: createDefaultMementos(),
+    accessBlocks: [{ id: "phantoms", wallUuids: "", regionUuids: "" }],
     climate: {
       stages: {
         initial: {
@@ -235,10 +403,62 @@ function createDefaultData() {
           sunset: 18.5,
           description: "Небо темнеет и остается пасмурным на протяжении всего дня. Температура остается прохладной и свежей, но периодические порывы ветра теперь становятся более частыми и время от времени перерастают в шквалы. При каждом закате гремит гул далёкого грома.",
         },
+        augsten: {
+          sunrise: 9,
+          sunset: 18,
+          description: "Наползает липкий туман. Хотя бриз и порывы ветра утихают, туман едва ли приносит улучшение, покрывая всё вокруг сырым слоем конденсата. Температура остаётся прохладной и свежей, опускаясь снаружи до умеренного холода после наступления темноты.",
+          coldWarning: true,
+        },
+        alisendra: {
+          sunrise: 10,
+          sunset: 18,
+          description: "Дождь срывается порывистой моросью день и ночь, а ветер усиливается. На открытом воздухе проверки Восприятия, основанные на зрении, получают штраф обстоятельства −1 из-за мороси. Температура становится некомфортной и опускается до категории умеренного холода на весь день.",
+          perceptionPenalty: -1,
+          perceptionVisionOnly: true,
+          coldWarning: true,
+        },
+        dazerien: {
+          sunrise: 11,
+          sunset: 17,
+          description: "Теперь буря разражается в полную силу. Дождь хлещет большую часть дня и ночи, стихая лишь ненадолго. На открытом воздухе во время дождя персонажи получают штраф обстоятельства −2 к проверкам Восприятия, основанным на зрении, из-за ливня, а ветер налагает штраф обстоятельства −1 на дистанционные Удары. Незащищённые маленькие источники открытого огня снаружи гаснут от ветра или дождя. Температура снаружи остаётся в пределах умеренного холода.",
+          perceptionPenalty: -2,
+          perceptionVisionOnly: true,
+          rangedPenalty: -1,
+          coldWarning: true,
+        },
+        raudltz: {
+          sunrise: 12,
+          sunset: 16,
+          description: "Буря набирает силу. Дождь непрерывно хлещет и местами протекает сквозь крышу, оставляя лужи на полу внутри помещений. На открытом воздухе проверки Восприятия, основанные на зрении, получают штраф обстоятельства −3 из-за ливня, а ветер налагает штраф обстоятельства −2 на дистанционные Удары. Незащищённые маленькие источники открытого огня снаружи гаснут от ветра или дождя. Температура снаружи остаётся в пределах умеренного холода.",
+          perceptionPenalty: -3,
+          perceptionVisionOnly: true,
+          rangedPenalty: -2,
+          coldWarning: true,
+        },
+        ryhasphinea: {
+          sunrise: 13,
+          sunset: 15,
+          description: "Дождь льёт потоками, покрывая внутренний двор Бастардхолла водой глубиной в несколько дюймов в отдельных местах. На открытом воздухе проверки Восприятия, основанные на зрении, получают штраф обстоятельства −3 из-за ливня, а ветер налагает штраф обстоятельства −3 на дистанционные Удары. Незащищённые маленькие источники открытого огня снаружи гаснут от ветра или дождя. Температура снаружи остаётся в пределах умеренного холода в течение дня, но опускается до сильного холода в период с 21:00 до 06:00.",
+          perceptionPenalty: -3,
+          perceptionVisionOnly: true,
+          rangedPenalty: -3,
+          coldWarning: true,
+        },
+        irrokcis: {
+          sunrise: 14,
+          sunset: 14,
+          description: "Сила бури превосходит всю прежнюю ярость, превращаясь в полноценный шторм. На открытом воздухе проверки Восприятия и дистанционные Удары получают штраф обстоятельства −4. Температура снаружи всё время остаётся в пределах сильного холода, и время от времени дождь сменяется снегом, но ненадолго, так и не перерастая в настоящую метель или буран. Незащищённые маленькие источники открытого огня снаружи гаснут от ветра и дождя. Солнце всходит в последний раз в 14:00, чтобы тут же зайти; после этого ночь становится вечной.",
+          perceptionPenalty: -4,
+          rangedPenalty: -4,
+          eternalNight: true,
+          lightning: true,
+        },
       },
       sceneRefs: "",
       excludedNpcRefs: "",
       stormActive: false,
+      outdoorPenaltyActive: false,
+      coldWarningDate: "",
       night: {
         darkness: 1,
         npcRules: DEFAULT_NIGHT_NPC_RULES,
@@ -302,6 +522,159 @@ function stackInventoryEntries(entries) {
   return stacks.sort((left, right) => (Number(left.depositedAt) || 0) - (Number(right.depositedAt) || 0));
 }
 
+function normalizeText(value, maxLength) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function normalizeSideQuests(entries) {
+  return normalizeArray(entries).flatMap((rawQuest, questIndex) => {
+    if (!rawQuest || typeof rawQuest !== "object") return [];
+    const title = normalizeText(rawQuest.title, 120);
+    if (!title) return [];
+    const questId = normalizeText(rawQuest.id, 120) || `side-quest-${questIndex + 1}`;
+    const notes = normalizeArray(rawQuest.notes).flatMap((rawNote, noteIndex) => {
+      if (!rawNote || typeof rawNote !== "object") return [];
+      const text = normalizeText(rawNote.text, 4000);
+      if (!text) return [];
+      return [{
+        id: normalizeText(rawNote.id, 120) || `${questId}-note-${noteIndex + 1}`,
+        text,
+        authorId: normalizeText(rawNote.authorId, 120),
+        authorName: normalizeText(rawNote.authorName, 120) || "Неизвестный игрок",
+        createdAt: Math.max(0, Number(rawNote.createdAt) || 0),
+      }];
+    });
+    const failed = rawQuest.failed === true;
+    const rawSourceSectionIndex = Number(rawQuest.sourceSectionIndex);
+    return [{
+      id: questId,
+      title,
+      description: normalizeText(rawQuest.description, 8000),
+      hidden: rawQuest.hidden === true,
+      completed: !failed && rawQuest.completed === true,
+      failed,
+      createdBy: normalizeText(rawQuest.createdBy, 120),
+      createdAt: Math.max(0, Number(rawQuest.createdAt) || 0),
+      sourceUuid: normalizeText(rawQuest.sourceUuid, 500),
+      sourceSectionId: normalizeText(rawQuest.sourceSectionId, 120),
+      sourceSectionIndex: Number.isFinite(rawSourceSectionIndex) ? Math.max(-1, Math.trunc(rawSourceSectionIndex)) : -1,
+      sourceHeading: normalizeText(rawQuest.sourceHeading, 240),
+      notes,
+    }];
+  });
+}
+
+function investigationNameKey(value) {
+  return normalizeText(value, 160).toLocaleLowerCase("ru-RU").replace(/\s+/g, " ");
+}
+
+function normalizeInvestigationHtml(value, maxLength = 50000) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function normalizeInvestigations(entries) {
+  return normalizeArray(entries).flatMap((rawInvestigation, investigationIndex) => {
+    if (!rawInvestigation || typeof rawInvestigation !== "object") return [];
+    const title = normalizeText(rawInvestigation.title, 160);
+    const topicName = normalizeText(rawInvestigation.topicName, 160) || title;
+    if (!title || !topicName) return [];
+    const investigationId = normalizeText(rawInvestigation.id, 120) || `investigation-${investigationIndex + 1}`;
+    const sources = normalizeArray(rawInvestigation.sources).flatMap((rawSource, sourceIndex) => {
+      if (!rawSource || typeof rawSource !== "object") return [];
+      const name = normalizeText(rawSource.name, 240);
+      if (!name) return [];
+      const maximum = Math.max(0, Math.trunc(Number(rawSource.maxPoints) || 0));
+      return [{
+        id: normalizeText(rawSource.id, 120) || `${investigationId}-source-${sourceIndex + 1}`,
+        name,
+        description: normalizeInvestigationHtml(rawSource.description),
+        checks: normalizeInvestigationHtml(rawSource.checks),
+        maxPoints: maximum,
+        points: Math.clamp(Math.trunc(Number(rawSource.points) || 0), 0, maximum),
+      }];
+    });
+    const revelations = normalizeArray(rawInvestigation.revelations).flatMap((rawRevelation) => {
+      if (!rawRevelation || typeof rawRevelation !== "object") return [];
+      const threshold = Math.max(0, Math.trunc(Number(rawRevelation.threshold) || 0));
+      const content = normalizeInvestigationHtml(rawRevelation.content);
+      return content ? [{ threshold, content }] : [];
+    }).sort((left, right) => left.threshold - right.threshold);
+    const rawSourceSectionIndex = Number(rawInvestigation.sourceSectionIndex);
+    return [{
+      id: investigationId,
+      title,
+      topicName,
+      level: Math.clamp(Math.trunc(Number(rawInvestigation.level) || 0), 0, 30),
+      sourceUuid: normalizeText(rawInvestigation.sourceUuid, 500),
+      sourceResearchId: normalizeText(rawInvestigation.sourceResearchId, 120),
+      sourceSectionIndex: Number.isFinite(rawSourceSectionIndex) ? Math.max(-1, Math.trunc(rawSourceSectionIndex)) : -1,
+      sourceHeading: normalizeText(rawInvestigation.sourceHeading, 240),
+      createdBy: normalizeText(rawInvestigation.createdBy, 120),
+      createdAt: Math.max(0, Number(rawInvestigation.createdAt) || 0),
+      sources,
+      revelations,
+    }];
+  });
+}
+
+function syncInvestigationResearchPoints(data, resetTopicNames = []) {
+  const totals = new Map();
+  for (const investigation of normalizeArray(data.investigations)) {
+    const key = investigationNameKey(investigation.topicName);
+    if (!key) continue;
+    const points = normalizeArray(investigation.sources).reduce((total, source) => total + Math.max(0, Number(source.points) || 0), 0);
+    totals.set(key, (totals.get(key) ?? 0) + points);
+  }
+  const resetKeys = new Set(normalizeArray(resetTopicNames).map(investigationNameKey).filter(Boolean));
+  for (const topic of normalizeArray(data.research)) {
+    const key = investigationNameKey(topic.name);
+    if (totals.has(key)) topic.points = totals.get(key);
+    else if (resetKeys.has(key)) topic.points = -1;
+  }
+}
+
+function normalizeFamilySlot(rawSlot, definition) {
+  const slot = rawSlot && typeof rawSlot === "object" ? rawSlot : {};
+  return {
+    id: definition.id,
+    actorUuid: normalizeText(slot.actorUuid, 500),
+    name: normalizeText(slot.name, 160),
+    img: normalizeText(slot.img, 1000),
+    notes: normalizeText(slot.notes, 4000),
+  };
+}
+
+function normalizeFamilyTree(rawTree) {
+  const tree = rawTree && typeof rawTree === "object" ? rawTree : {};
+  const storedSlots = normalizeArray(tree.slots);
+  const storedHeirs = normalizeArray(tree.customHeirs);
+  return {
+    crest: normalizeFamilySlot(tree.crest, { id: "crest" }),
+    slots: FAMILY_TREE_SLOTS.map((definition) => normalizeFamilySlot(
+      storedSlots.find((slot) => slot?.id === definition.id),
+      definition,
+    )),
+    customHeirs: FAMILY_TREE_HEIRS.map((definition) => normalizeFamilySlot(
+      storedHeirs.find((slot) => slot?.id === definition.id),
+      definition,
+    )),
+  };
+}
+
+function migrateResearchTopicsV14(topics) {
+  const byLegacyId = new Map(topics.map((topic) => [String(topic?.id ?? ""), topic]));
+  return RESEARCH_V14_SOURCE_ORDER.map((sourceIndex, index) => {
+    const source = byLegacyId.get(`research-${sourceIndex + 1}`) ?? topics[sourceIndex] ?? {};
+    const legacyName = LEGACY_RESEARCH_TOPICS[sourceIndex];
+    const name = String(source.name ?? "") === legacyName ? DEFAULT_RESEARCH_TOPICS[index] : source.name;
+    return {
+      ...source,
+      id: `research-${index + 1}`,
+      name: String(name ?? DEFAULT_RESEARCH_TOPICS[index]),
+    };
+  });
+}
+
 function normalizeData(raw) {
   const storedVersion = Number(raw?.version ?? 0);
   const data = foundry.utils.mergeObject(createDefaultData(), clone(raw ?? {}), {
@@ -309,8 +682,46 @@ function normalizeData(raw) {
     recursive: true,
     overwrite: true,
   });
-  data.version = 7;
+  data.version = 21;
   data.inventory = stackInventoryEntries(data.inventory);
+  if (storedVersion < 19) data.investigations = [];
+  if (storedVersion < 20) data.mementos = normalizeArray(data.mementos).map((memento) => ({ regionUuids: "", ...memento }));
+  if (storedVersion < 21) data.accessBlocks = createDefaultData().accessBlocks;
+  if (storedVersion < 8) data.sideQuests = normalizeArray(raw?.sideQuests);
+  if (storedVersion < 9) {
+    data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
+      sourcePath: "",
+      sourceHash: "",
+      importedAt: 0,
+      ...quest,
+    }));
+  }
+  if (storedVersion < 10) {
+    data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
+      completed: false,
+      ...quest,
+    }));
+  }
+  if (storedVersion < 11) {
+    data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
+      failed: false,
+      ...quest,
+    }));
+  }
+  if (storedVersion < 12) {
+    data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
+      ...quest,
+      sourceUuid: "",
+      sourceSectionId: "",
+      sourceSectionIndex: -1,
+      sourceHeading: "",
+    }));
+  }
+  if (storedVersion < 13 && (!raw?.familyTree || typeof raw.familyTree !== "object")) {
+    data.familyTree = createDefaultData().familyTree;
+  }
+  data.familyTree = normalizeFamilyTree(data.familyTree);
+  data.sideQuests = normalizeSideQuests(data.sideQuests);
   if (storedVersion < 6) {
     data.soulhearts.slugs = Object.fromEntries(Object.entries(SOULHEARTS).map(([key, value]) => [key, value.defaultSlugs.join(", ")]));
   }
@@ -319,9 +730,23 @@ function normalizeData(raw) {
     const index = data.research.length;
     data.research.push({ id: `research-${index + 1}`, name: DEFAULT_RESEARCH_TOPICS[index], points: -1 });
   }
+  if (storedVersion < 14 && raw?.research) {
+    data.research = migrateResearchTopicsV14(data.research);
+  }
+  if (storedVersion < 15 && data.research[17]?.name === "Великард") {
+    data.research[17] = { ...data.research[17], name: "Великарн" };
+  }
+  if (storedVersion < 16) {
+    data.climate.outdoorPenaltyActive = false;
+    data.climate.coldWarningDate = "";
+  }
+  data.climate.outdoorPenaltyActive = data.climate.outdoorPenaltyActive === true;
+  data.climate.coldWarningDate = String(data.climate.coldWarningDate ?? "");
   if (storedVersion < 3) {
     data.research = data.research.map((topic) => ({ ...topic, points: Number(topic.points) === 0 ? -1 : Number(topic.points) }));
   }
+  data.investigations = normalizeInvestigations(data.investigations);
+  syncInvestigationResearchPoints(data);
   data.phantoms = normalizeArray(data.phantoms);
   data.phantoms = PHANTOMS.map((definition) => {
     const stored = data.phantoms.find((entry) => entry?.id === definition.id) ?? {};
@@ -340,6 +765,33 @@ function normalizeData(raw) {
       }),
     };
   });
+  if (storedVersion < 18) {
+    data.servantPhantoms = createDefaultServantPhantoms();
+    data.boons = createDefaultData().boons;
+  }
+  const storedServants = normalizeArray(data.servantPhantoms);
+  data.servantPhantoms = SERVANT_PHANTOMS.map((definition) => {
+    const stored = storedServants.find((entry) => entry?.id === definition.id) ?? {};
+    const recipeIds = (SERVANT_RECIPES[definition.id] ?? []).map((recipe) => recipe.id);
+    const storedOrder = [...new Set(normalizeArray(stored.recipeOrder).map(String))];
+    const recipeOrder = [...storedOrder.filter((id) => recipeIds.includes(id)), ...recipeIds.filter((id) => !storedOrder.includes(id))];
+    return {
+      id: definition.id,
+      active: stored.active === true,
+      lastGrantedDay: stored.lastGrantedDay !== null && stored.lastGrantedDay !== undefined && Number.isInteger(Number(stored.lastGrantedDay)) ? Number(stored.lastGrantedDay) : null,
+      recipeOrder,
+      usedRecipeIds: [...new Set(normalizeArray(stored.usedRecipeIds).map(String).filter((id) => recipeIds.includes(id)))],
+    };
+  });
+  data.boons = data.boons && typeof data.boons === "object" ? data.boons : {};
+  data.boons.ausken = {
+    lastGrantedDay: data.boons.ausken?.lastGrantedDay !== null && data.boons.ausken?.lastGrantedDay !== undefined && Number.isInteger(Number(data.boons.ausken.lastGrantedDay)) ? Number(data.boons.ausken.lastGrantedDay) : null,
+  };
+  data.boons.shelyn = {
+    active: data.boons.shelyn?.active === true,
+    choice: SHELYN_BLESSINGS.some((entry) => entry.id === data.boons.shelyn?.choice) ? data.boons.shelyn.choice : "tangy",
+    lastGrantedDay: data.boons.shelyn?.lastGrantedDay !== null && data.boons.shelyn?.lastGrantedDay !== undefined && Number.isInteger(Number(data.boons.shelyn.lastGrantedDay)) ? Number(data.boons.shelyn.lastGrantedDay) : null,
+  };
   data.mementos = normalizeArray(data.mementos);
   const defaults = createDefaultMementos();
   data.mementos = defaults.map((definition) => {
@@ -348,6 +800,9 @@ function normalizeData(raw) {
       ...definition,
       ...stored,
     };
+    merged.wallUuids = String(merged.wallUuids ?? "");
+    merged.regionUuids = String(merged.regionUuids ?? "");
+    delete merged.regionBehaviorUuids;
     if (storedVersion < 3) {
       merged.foundArea = definition.foundArea;
       merged.area = definition.area;
@@ -355,8 +810,30 @@ function normalizeData(raw) {
     if (storedVersion < 4 && ["dazerien-thumbscrew", "raudltz-telescope", "ryhasphinea-hourglass", "irrokcis-medallion"].includes(definition.id)) {
       Object.assign(merged, definition, { wallUuids: stored.wallUuids ?? definition.wallUuids });
     }
+    if (storedVersion < 17 && definition.id === "irrokcis-medallion") {
+      const legacyBonus = "Все Удары оружием персонажей игроков наносят 1 дополнительный духовный урон до конца Пути Приключений.";
+      if (!stored.bonus || stored.bonus === legacyBonus) merged.bonus = definition.bonus;
+      const legacyRules = JSON.stringify([{
+        key: "FlatModifier",
+        selector: "strike-damage",
+        type: "untyped",
+        value: 1,
+        damageType: "spirit",
+        slug: "irrokcis-medallion-damage",
+        predicate: ["item:type:weapon", { not: "item:category:unarmed" }],
+      }], null, 2);
+      if (!stored.rules || stored.rules === legacyRules) merged.rules = definition.rules;
+    }
     return merged;
   });
+  data.accessBlocks = [{ id: "phantoms", wallUuids: "", regionUuids: "" }].map((definition) => {
+    const stored = normalizeArray(raw?.accessBlocks).find((entry) => entry?.id === definition.id) ?? {};
+    return { ...definition, ...stored, wallUuids: String(stored.wallUuids ?? ""), regionUuids: String(stored.regionUuids ?? "") };
+  });
+  if (data.homebrew && typeof data.homebrew === "object") {
+    delete data.homebrew.medallionUnarmed;
+    if (!Object.keys(data.homebrew).length) delete data.homebrew;
+  }
   return data;
 }
 
@@ -435,11 +912,15 @@ function allPhantomsFound(data) {
   return data.phantoms.length === PHANTOMS.length && data.phantoms.every((phantom) => phantom.found === true);
 }
 
-function jinnivereReturned(data) {
+function mementoReturned(data, id, slug = "") {
   return data.inventory.some((entry) => (
     entry.category === "memento"
-    && (entry.mementoId === "jinnivere-riding-crop" || entry.slug === "jinniveres-riding-crop")
+    && (entry.mementoId === id || (slug && entry.slug === slug))
   ));
+}
+
+function jinnivereReturned(data) {
+  return mementoReturned(data, "jinnivere-riding-crop", "jinniveres-riding-crop");
 }
 
 function normalizeHour(value, fallback) {
@@ -466,24 +947,77 @@ function getClimateStage(data) {
     key = "jinnivere";
     label = "Подвал";
   }
+  const mementoStages = [
+    ["augsten-cudgel", "augstens-cudgel", "augsten", "Приёмные Залы"],
+    ["alisendra-fan", "alisendras-fan", "alisendra", "Подземелье"],
+    ["dazerien-thumbscrew", "dazeriens-thumbscrew", "dazerien", "Личные Залы"],
+    ["raudltz-telescope", "raudltzs-telescope", "raudltz", "Храм"],
+    ["ryhasphinea-hourglass", "ryhasphineas-hourglass", "ryhasphinea", "Катакомбы"],
+    ["irrokcis-medallion", "irrokciss-medallion", "irrokcis", "Башни"],
+  ];
+  for (const [mementoId, slug, stageKey, stageLabel] of mementoStages) {
+    if (!mementoReturned(data, mementoId, slug)) continue;
+    key = stageKey;
+    label = stageLabel;
+  }
   const defaults = createDefaultData().climate.stages[key];
   const configured = stages[key] ?? defaults;
   const sunrise = normalizeHour(configured.sunrise, defaults.sunrise);
   const sunset = normalizeHour(configured.sunset, defaults.sunset);
-  const dayDuration = sunrise <= sunset ? sunset - sunrise : (24 - sunrise) + sunset;
+  const eternalNight = configured.eternalNight === true;
+  const dayDuration = eternalNight ? 0 : (sunrise <= sunset ? sunset - sunrise : (24 - sunrise) + sunset);
   return {
     key,
     label,
     sunrise,
     sunset,
-    sunriseLabel: formatHour(sunrise),
-    sunsetLabel: formatHour(sunset),
+    sunriseLabel: eternalNight ? `${formatHour(sunrise)} (последний)` : formatHour(sunrise),
+    sunsetLabel: eternalNight ? "сразу" : formatHour(sunset),
     dayDuration,
     nightDuration: 24 - dayDuration,
     description: String(configured.description ?? defaults.description ?? ""),
+    perceptionPenalty: Math.min(0, Number(configured.perceptionPenalty) || 0),
+    perceptionVisionOnly: configured.perceptionVisionOnly === true,
+    rangedPenalty: Math.min(0, Number(configured.rangedPenalty) || 0),
+    coldWarning: configured.coldWarning === true,
+    eternalNight,
+    lightning: configured.lightning === true,
     dayDurationLabel: Number.isInteger(dayDuration) ? String(dayDuration) : String(dayDuration).replace(".5", "½"),
     nightDurationLabel: Number.isInteger(24 - dayDuration) ? String(24 - dayDuration) : String(24 - dayDuration).replace(".5", "½"),
   };
+}
+
+function outdoorPenaltyRules(stage) {
+  const rules = [];
+  if (stage.perceptionPenalty < 0) {
+    rules.push({
+      key: "FlatModifier",
+      label: "Непогода на улице",
+      selector: "perception",
+      slug: "bastardhall-outdoor-weather-perception",
+      type: "circumstance",
+      value: stage.perceptionPenalty,
+    });
+  }
+  if (stage.rangedPenalty < 0) {
+    rules.push({
+      key: "FlatModifier",
+      label: "Непогода на улице",
+      selector: "strike-attack-roll",
+      slug: "bastardhall-outdoor-weather-ranged",
+      type: "circumstance",
+      value: stage.rangedPenalty,
+      predicate: ["item:ranged"],
+    });
+  }
+  return rules;
+}
+
+function outdoorPenaltyDescription(stage) {
+  const parts = [];
+  if (stage.perceptionPenalty < 0) parts.push(`${stage.perceptionPenalty} к проверкам Восприятия${stage.perceptionVisionOnly ? ", основанным на зрении" : ""}`);
+  if (stage.rangedPenalty < 0) parts.push(`${stage.rangedPenalty} к дистанционным Ударам`);
+  return `На открытом воздухе: ${parts.join("; ")}.`;
 }
 
 function isDaytime(data) {
@@ -492,6 +1026,7 @@ function isDaytime(data) {
     ? Number(components.hour ?? 0) + (Number(components.minute ?? 0) / 60) + (Number(components.second ?? 0) / 3600)
     : (Number(game.time?.worldTime ?? 0) / 3600) % 24;
   const stage = getClimateStage(data);
+  if (stage.eternalNight) return false;
   const start = stage.sunrise;
   const end = stage.sunset;
   if (start === end) return true;
@@ -568,6 +1103,100 @@ function currentWorldTimeLabel() {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function currentWorldDateKey() {
+  const pf2eWorldTime = game.pf2e?.worldClock?.worldTime;
+  if (typeof pf2eWorldTime?.toISODate === "function") return String(pf2eWorldTime.toISODate());
+  const pf2eDateParts = [Number(pf2eWorldTime?.year), Number(pf2eWorldTime?.month), Number(pf2eWorldTime?.day)];
+  if (pf2eDateParts.every(Number.isFinite)) return pf2eDateParts.join("-");
+  try {
+    const date = game.seasonsStars?.api?.getCurrentDate?.();
+    const dateParts = [Number(date?.year), Number(date?.month), Number(date?.day)];
+    if (dateParts.every(Number.isFinite)) return dateParts.join("-");
+  } catch (_error) {
+    // Fall through to the currently selected clock components.
+  }
+  const components = currentClockComponents();
+  const year = Number(components?.year);
+  const month = Number(components?.month);
+  const day = Number(components?.day);
+  if ([year, month, day].every(Number.isFinite)) return `${year}-${month}-${day}`;
+  return `elapsed-${Math.floor(Number(game.time?.worldTime ?? 0) / 86400)}`;
+}
+
+async function postModerateColdWarning(data) {
+  const stage = getClimateStage(data);
+  if (!stage.coldWarning || stage.eternalNight || isDaytime(data)) return;
+  const warningHour = stage.sunset + 4;
+  if (warningHour >= 24 || currentWorldHour() < warningHour) return;
+  const dateKey = currentWorldDateKey();
+  if (data.climate.coldWarningDate === dateKey) return;
+
+  data.climate.coldWarningDate = dateKey;
+  await saveData(data);
+  await ChatMessage.create({
+    user: game.user?.id ?? null,
+    speaker: ChatMessage.getSpeaker(),
+    content: `<section class="bh-cold-chat-warning"><h3><i class="fa-solid fa-temperature-low"></i> Умеренный холод</h3><p>После заката прошло 4 часа. Если ПИ не защищены одеждой для холодной погоды, способностью переносить холод или подходящим магическим эффектом, они получают состояние @UUID[Compendium.pf2e.conditionitems.Item.HL2l2VRSaQHu9lUw]{Утомление}.</p><p>Утомлённые ПИ не могут использовать действия исследования, включая Поиск предметов и ловушек.</p></section>`,
+  });
+}
+
+async function postLightningDamage() {
+  const DamageRoll = game.pf2e?.DamageRoll ?? CONFIG.Dice?.rolls?.find((RollClass) => RollClass.name === "DamageRoll");
+  if (!DamageRoll) throw new Error("PF2E DamageRoll недоступен.");
+
+  const targets = Array.from(game.user?.targets ?? [])
+    .map((token) => token.document?.uuid)
+    .filter(Boolean);
+  const roll = await new DamageRoll("(10d6)[electricity]").evaluate();
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker(),
+    flavor: `<section class="bh-lightning-chat"><h3><i class="fa-solid fa-bolt-lightning"></i><span>Удар молнии</span></h3><p>Молния поражает одного из ПИ снаружи.</p><div class="bh-lightning-save"><i class="fa-solid fa-person-running"></i><span>Базовый Рефлекс</span><strong>КС 30</strong></div></section>`,
+    flags: {
+      pf2e: { context: { type: "damage-roll", options: ["damaging-effect"] } },
+      "pf2e-toolbelt": {
+        targetHelper: {
+          type: "damage",
+          targets,
+          options: ["damaging-effect"],
+          saveVariants: {
+            null: { basic: true, dc: 30, statistic: "reflex" },
+          },
+        },
+      },
+    },
+  });
+  return roll;
+}
+
+async function rollTowerLightning() {
+  const actor = canvas?.tokens?.controlled?.find?.((token) => token.actor?.type === "character")?.actor
+    ?? game.user?.character
+    ?? game.actors?.find?.((entry) => entry.type === "character")
+    ?? null;
+  const Check = game.pf2e?.Check;
+  const CheckModifier = game.pf2e?.CheckModifier;
+  if (actor && Check?.roll && CheckModifier) {
+    const check = new CheckModifier("Удар молнии", { modifiers: [] });
+    return Check.roll(check, {
+      actor,
+      type: "flat-check",
+      title: "Удар молнии: избежать разряда",
+      dc: { value: 17 },
+      skipDialog: true,
+    }, null, async (_roll, outcome) => {
+      if (!["success", "criticalSuccess"].includes(outcome)) await postLightningDamage();
+    });
+  }
+
+  const roll = await new Roll("1d20").evaluate();
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: "<strong>Удар молнии: чистая проверка Сл 17</strong>",
+  });
+  if (Number(roll.total) < 17) await postLightningDamage();
+  return roll;
+}
+
 function phantomRank(data, id) {
   const phantom = data.phantoms.find((entry) => entry.id === id);
   return phantom?.found ? Number(phantom.rank) || 0 : -1;
@@ -637,6 +1266,47 @@ function phantomPermanentEffect(id, rank) {
     };
   }
   return null;
+}
+
+function researchPoints(data, topicIndex) {
+  const points = Number(data.research?.[topicIndex]?.points);
+  return Number.isFinite(points) ? points : -1;
+}
+
+function researchSearchEffect() {
+  return {
+    name: "Поиск дверей и тайников",
+    description: "Бонус обстоятельства +2 к проверкам Восприятия при Поиске потайных дверей или скрытых тайников в замке. Не применяется к инициативе.",
+    rules: [{
+      key: "FlatModifier",
+      label: "Поиск дверей и тайников",
+      selector: "perception",
+      slug: "bastardhall-search-doors-and-caches",
+      type: "circumstance",
+      value: 2,
+      hideIfDisabled: false,
+      predicate: [{ not: "check:statistic:initiative" }],
+    }],
+    img: "icons/magic/perception/eye-ringed-glow-angry-small-teal.webp",
+  };
+}
+
+function researchCurseSaveEffect(points) {
+  const value = points >= 21 ? 4 : 1;
+  return {
+    name: "Защита от проклятий",
+    description: `Бонус обстоятельства +${value} к спасброскам против эффектов с трейтом «проклятие».`,
+    rules: [{
+      key: "FlatModifier",
+      label: "Защита от проклятий",
+      selector: "saving-throw",
+      slug: "bastardhall-curse-saving-throws",
+      type: "circumstance",
+      value,
+      predicate: ["item:trait:curse"],
+    }],
+    img: "icons/magic/defensive/shield-barrier-flaming-diamond-purple-orange.webp",
+  };
 }
 
 function parseRules(json, label) {
@@ -737,15 +1407,13 @@ function isExcludedPhantom(actor, data) {
   return refs.has(normalizeLookup(actor.uuid)) || refs.has(normalizeLookup(actor.id)) || refs.has(actorName);
 }
 
-function mementoBonusText(memento, data) {
-  const base = String(memento.bonus ?? "");
-  if (memento.id !== "irrokcis-medallion" || !data.homebrew?.medallionUnarmed) return base;
-  return `${base} Хоумбрю: дополнительный урон также распространяется на безоружные атаки.`.trim();
+function mementoBonusText(memento) {
+  return String(memento.bonus ?? "");
 }
 
-function mementoRules(memento, data, key) {
+function mementoRules(memento, key) {
   const rules = parseRules(memento.rules, key);
-  if (memento.id !== "irrokcis-medallion" || !data.homebrew?.medallionUnarmed) return rules;
+  if (memento.id !== "irrokcis-medallion") return rules;
   return rules.map((rule) => {
     if (rule?.slug !== "irrokcis-medallion-damage") return rule;
     const adjusted = clone(rule);
@@ -756,12 +1424,19 @@ function mementoRules(memento, data, key) {
 
 async function reconcileActorEffects(data, nightActive, stormActive, campaignEnabled = true) {
   const hp = totalBonusHp(data);
+  const searchResearchPoints = researchPoints(data, 1);
+  const curseResearchPoints = researchPoints(data, 10);
+  const searchResearch = researchSearchEffect();
+  const curseSaveResearch = researchCurseSaveEffect(curseResearchPoints);
   const pcNightActive = pcNightPenaltyActive(data, nightActive);
   const collectedMementoIds = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
   const nightPcRules = parseRules(data.climate.night.pcRules, "night/PC");
   const nightNpcRules = parseRules(data.climate.night.npcRules, "night/NPC");
   const stormPcRules = parseRules(data.climate.storm.pcRules, "storm/PC");
   const stormNpcRules = parseRules(data.climate.storm.npcRules, "storm/NPC");
+  const climateStage = getClimateStage(data);
+  const weatherRules = outdoorPenaltyRules(climateStage);
+  const outdoorPenaltyActive = campaignEnabled && data.climate.outdoorPenaltyActive === true && weatherRules.length > 0;
 
   for (const actor of game.actors?.contents ?? []) {
     const playerCharacter = isPlayerCharacter(actor);
@@ -778,11 +1453,33 @@ async function reconcileActorEffects(data, nightActive, stormActive, campaignEna
     await syncEffect(actor, "night-npc", eligibleNpc && nightActive, () => effectSource("night-npc", "Бастардхолл: Ночь", "Эффект ночи для персонажей мастера.", nightNpcRules, "icons/magic/perception/eye-ringed-glow-angry-large-red.webp"));
     await syncEffect(actor, "storm-pc", playerCharacter && stormActive, () => effectSource("storm-pc", "Бастардхолл: Шторм", "Эффект шторма для персонажей игроков.", stormPcRules, "icons/magic/air/weather-clouds-rainbow.webp"));
     await syncEffect(actor, "storm-npc", eligibleNpc && stormActive, () => effectSource("storm-npc", "Бастардхолл: Шторм", "Эффект шторма для персонажей мастера.", stormNpcRules, "icons/magic/air/weather-clouds-rainbow.webp"));
+    await syncEffect(actor, "outdoor-weather-pc", playerCharacter && outdoorPenaltyActive, () => effectSource(
+      "outdoor-weather-pc",
+      "Непогода на улице",
+      outdoorPenaltyDescription(climateStage),
+      weatherRules,
+      "icons/magic/air/weather-clouds-rain.webp",
+    ));
+
+    await syncEffect(actor, "research-search", campaignEnabled && playerCharacter && searchResearchPoints >= 11, () => effectSource(
+      "research-search",
+      `Бастардхолл: ${searchResearch.name}`,
+      searchResearch.description,
+      searchResearch.rules,
+      searchResearch.img,
+    ));
+    await syncEffect(actor, "research-curse-saves", campaignEnabled && playerCharacter && curseResearchPoints >= 12, () => effectSource(
+      "research-curse-saves",
+      `Бастардхолл: ${curseSaveResearch.name}`,
+      curseSaveResearch.description,
+      curseSaveResearch.rules,
+      curseSaveResearch.img,
+    ));
 
     for (const memento of data.mementos) {
       const key = `memento-${memento.id}`;
       const active = campaignEnabled && playerCharacter && collectedMementoIds.has(memento.id);
-      await syncEffect(actor, key, active, () => effectSource(key, `Бастардхолл: ${memento.name}`, mementoBonusText(memento, data), mementoRules(memento, data, key)));
+      await syncEffect(actor, key, active, () => effectSource(key, `Бастардхолл: ${memento.name}`, mementoBonusText(memento), mementoRules(memento, key)));
     }
 
     for (const phantom of data.phantoms) {
@@ -790,6 +1487,8 @@ async function reconcileActorEffects(data, nightActive, stormActive, campaignEna
       const support = phantomPermanentEffect(phantom.id, phantom.found ? Number(phantom.rank) || 0 : -1);
       await syncEffect(actor, key, campaignEnabled && playerCharacter && Boolean(support), () => effectSource(key, `Бастардхолл: ${support.name}`, support.description, support.rules, support.img));
     }
+    if (!campaignEnabled || phantomRank(data, "ausken") < 1) await syncEffect(actor, "ausken-blessing", false, () => null);
+    if (!campaignEnabled || !data.boons.shelyn.active) await syncEffect(actor, "shelyn-grace", false, () => null);
   }
   for (const token of canvas?.tokens?.placeables ?? []) token.renderFlags?.set?.({ refreshEffects: true });
 }
@@ -846,16 +1545,69 @@ async function reconcileSceneDarkness(data, nightActive, stormActive) {
   }
 }
 
+function nightTexturePresetScenes(data, { includeManaged = false } = {}) {
+  const scenes = new Map();
+  for (const ref of splitRefs(data.climate.sceneRefs)) {
+    const scene = resolveScene(ref);
+    if (scene) scenes.set(scene.id, scene);
+  }
+  if (includeManaged) {
+    for (const scene of game.scenes?.contents ?? []) {
+      if (scene.getFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG)) scenes.set(scene.id, scene);
+    }
+  }
+  return [...scenes.values()];
+}
+
+async function applyNightTexturePresets(data) {
+  for (const scene of nightTexturePresetScenes(data)) {
+    if (scene.getFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG)) continue;
+    const originalPreset = scene.getFlag(MODULE_ID, TEXTURE_PRESET_FLAG) ?? null;
+    await scene.setFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG, { originalPreset });
+    if (originalPreset !== BASTION_TEXTURE_PRESET) {
+      await scene.setFlag(MODULE_ID, TEXTURE_PRESET_FLAG, BASTION_TEXTURE_PRESET);
+    }
+  }
+}
+
+async function restoreNightTexturePresets(data = getData()) {
+  for (const scene of nightTexturePresetScenes(data, { includeManaged: true })) {
+    const stored = scene.getFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG);
+    if (!stored) continue;
+    const currentPreset = scene.getFlag(MODULE_ID, TEXTURE_PRESET_FLAG) ?? null;
+    if (currentPreset === BASTION_TEXTURE_PRESET) {
+      if (stored.originalPreset == null) await scene.unsetFlag(MODULE_ID, TEXTURE_PRESET_FLAG);
+      else await scene.setFlag(MODULE_ID, TEXTURE_PRESET_FLAG, stored.originalPreset);
+    }
+    await scene.unsetFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG);
+  }
+}
+
 async function disableMementoWalls(memento) {
   for (const ref of splitRefs(memento.wallUuids)) {
     try {
       const wall = await fromUuid(ref);
       if (wall?.documentName !== "Wall") continue;
-      const enabled = wall.getFlag(MODULE_ID, "wallTexture")?.enabled;
-      if (enabled === false) continue;
-      await wall.setFlag(MODULE_ID, "wallTexture", {
-        ...(wall.getFlag(MODULE_ID, "wallTexture") ?? {}),
-        enabled: false,
+      const stored = wall.getFlag(MODULE_ID, "wallTexture") ?? {};
+      if (stored.enabled === false) continue;
+      
+      const originalRestrictions = {
+        light: wall.light,
+        move: wall.move,
+        sight: wall.sight,
+        sound: wall.sound,
+      };
+
+      await wall.update({
+        light: 0,
+        move: 0,
+        sight: 0,
+        sound: 0,
+        [`flags.${MODULE_ID}.wallTexture`]: {
+          ...stored,
+          enabled: false,
+          originalRestrictions,
+        },
       });
     } catch (error) {
       console.warn(`${MODULE_ID} | Failed to disable Bastardhall border ${ref}`, error);
@@ -863,15 +1615,90 @@ async function disableMementoWalls(memento) {
   }
 }
 
+async function reconcileMementoRegionBehaviors(memento, collected) {
+  for (const ref of splitRefs(memento.regionUuids)) {
+    try {
+      const region = await fromUuid(ref);
+      if (accessDocumentName(region) !== "Region") continue;
+      const access = region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
+      if (!accessFlagEnabled(access?.enabled) || access.stage !== memento.id) continue;
+      const originalDisabled = accessOriginalDisabled(access) ?? {};
+      for (const behavior of region.behaviors?.contents ?? []) {
+        if (collected) await behavior.update({ disabled: false });
+        else {
+          const disabled = originalDisabled[behavior.uuid];
+          if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
+        }
+      }
+      if (collected) {
+        if (region.color !== "#16a298") await region.update({ color: "#16a298" });
+      } else if (access.originalColor !== undefined && region.color !== access.originalColor) {
+        await region.update({ color: access.originalColor });
+      }
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Failed to reconcile Bastardhall region behavior ${ref}`, error);
+    }
+  }
+}
+
+async function restoreMementoRegionBehaviors(data) {
+  for (const memento of accessBlockEntries(data)) {
+    for (const ref of splitRefs(memento.regionUuids)) {
+      try {
+        const region = await fromUuid(ref);
+        const access = region?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
+        const originalDisabled = accessOriginalDisabled(access) ?? {};
+        for (const behavior of region?.behaviors?.contents ?? []) {
+          const disabled = originalDisabled[behavior.uuid];
+          if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
+        }
+        if (access?.originalColor !== undefined && region.color !== access.originalColor) {
+          await region.update({ color: access.originalColor });
+        }
+      } catch (error) {
+        console.warn(`${MODULE_ID} | Failed to restore Bastardhall region behavior ${ref}`, error);
+      }
+    }
+  }
+}
+
+async function restoreAccessRegion(region) {
+  if (accessBlockStage(region)) return;
+  const access = region?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
+  const originalDisabled = accessOriginalDisabled(access) ?? {};
+  for (const behavior of region?.behaviors?.contents ?? []) {
+    const disabled = originalDisabled[behavior.uuid];
+    if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
+  }
+  if (access?.originalColor !== undefined && region.color !== access.originalColor) {
+    await region.update({ color: access.originalColor });
+  }
+}
+
 async function restoreMementoWalls(data) {
-  for (const memento of data.mementos ?? []) {
+  for (const memento of accessBlockEntries(data)) {
     for (const ref of splitRefs(memento.wallUuids)) {
       try {
         const wall = await fromUuid(ref);
         if (wall?.documentName !== "Wall") continue;
         const stored = wall.getFlag(MODULE_ID, "wallTexture");
         if (stored?.enabled !== false) continue;
-        await wall.setFlag(MODULE_ID, "wallTexture", { ...stored, enabled: true });
+
+        const restrictions = stored.originalRestrictions ?? {};
+        const updates = {
+          [`flags.${MODULE_ID}.wallTexture`]: {
+            ...stored,
+            enabled: true,
+            "-=originalRestrictions": null,
+          }
+        };
+
+        if (restrictions.light !== undefined) updates.light = restrictions.light;
+        if (restrictions.move !== undefined) updates.move = restrictions.move;
+        if (restrictions.sight !== undefined) updates.sight = restrictions.sight;
+        if (restrictions.sound !== undefined) updates.sound = restrictions.sound;
+
+        await wall.update(updates);
       } catch (error) {
         console.warn(`${MODULE_ID} | Failed to restore Bastardhall border ${ref}`, error);
       }
@@ -883,12 +1710,22 @@ async function resetBastardhallData() {
   if (!game.user?.isGM) return;
   const previous = getData();
   await restoreMementoWalls(previous);
+  await restoreMementoRegionBehaviors(previous);
+  await restoreNightTexturePresets(previous);
   for (const actor of game.actors?.contents ?? []) {
     if (actor.getFlag?.(MODULE_ID, "phantomDaily")) await actor.unsetFlag(MODULE_ID, "phantomDaily");
+    const dailyEffects = [
+      ...managedEffects(actor, "ausken-blessing"),
+      ...managedEffects(actor, "shelyn-grace"),
+    ];
+    if (dailyEffects.length) await actor.deleteEmbeddedDocuments("Item", [...new Set(dailyEffects.map((item) => item.id))]);
   }
   const resetData = createDefaultData();
   resetData.inventory = [];
+  resetData.sideQuests = [];
+  resetData.investigations = [];
   await game.settings.set(MODULE_ID, DATA_SETTING, resetData);
+  await rebuildAccessBlockLinks();
 
   // Foundry can retain an indexed array when replacing an Object setting in some
   // versions. Verify the persisted value and explicitly remove inventory keys.
@@ -898,8 +1735,11 @@ async function resetBastardhallData() {
     await game.settings.set(MODULE_ID, DATA_SETTING, persisted);
   }
 
-  const remaining = getData().inventory.length;
+  const normalized = getData();
+  const remaining = normalized.inventory.length;
   if (remaining) throw new Error(`Не удалось очистить инвентарь: осталось предметов — ${remaining}.`);
+  if (normalized.sideQuests.length) throw new Error("Не удалось очистить список сайд-квестов.");
+  if (normalized.investigations.length) throw new Error("Не удалось очистить список изысканий.");
 }
 
 function actorReconcileSignature(data, nightActive, stormActive, enabled) {
@@ -915,13 +1755,16 @@ function actorReconcileSignature(data, nightActive, stormActive, enabled) {
     soulhearts: data.soulhearts,
     climate: {
       excludedNpcRefs: data.climate.excludedNpcRefs,
+      stage: getClimateStage(data),
+      outdoorPenaltyActive: data.climate.outdoorPenaltyActive,
       nightRules: { pc: data.climate.night.pcRules, npc: data.climate.night.npcRules },
       stormRules: { pc: data.climate.storm.pcRules, npc: data.climate.storm.npcRules },
     },
     collectedMementos,
+    research: data.research.map(({ id, points }) => ({ id, points })),
     mementos: data.mementos.map(({ id, name, bonus, rules }) => ({ id, name, bonus, rules })),
-    homebrew: data.homebrew,
     phantoms: data.phantoms.map(({ id, name, found, rank, actorUuid }) => ({ id, name, found, rank, actorUuid })),
+    dailyBoons: { shelynActive: data.boons.shelyn.active },
   });
 }
 
@@ -942,7 +1785,8 @@ function mementoReconcileSignature(data, enabled) {
       .filter((entry) => entry.category === "memento")
       .map((entry) => entry.mementoId)
       .sort(),
-    walls: data.mementos.map(({ id, wallUuids }) => ({ id, wallUuids })),
+    allPhantomsFound: allPhantomsFound(data),
+    walls: accessBlockEntries(data).map(({ id, wallUuids, regionUuids }) => ({ id, wallUuids, regionUuids })),
   });
 }
 
@@ -951,12 +1795,25 @@ let pendingReconcile = null;
 let lastActorSignature = null;
 let lastSceneSignature = null;
 let lastMementoSignature = null;
+let lastObservedNightActive = null;
 
 async function runReconcile(request) {
   const data = getData();
   const enabled = Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING));
   const nightActive = enabled && !isDaytime(data);
   const stormActive = enabled && Boolean(data.climate.stormActive);
+
+  if (request.observeNightTransition) {
+    const previousNightActive = lastObservedNightActive;
+    lastObservedNightActive = nightActive;
+    if (previousNightActive === false && nightActive) await applyNightTexturePresets(data);
+    else if (previousNightActive === true && !nightActive) await restoreNightTexturePresets(data);
+    if (enabled) await postModerateColdWarning(data);
+  }
+  if (request.restoreNightPresets || (!enabled && nightTexturePresetScenes(data, { includeManaged: true }).some((scene) => scene.getFlag(MODULE_ID, NIGHT_TEXTURE_PRESET_FLAG)))) {
+    await restoreNightTexturePresets(data);
+    lastObservedNightActive = nightActive;
+  }
 
   const actorSignature = actorReconcileSignature(data, nightActive, stormActive, enabled);
   if (request.forceActors || actorSignature !== lastActorSignature) {
@@ -972,22 +1829,25 @@ async function runReconcile(request) {
 
   const mementoSignature = mementoReconcileSignature(data, enabled);
   if (request.forceMementos || mementoSignature !== lastMementoSignature) {
-    const collected = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
-    if (enabled) {
-      for (const memento of data.mementos) {
-        if (collected.has(memento.id)) await disableMementoWalls(memento);
-      }
+      if (enabled) {
+        for (const memento of accessBlockEntries(data)) {
+          const open = accessBlockIsOpen(data, memento);
+          if (open) await disableMementoWalls(memento);
+          await reconcileMementoRegionBehaviors(memento, open);
+        }
     }
     lastMementoSignature = mementoSignature;
   }
 }
 
-function queueReconcile({ forceActors = false, forceScenes = false, forceMementos = false } = {}) {
+function queueReconcile({ forceActors = false, forceScenes = false, forceMementos = false, observeNightTransition = false, restoreNightPresets = false } = {}) {
   if (!isPrimaryGM()) return activeReconcile;
-  pendingReconcile ??= { forceActors: false, forceScenes: false, forceMementos: false };
+  pendingReconcile ??= { forceActors: false, forceScenes: false, forceMementos: false, observeNightTransition: false, restoreNightPresets: false };
   pendingReconcile.forceActors ||= forceActors;
   pendingReconcile.forceScenes ||= forceScenes;
   pendingReconcile.forceMementos ||= forceMementos;
+  pendingReconcile.observeNightTransition ||= observeNightTransition;
+  pendingReconcile.restoreNightPresets ||= restoreNightPresets;
   if (activeReconcile) return activeReconcile;
 
   activeReconcile = (async () => {
@@ -1024,6 +1884,52 @@ function resolveActor(ref) {
   const uuidMatch = String(ref).match(/Actor\.([A-Za-z0-9]+)/);
   const id = uuidMatch?.[1] ?? ref;
   return game.actors?.get(id) ?? game.actors?.getName?.(ref) ?? null;
+}
+
+function plainTextFromHtml(value) {
+  if (value && typeof value === "object") return "";
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  const container = document.createElement("div");
+  container.innerHTML = raw.replace(/<(?:br\s*\/?|\/p|\/div|\/li)>/gi, "\n");
+  return normalizeText((container.textContent ?? "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n"), 4000);
+}
+
+function actorFamilyNotes(actor) {
+  const candidates = [
+    foundry.utils.getProperty(actor, "system.details.publicNotes"),
+    foundry.utils.getProperty(actor, "system.details.biography.value"),
+    foundry.utils.getProperty(actor, "system.details.biography"),
+    foundry.utils.getProperty(actor, "system.description.value"),
+  ];
+  return candidates.map(plainTextFromHtml).find(Boolean) ?? "";
+}
+
+function familySlotView(slot, definition) {
+  const actor = resolveActor(slot.actorUuid);
+  const assigned = Boolean(slot.actorUuid);
+  return {
+    ...definition,
+    ...slot,
+    assigned,
+    name: actor?.name ?? slot.name,
+    img: actor?.img ?? slot.img,
+    notes: actor ? actorFamilyNotes(actor) : slot.notes,
+    xPercent: Number(definition.x ?? 500) / 10,
+  };
+}
+
+function storedFamilySlot(data, section, id) {
+  if (section === "crest") return data.familyTree.crest;
+  const collection = section === "customHeirs" ? data.familyTree.customHeirs : data.familyTree.slots;
+  return collection.find((slot) => slot.id === id) ?? null;
+}
+
+function assignFamilyActor(slot, actor) {
+  slot.actorUuid = actor.uuid;
+  slot.name = normalizeText(actor.name, 160);
+  slot.img = normalizeText(actor.img, 1000);
+  slot.notes = actorFamilyNotes(actor);
 }
 
 async function choosePhantom(data, heart) {
@@ -1147,6 +2053,38 @@ async function giveItems(actor, uuids, { infused = false } = {}) {
   return sources.length;
 }
 
+async function equipmentItemBySlug(slug) {
+  const { pack, entries } = await equipmentIndex();
+  const entry = entries.find((candidate) => indexedSlug(candidate) === String(slug ?? "").toLowerCase());
+  return entry && pack ? fromUuid(`Compendium.${pack.collection}.${entry._id}`) : null;
+}
+
+async function givePreparedItem(actor, recipe, quantity, { infused = false } = {}) {
+  const item = await equipmentItemBySlug(recipe.slug);
+  if (!item || item.documentName !== "Item") throw new Error(`В pf2e.equipment-srd не найден предмет со slug «${recipe.slug}».`);
+  const source = item.toObject();
+  delete source._id;
+  foundry.utils.setProperty(source, "system.quantity", Math.max(1, Math.trunc(Number(quantity) || 1)));
+  if (infused) {
+    const traits = normalizeArray(source.system?.traits?.value);
+    if (!traits.includes("infused")) traits.push("infused");
+    foundry.utils.setProperty(source, "system.traits.value", traits);
+  }
+  if (recipe.suffix) source.name = `${source.name} (${recipe.suffix})`;
+  if (recipe.variant) {
+    const variantText = recipe.variant === "mournful" ? "Вариант приготовления: Скорбный." : "Вариант приготовления: Виски.";
+    const description = String(source.system?.description?.value ?? "");
+    foundry.utils.setProperty(source, "system.description.value", `<p><strong>${variantText}</strong></p>${description}`);
+  }
+  foundry.utils.setProperty(source, `flags.${MODULE_ID}.bastardhallPreparation`, {
+    recipeId: recipe.id,
+    variant: recipe.variant ?? "",
+    createdDay: currentWorldDay(),
+  });
+  await actor.createEmbeddedDocuments("Item", [source]);
+  return source;
+}
+
 function temporaryEffectSource(key, name, description, rules, img) {
   const source = effectSource(key, name, description, rules, img);
   source.system.duration = { value: 24, unit: "hours", expiry: "turn-start", sustained: false };
@@ -1161,6 +2099,220 @@ async function replaceManagedEffect(actor, key, source) {
 
 function currentWorldDay() {
   return Math.floor(Number(game.time?.worldTime ?? 0) / 86400);
+}
+
+function unlockedArea(data, areaName) {
+  if (areaName === "Береговая Линия") return true;
+  if (areaName === "Замковые Территории") return allPhantomsFound(data);
+  const collected = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
+  return data.mementos.some((memento) => memento.area === areaName && collected.has(memento.id));
+}
+
+function servantState(data, id) {
+  return data.servantPhantoms.find((entry) => entry.id === id) ?? null;
+}
+
+function remainingServantRecipes(servant) {
+  const used = new Set(servant?.usedRecipeIds ?? []);
+  return normalizeArray(servant?.recipeOrder).filter((id) => !used.has(id));
+}
+
+function actorAllowedForUser(actor, user) {
+  return Boolean(actor?.type === "character" && user && (user.isGM || actor.testUserPermission?.(user, "OWNER") || user.character?.id === actor.id));
+}
+
+function requestedActor(actorId, user) {
+  const actor = game.actors?.get(normalizeText(actorId, 120));
+  return actorAllowedForUser(actor, user) ? actor : null;
+}
+
+function emitDailyResult(recipientId, message, level = "info") {
+  const payload = {
+    type: "bastardhall-daily-result",
+    id: randomId(),
+    recipientId,
+    message: normalizeText(message, 1000),
+    level: ["info", "warn", "error"].includes(level) ? level : "info",
+  };
+  if (recipientId === game.user?.id) ui.notifications?.[payload.level]?.(payload.message);
+  else game.socket?.emit?.(SOCKET_CHANNEL, payload);
+}
+
+async function rollServantQuantity(label) {
+  const roll = await new Roll("1d4").evaluate();
+  await roll.toMessage({ flavor: `<b>${escapeHtml(label)}</b><br>Количество приготовленных порций.` });
+  return Math.max(1, Number(roll.total) || 1);
+}
+
+async function grantDailyCooking(request = {}, userId = game.user?.id) {
+  if (!isPrimaryGM()) return;
+  const user = game.users?.get(userId);
+  if (!user) return;
+  const data = getData();
+  const today = currentWorldDay();
+  const results = [];
+  const errors = [];
+  let changed = false;
+
+  const aron = data.phantoms.find((entry) => entry.id === "aron");
+  const aronRank = aron?.found ? Number(aron.rank) || 0 : -1;
+  const aronActor = requestedActor(request.targets?.aron, user);
+  if (aronRank >= 1 && aronActor) {
+    try {
+      const max = aronRank >= 3 ? 3 : 2;
+      const usedByGroup = playerCharacters().reduce((used, character) => used + dailyUses(character, "aronDrinks"), 0);
+      const remaining = Math.max(0, max - usedByGroup);
+      const allowed = new Set((await phantomItemOptions("drinks", aronRank)).map((entry) => entry.uuid));
+      const uuids = normalizeArray(request.aronItems).map(String).filter((uuid) => allowed.has(uuid)).slice(0, remaining);
+      if (!remaining) results.push("Напитки Арона сегодня уже выданы.");
+      else if (!uuids.length) results.push("Для Арона не выбраны напитки.");
+      else {
+        const count = await giveItems(aronActor, uuids, { infused: true });
+        if (count) {
+          await addDailyUses(aronActor, "aronDrinks", count);
+          results.push(`${aronActor.name} получает напитки Арона ×${count}.`);
+        }
+      }
+    } catch (error) {
+      errors.push(`Арон: ${error.message}`);
+    }
+  }
+
+  for (const definition of SERVANT_PHANTOMS) {
+    const servant = servantState(data, definition.id);
+    const actor = requestedActor(request.targets?.[definition.id], user);
+    if (!servant?.active || !actor) continue;
+    if (servant.lastGrantedDay === today) {
+      results.push(`${definition.name} сегодня уже выдали свою готовку.`);
+      continue;
+    }
+    try {
+      if (definition.id === "bakers") {
+        const moderate = unlockedArea(data, "Храм");
+        const recipe = {
+          id: moderate ? "poets-fritter-moderate" : "poets-fritter-lesser",
+          slug: moderate ? "poets-fritter-moderate" : "poets-fritter-lesser",
+        };
+        await givePreparedItem(actor, recipe, 2, { infused: true });
+        servant.lastGrantedDay = today;
+        changed = true;
+        results.push(`${actor.name} получает Пончик поэта ${moderate ? "[Средний]" : "[Малый]"} ×2 (насыщенные).`);
+        continue;
+      }
+
+      const nextRecipeId = remainingServantRecipes(servant)[0];
+      const recipe = SERVANT_RECIPES[definition.id]?.find((entry) => entry.id === nextRecipeId);
+      if (!recipe) {
+        results.push(`У ${definition.id === "cooks" ? "поваров" : "пивоваров"} закончились ингредиенты.`);
+        continue;
+      }
+      const quantity = await rollServantQuantity(definition.name);
+      await givePreparedItem(actor, recipe, quantity);
+      servant.usedRecipeIds.push(recipe.id);
+      servant.lastGrantedDay = today;
+      changed = true;
+      results.push(`${actor.name} получает «${recipe.name}» ×${quantity}.`);
+    } catch (error) {
+      errors.push(`${definition.name}: ${error.message}`);
+    }
+  }
+
+  if (changed) await saveData(data);
+  const message = [...results, ...errors].join(" ") || "Не выбраны доступные получатели ежедневной готовки.";
+  emitDailyResult(user.id, message, errors.length ? "warn" : "info");
+}
+
+function shelynDaylightEffect(data, blessing) {
+  const remainingHours = Math.max(0, Number(getClimateStage(data).sunset) - currentWorldHour());
+  const minutes = Math.max(1, Math.ceil(remainingHours * 60));
+  const source = effectSource(
+    "shelyn-grace",
+    `Бастардхолл: ${blessing.name}`,
+    `${blessing.spell}: бонус предмета +1 к ${blessing.check} до сегодняшнего заката.`,
+    [{ key: "FlatModifier", selector: blessing.selector, type: "item", value: 1 }],
+    "icons/magic/holy/prayer-hands-glowing-yellow-green.webp",
+  );
+  source.system.duration = { value: minutes, unit: "minutes", expiry: "turn-start", sustained: false };
+  return source;
+}
+
+async function grantAuskenBlessing(actors, rank) {
+  const rules = [{ key: "FlatModifier", selector: "saving-throw", type: "status", value: 1, predicate: ["item:trait:fear"] }];
+  if (rank >= 2) rules.push({ key: "AdjustDegreeOfSuccess", selector: "saving-throw", adjustment: { success: "one-degree-better" }, predicate: ["item:trait:fear"] });
+  const description = rank >= 2
+    ? "На 24 часа: бонус состояния +1 к спасброскам против страха; успех против страха считается критическим успехом. При получении Испуга его значение уменьшается на 1 вручную."
+    : "На 24 часа: бонус состояния +1 к спасброскам против страха. При получении Испуга его значение уменьшается на 1 вручную.";
+  for (const actor of actors) {
+    await replaceManagedEffect(actor, "ausken-blessing", temporaryEffectSource("ausken-blessing", "Бастардхолл: Благословение шерифа", description, rules, "icons/symbols/star-yellow.webp"));
+  }
+}
+
+async function grantDailyBoons(request = {}, userId = game.user?.id) {
+  if (!isPrimaryGM()) return;
+  const user = game.users?.get(userId);
+  if (!user) return;
+  const data = getData();
+  const today = currentWorldDay();
+  const results = [];
+  const errors = [];
+  let changed = false;
+
+  const auskenRank = phantomRank(data, "ausken");
+  if (auskenRank >= 1) {
+    const maxTargets = auskenRank >= 3 ? 2 : 1;
+    const actors = [...new Set(normalizeArray(request.auskenActorIds).map((id) => requestedActor(id, user)).filter(Boolean))].slice(0, maxTargets);
+    if (data.boons.ausken.lastGrantedDay === today) results.push("Благословение шерифа сегодня уже выдано.");
+    else if (actors.length) {
+      try {
+        await grantAuskenBlessing(actors, auskenRank);
+        data.boons.ausken.lastGrantedDay = today;
+        changed = true;
+        results.push(`Благословение шерифа получили: ${actors.map((actor) => actor.name).join(", ")}.`);
+      } catch (error) {
+        errors.push(`Благословение шерифа: ${error.message}`);
+      }
+    }
+  }
+
+  if (data.boons.shelyn.active) {
+    const actors = playerCharacters();
+    const blessing = SHELYN_BLESSINGS.find((entry) => entry.id === request.shelynChoice) ?? SHELYN_BLESSINGS[0];
+    if (data.boons.shelyn.lastGrantedDay === today) results.push("Благодать Шелин сегодня уже выдана.");
+    else if (!isDaytime(data)) results.push("Благодать Шелин можно выдать только в дневное время.");
+    else if (!actors.length) results.push("В мире нет персонажей игроков для Благодати Шелин.");
+    else if (actors.length) {
+      try {
+        for (const actor of actors) await replaceManagedEffect(actor, "shelyn-grace", shelynDaylightEffect(data, blessing));
+        data.boons.shelyn.choice = blessing.id;
+        data.boons.shelyn.lastGrantedDay = today;
+        changed = true;
+        results.push(`${blessing.name}: благо до заката получили ${actors.map((actor) => actor.name).join(", ")}.`);
+      } catch (error) {
+        errors.push(`Благодать Шелин: ${error.message}`);
+      }
+    }
+  }
+
+  if (changed) await saveData(data);
+  const message = [...results, ...errors].join(" ") || "Не выбраны доступные получатели ежедневных благ.";
+  emitDailyResult(user.id, message, errors.length ? "warn" : "info");
+}
+
+async function moveServantRecipe(serviceId, recipeId, direction, userId = game.user?.id) {
+  if (!isPrimaryGM()) return;
+  const user = game.users?.get(userId);
+  if (!user) return;
+  const data = getData();
+  const servant = servantState(data, normalizeText(serviceId, 40));
+  if (!servant || (!servant.active && !user.isGM)) return;
+  const remaining = remainingServantRecipes(servant);
+  const from = remaining.indexOf(normalizeText(recipeId, 80));
+  const to = from + Math.sign(Number(direction) || 0);
+  if (from < 0 || to < 0 || to >= remaining.length) return;
+  const leftIndex = servant.recipeOrder.indexOf(remaining[from]);
+  const rightIndex = servant.recipeOrder.indexOf(remaining[to]);
+  [servant.recipeOrder[leftIndex], servant.recipeOrder[rightIndex]] = [servant.recipeOrder[rightIndex], servant.recipeOrder[leftIndex]];
+  await saveData(data);
 }
 
 function dailyUses(actor, key) {
@@ -1327,6 +2479,21 @@ function getFormRoot(html) {
   return null;
 }
 
+function normalizeUuidLinkSyntax(value) {
+  return String(value ?? "").replace(/@UUID\[([^\]]+)\]\{\\\s*/g, "@UUID[$1]{");
+}
+
+async function enrichInvestigationLinks(root) {
+  if (!globalThis.TextEditor?.enrichHTML) return;
+  const elements = root?.querySelectorAll?.(".bh-investigation-description, .bh-investigation-checks, .bh-investigation-revelation-list, .bh-investigation-detail h2, .bh-investigation-sources h3, .bh-investigation-select strong") ?? [];
+  await Promise.all([...elements].map(async (element) => {
+    const content = normalizeUuidLinkSyntax(element.innerHTML);
+    if (!content.includes("@UUID[")) return;
+    const enriched = await TextEditor.enrichHTML(content, { async: true });
+    if (element.isConnected) element.innerHTML = enriched;
+  }));
+}
+
 /**
  * PF2e's effects panel renders every Item of type "effect" and does not honor
  * system.tokenIcon.show.  Bastardhall bonuses intentionally remain real effect
@@ -1369,12 +2536,820 @@ function applyConfigForm(root, data) {
   for (const [path, rawValue] of formData.entries()) {
     let value = rawValue;
     if (path === "climate.night.darkness" || /^climate\.stages\.[^.]+\.(sunrise|sunset)$/.test(path)) value = parseNumber(rawValue);
-    if (path === "stormActive" || path === "homebrew.medallionUnarmed") value = rawValue === "true" || rawValue === "on";
+    if (path === "stormActive") value = rawValue === "true" || rawValue === "on";
     if (/^phantoms\.\d+\.found$/.test(path)) value = rawValue === "true";
     if (/^research\.\d+\.points$/.test(path) || /^phantoms\.\d+\.rank$/.test(path)) value = parseNumber(rawValue);
     setPath(data, path, value);
   }
   return data;
+}
+
+function accessBlockOptions() {
+  return [
+    { id: "phantoms", label: "Замковые территории — найдены все фантомы Майсерин" },
+    ...createDefaultMementos().map((memento) => ({ id: memento.id, label: `${memento.name} — открывает ${memento.area}` })),
+  ];
+}
+
+function isBastardhallEnabled() {
+  const value = game.settings.get(MODULE_ID, ENABLE_SETTING);
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function createAccessBlockFieldset(doc) {
+  const fieldset = globalThis.document.createElement("fieldset");
+  fieldset.className = "tsu-wall-texture-config tsu-bastardhall-access-block";
+  let originalDisabledInput = null;
+  let originalColorInput = null;
+  if (accessDocumentName(doc) === "Region") {
+    const access = doc.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG) ?? {};
+    const originalDisabled = accessOriginalDisabled(access) ?? Object.fromEntries(
+      (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
+    );
+    originalDisabledInput = globalThis.document.createElement("input");
+    originalDisabledInput.type = "hidden";
+    originalDisabledInput.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.originalDisabled`;
+    originalDisabledInput.value = JSON.stringify(originalDisabled);
+    originalColorInput = globalThis.document.createElement("input");
+    originalColorInput.type = "hidden";
+    originalColorInput.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.originalColor`;
+    originalColorInput.value = String(access.originalColor ?? doc.color ?? "");
+    fieldset.append(originalDisabledInput, originalColorInput);
+  }
+  const legend = globalThis.document.createElement("legend");
+  legend.textContent = "Блок доступа Бастардхолла";
+
+  const enabledGroup = globalThis.document.createElement("div");
+  enabledGroup.className = "form-group";
+  const enabledLabel = globalThis.document.createElement("label");
+  enabledLabel.textContent = "Включить";
+  const enabledFields = globalThis.document.createElement("div");
+  enabledFields.className = "form-fields";
+  const enabledInput = globalThis.document.createElement("input");
+  enabledInput.type = "hidden";
+  enabledInput.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.enabled`;
+  enabledInput.dataset.dtype = "Boolean";
+  const enabled = globalThis.document.createElement("input");
+  enabled.type = "checkbox";
+  enabled.value = "true";
+  enabled.title = "Включить блок доступа";
+  enabled.setAttribute("aria-label", "Включить блок доступа");
+  const currentAccess = doc.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG) ?? {};
+  const currentEnabled = accessFlagEnabled(currentAccess.enabled);
+  enabledInput.value = currentEnabled ? "true" : "false";
+  enabled.checked = currentEnabled;
+  enabled.addEventListener("change", () => {
+    const wasEnabled = enabledInput.value === "true";
+    if (enabled.checked && !wasEnabled && originalDisabledInput && originalColorInput) {
+      originalDisabledInput.value = JSON.stringify(Object.fromEntries(
+        (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
+      ));
+      originalColorInput.value = String(doc.color ?? "");
+    }
+    enabledInput.value = enabled.checked ? "true" : "false";
+  });
+  enabledFields.append(enabledInput, enabled);
+  enabledGroup.append(enabledLabel, enabledFields);
+
+  const stageGroup = globalThis.document.createElement("div");
+  stageGroup.className = "form-group";
+  const stageLabel = globalThis.document.createElement("label");
+  stageLabel.textContent = "Этап";
+  const stageFields = globalThis.document.createElement("div");
+  stageFields.className = "form-fields";
+  const stage = globalThis.document.createElement("select");
+  stage.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.stage`;
+  const currentStage = String(doc.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG)?.stage ?? "");
+  const empty = globalThis.document.createElement("option");
+  empty.value = "";
+  empty.textContent = "— не выбран —";
+  stage.append(empty);
+  for (const option of accessBlockOptions()) {
+    const element = globalThis.document.createElement("option");
+    element.value = option.id;
+    element.textContent = option.label;
+    element.selected = option.id === currentStage;
+    stage.append(element);
+  }
+  stage.addEventListener("change", () => {
+    const wasEnabled = enabledInput.value === "true";
+    if (stage.value && !wasEnabled && originalDisabledInput && originalColorInput) {
+      originalDisabledInput.value = JSON.stringify(Object.fromEntries(
+        (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
+      ));
+      originalColorInput.value = String(doc.color ?? "");
+    }
+    enabled.checked = Boolean(stage.value);
+    enabledInput.value = enabled.checked ? "true" : "false";
+  });
+  stageFields.append(stage);
+  stageGroup.append(stageLabel, stageFields);
+  const hint = globalThis.document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Документ будет автоматически добавлен в настройку памятной вещи на листе Бастардхолла.";
+  fieldset.append(legend, enabledGroup, stageGroup, hint);
+  return fieldset;
+}
+
+function injectAccessBlockConfig(app, element) {
+  if (!isBastardhallEnabled()) return;
+  const root = getFormRoot(element);
+  const document = app?.document ?? app?.object;
+  const documentName = accessDocumentName(document);
+  if (!root || !document || !["Wall", "Region"].includes(documentName)) return;
+  if (root.querySelector(".tsu-bastardhall-access-block")) return;
+  const form = root.matches?.("form") ? root : root.querySelector("form");
+  const accessBlock = createAccessBlockFieldset(document);
+  const textureBlock = root.querySelector(".tsu-wall-texture-config");
+  if (textureBlock?.parentElement) {
+    textureBlock.parentElement.insertBefore(accessBlock, textureBlock.nextSibling);
+  } else {
+    const submitButton = root.querySelector("button[type='submit'], input[type='submit']");
+    if (submitButton) submitButton.before(accessBlock);
+    else form?.append(accessBlock);
+  }
+  app.setPosition?.({ height: "auto" });
+}
+
+function accessDocumentName(document) {
+  return document?.documentName ?? document?.constructor?.documentName ?? "";
+}
+
+function accessFlagEnabled(value) {
+  return value === true
+    || value === "true"
+    || value === "on"
+    || (Array.isArray(value) && value.some((entry) => entry === true || entry === "true" || entry === "on"));
+}
+
+function accessOriginalDisabled(access) {
+  if (access?.originalDisabled && typeof access.originalDisabled === "object") return access.originalDisabled;
+  if (typeof access?.originalDisabled !== "string") return null;
+  try {
+    const parsed = JSON.parse(access.originalDisabled);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function accessBlockStage(document) {
+  const access = document?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
+  return accessFlagEnabled(access?.enabled) ? String(access.stage ?? "") : "";
+}
+
+function accessBlockEntries(data) {
+  return [...data.mementos, ...(data.accessBlocks ?? [])];
+}
+
+function accessBlockIsOpen(data, entry) {
+  return entry.id === "phantoms" ? allPhantomsFound(data) : data.inventory.some((item) => item.category === "memento" && item.mementoId === entry.id);
+}
+
+async function syncAccessBlockDocument(document) {
+  const documentName = accessDocumentName(document);
+  if (!isPrimaryGM() || !isBastardhallEnabled() || !document?.uuid || !["Wall", "Region"].includes(documentName)) return;
+  const stage = accessBlockStage(document);
+  const data = getData();
+  let changed = false;
+  for (const memento of accessBlockEntries(data)) {
+    const references = [[documentName === "Wall" ? "wallUuids" : "regionUuids", document.uuid]];
+    for (const [property, reference] of references) {
+      if (!reference) continue;
+      const previous = String(memento[property] ?? "");
+      const refs = splitRefs(memento[property]);
+      const next = refs.filter((ref) => ref !== reference);
+      if (stage === memento.id) next.push(reference);
+      memento[property] = [...new Set(next)].join("\n");
+      if (memento[property] !== previous) changed = true;
+    }
+  }
+  if (changed) await saveData(data);
+}
+
+async function removeAccessBlockDocument(document) {
+  if (!isPrimaryGM() || !document?.uuid) return;
+  const data = getData();
+  let changed = false;
+  const documentName = accessDocumentName(document);
+  const references = [[documentName === "Wall" ? "wallUuids" : "regionUuids", document.uuid]];
+  for (const memento of data.mementos) {
+    for (const [property, reference] of references) {
+      if (!reference) continue;
+      const next = splitRefs(memento[property]).filter((ref) => ref !== reference);
+      if (next.join("\n") !== memento[property]) {
+        memento[property] = next.join("\n");
+        changed = true;
+      }
+    }
+  }
+  if (changed) await saveData(data);
+}
+
+async function restoreAccessWall(wall) {
+  if (accessBlockStage(wall)) return;
+  const stored = wall?.getFlag?.(MODULE_ID, "wallTexture");
+  if (stored?.enabled !== false) return;
+  const restrictions = stored.originalRestrictions ?? {};
+  const update = {
+    [`flags.${MODULE_ID}.wallTexture`]: {
+      ...stored,
+      enabled: true,
+      "-=originalRestrictions": null,
+    },
+  };
+  for (const property of ["light", "move", "sight", "sound"]) {
+    if (restrictions[property] !== undefined) update[property] = restrictions[property];
+  }
+  await wall.update(update);
+}
+
+async function rebuildAccessBlockLinks() {
+  if (!isPrimaryGM() || !isBastardhallEnabled()) return;
+  const data = getData();
+  const links = new Map(accessBlockEntries(data).map((memento) => [memento.id, { walls: [], regions: [] }]));
+  for (const scene of game.scenes?.contents ?? []) {
+    for (const document of [...(scene.walls?.contents ?? []), ...(scene.regions?.contents ?? [])]) {
+      const stage = accessBlockStage(document);
+      const entry = links.get(stage);
+      if (!entry) continue;
+      if (accessDocumentName(document) === "Wall") entry.walls.push(document.uuid);
+      else {
+        entry.regions.push(document.uuid);
+      }
+    }
+  }
+  let changed = false;
+  for (const memento of accessBlockEntries(data)) {
+    const link = links.get(memento.id);
+    const wallUuids = link.walls.join("\n");
+    const regionUuids = link.regions.join("\n");
+    if (memento.wallUuids !== wallUuids || memento.regionUuids !== regionUuids) changed = true;
+    memento.wallUuids = wallUuids;
+    memento.regionUuids = regionUuids;
+  }
+  if (changed) await saveData(data);
+}
+
+function captureRegionAccessState(region, changed) {
+  if (accessDocumentName(region) !== "Region") return;
+  const path = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}`;
+  const access = foundry.utils.getProperty(changed, path);
+  if (!access || typeof access !== "object") return;
+  const previousEnabled = accessFlagEnabled(region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG)?.enabled);
+  const nextEnabled = accessFlagEnabled(access.enabled);
+  pendingRegionAccessChanges.set(region, { changed: previousEnabled !== nextEnabled, enabled: nextEnabled });
+  if (!nextEnabled) return;
+  const current = region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG) ?? {};
+  if (current.originalDisabled === undefined && access.originalDisabled === undefined) {
+    foundry.utils.setProperty(changed, `${path}.originalDisabled`, Object.fromEntries(
+      (region.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
+    ));
+  }
+  if (current.originalColor === undefined && access.originalColor === undefined) {
+    foundry.utils.setProperty(changed, `${path}.originalColor`, String(region.color ?? ""));
+  }
+}
+
+function randomId() {
+  return foundry.utils.randomID?.() ?? crypto.randomUUID();
+}
+
+function dialogRoot(html) {
+  return html?.[0] ?? html;
+}
+
+async function promptSideQuest(quest = null, { allowHidden = game.user?.isGM } = {}) {
+  const title = escapeHtml(quest?.title ?? "");
+  const description = escapeHtml(quest?.description ?? "");
+  return Dialog.prompt({
+    title: quest ? "Редактировать сайд-квест" : "Новый сайд-квест",
+    content: `<form class="bh-sidequest-dialog">
+      <div class="form-group"><label>Название</label><div class="form-fields"><input type="text" name="title" maxlength="120" value="${title}" autofocus></div></div>
+      <div class="form-group"><label>Описание</label><div class="form-fields"><textarea name="description" rows="8" maxlength="8000">${description}</textarea></div></div>
+      ${allowHidden ? `<div class="form-group"><label>Скрыть от игроков</label><div class="form-fields"><input type="checkbox" name="hidden" ${quest?.hidden ? "checked" : ""}></div></div>` : ""}
+    </form>`,
+    label: quest ? "Сохранить" : "Добавить",
+    callback: (html) => {
+      const root = dialogRoot(html);
+      return {
+        title: normalizeText(root?.querySelector?.('[name="title"]')?.value, 120),
+        description: normalizeText(root?.querySelector?.('[name="description"]')?.value, 8000),
+        hidden: allowHidden && Boolean(root?.querySelector?.('[name="hidden"]')?.checked),
+      };
+    },
+    rejectClose: false,
+  });
+}
+
+async function createSideQuest(draft, userId = game.user?.id) {
+  if (!isPrimaryGM()) return null;
+  const user = game.users?.get(userId);
+  const title = normalizeText(draft?.title, 120);
+  if (!user || !title) return null;
+
+  const data = getData();
+  const quest = {
+    id: randomId(),
+    title,
+    description: normalizeText(draft?.description, 8000),
+    hidden: user.isGM && draft?.hidden === true,
+    completed: false,
+    failed: false,
+    createdBy: user.id,
+    createdAt: Date.now(),
+    notes: [],
+  };
+  data.sideQuests.push(quest);
+  await saveData(data);
+  return quest;
+}
+
+function emitSideQuestCreate(draft) {
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-create",
+    title: normalizeText(draft?.title, 120),
+    description: normalizeText(draft?.description, 8000),
+    senderId: game.user?.id,
+  });
+}
+
+async function setSideQuestCompleted(questId, completed, userId = game.user?.id) {
+  if (!isPrimaryGM()) return false;
+  const user = game.users?.get(userId);
+  if (!user) return false;
+  const data = getData();
+  const quest = data.sideQuests.find((entry) => entry.id === normalizeText(questId, 120));
+  if (!quest || (quest.hidden && !user.isGM)) return false;
+  const becameCompleted = completed === true && !quest.completed;
+  quest.completed = completed === true;
+  if (quest.completed) quest.failed = false;
+  await saveData(data);
+  if (becameCompleted && !quest.hidden) broadcastSideQuestBanner("completed", quest.title);
+  return true;
+}
+
+function emitSideQuestCompleted(questId, completed) {
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-completed",
+    questId: normalizeText(questId, 120),
+    completed: completed === true,
+    senderId: game.user?.id,
+  });
+}
+
+async function setSideQuestFailed(questId, failed, userId = game.user?.id) {
+  if (!isPrimaryGM()) return false;
+  const user = game.users?.get(userId);
+  if (!user) return false;
+  const data = getData();
+  const quest = data.sideQuests.find((entry) => entry.id === normalizeText(questId, 120));
+  if (!quest || (quest.hidden && !user.isGM)) return false;
+  const becameFailed = failed === true && !quest.failed;
+  quest.failed = failed === true;
+  if (quest.failed) quest.completed = false;
+  await saveData(data);
+  if (becameFailed && !quest.hidden) broadcastSideQuestBanner("failed", quest.title);
+  return true;
+}
+
+function emitSideQuestFailed(questId, failed) {
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-failed",
+    questId: normalizeText(questId, 120),
+    failed: failed === true,
+    senderId: game.user?.id,
+  });
+}
+
+async function promptSideQuestNote() {
+  return Dialog.prompt({
+    title: "Добавить заметку",
+    content: `<form class="bh-sidequest-dialog"><div class="form-group"><label>Заметка</label><div class="form-fields"><textarea name="note" rows="6" maxlength="4000" autofocus></textarea></div></div></form>`,
+    label: "Добавить",
+    callback: (html) => normalizeText(dialogRoot(html)?.querySelector?.('[name="note"]')?.value, 4000),
+    rejectClose: false,
+  });
+}
+
+async function addSideQuestNote(questId, text, userId = game.user?.id) {
+  if (!isPrimaryGM()) return;
+  const noteText = normalizeText(text, 4000);
+  if (!noteText) return;
+  const user = game.users?.get(userId);
+  if (!user) return;
+  const data = getData();
+  const quest = data.sideQuests.find((entry) => entry.id === questId);
+  if (!quest || (quest.hidden && !user.isGM)) return;
+  quest.notes.push({
+    id: randomId(),
+    text: noteText,
+    authorId: user.id,
+    authorName: user.name,
+    createdAt: Date.now(),
+  });
+  await saveData(data);
+}
+
+function emitSideQuestNote(questId, text) {
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-note",
+    questId,
+    text: normalizeText(text, 4000),
+    senderId: game.user?.id,
+  });
+}
+
+function formatSideQuestDate(timestamp) {
+  if (!Number(timestamp)) return "";
+  try {
+    return new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(timestamp));
+  } catch (_error) {
+    return "";
+  }
+}
+
+function parseJournalSideQuestPage(page, reference = {}) {
+  const content = String(page?.text?.content ?? "");
+  if (!content) throw new Error("Страница журнала не содержит текста.");
+  const template = document.createElement("template");
+  template.innerHTML = content;
+  const sections = Array.from(template.content.querySelectorAll("section.side-quest"));
+  const requestedIndex = Math.trunc(Number(reference.sourceSectionIndex));
+  const sourceSectionId = normalizeText(reference.sourceSectionId, 120);
+  let section = sourceSectionId
+    ? sections.find((candidate) => candidate.dataset.sideQuestId === sourceSectionId)
+    : null;
+  section ??= Number.isInteger(requestedIndex) && requestedIndex >= 0 ? sections[requestedIndex] : null;
+  if (!section && reference.sourceHeading) {
+    section = sections.find((candidate) => normalizeText(candidate.querySelector("h1, h2, h3, h4, h5, h6")?.textContent, 240) === normalizeText(reference.sourceHeading, 240));
+  }
+  if (!(section instanceof HTMLElement)) throw new Error("Связанная секция side-quest не найдена.");
+  const sectionIndex = sections.indexOf(section);
+  const title = normalizeText(section.querySelector("h1, h2, h3, h4, h5, h6")?.textContent, 120);
+  if (!title) throw new Error("У секции side-quest нет заголовка.");
+  return {
+    title,
+    description: normalizeText(section.querySelector("p")?.textContent, 8000),
+    sourceUuid: page.uuid,
+    sourceSectionId: normalizeText(section.dataset.sideQuestId, 120),
+    sourceSectionIndex: sectionIndex,
+    sourceHeading: title,
+  };
+}
+
+async function resolveJournalSideQuest(reference) {
+  const sourceUuid = normalizeText(reference?.sourceUuid, 500);
+  const page = sourceUuid ? await fromUuid(sourceUuid) : null;
+  if (page?.documentName !== "JournalEntryPage") throw new Error("Связанная страница журнала недоступна.");
+  return { page, source: parseJournalSideQuestPage(page, reference) };
+}
+
+async function addJournalSideQuest(reference, userId = game.user?.id) {
+  if (!isPrimaryGM() || !game.settings.get(MODULE_ID, ENABLE_SETTING)) return null;
+  const user = game.users?.get(userId);
+  if (!user) return null;
+  const { source } = await resolveJournalSideQuest(reference);
+  const data = getData();
+  const existing = data.sideQuests.find((quest) => (
+    quest.sourceUuid === source.sourceUuid
+    && (
+      source.sourceSectionId && quest.sourceSectionId === source.sourceSectionId
+      || !source.sourceSectionId && quest.sourceSectionIndex === source.sourceSectionIndex
+    )
+  ));
+  if (existing) {
+    Object.assign(existing, source);
+    await saveData(data);
+    return { updated: true, questId: existing.id };
+  }
+
+  const quest = {
+    id: randomId(),
+    ...source,
+    hidden: false,
+    completed: false,
+    failed: false,
+    createdBy: user.id,
+    createdAt: Date.now(),
+    notes: [],
+  };
+  data.sideQuests.push(quest);
+  await saveData(data);
+  broadcastSideQuestBanner("received", quest.title);
+  return { added: true, questId: quest.id };
+}
+
+function requestJournalSideQuest(reference) {
+  if (isPrimaryGM()) return addJournalSideQuest(reference);
+  const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+  if (!activeGM) {
+    ui.notifications?.warn?.("Для добавления сайд-квеста мастер должен быть в сети.");
+    return Promise.resolve(null);
+  }
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-journal-create",
+    reference,
+    senderId: game.user?.id,
+  });
+  return Promise.resolve({ queued: true });
+}
+
+async function refreshJournalSideQuests() {
+  if (!isPrimaryGM()) return { updated: 0, errors: [] };
+  const data = getData();
+  let updated = 0;
+  const errors = [];
+  for (const quest of data.sideQuests.filter((entry) => entry.sourceUuid)) {
+    try {
+      const { source } = await resolveJournalSideQuest(quest);
+      if (quest.title !== source.title || quest.description !== source.description || quest.sourceSectionIndex !== source.sourceSectionIndex || quest.sourceHeading !== source.sourceHeading) {
+        Object.assign(quest, source);
+        updated += 1;
+      }
+    } catch (error) {
+      errors.push(`${quest.title}: ${error.message}`);
+    }
+  }
+  if (updated) await saveData(data);
+  if (errors.length) console.warn(`${MODULE_ID} | Ошибки обновления сайд-квестов из журналов:\n${errors.join("\n")}`);
+  return { updated, errors };
+}
+
+async function openJournalSideQuest(quest) {
+  const { page, source } = await resolveJournalSideQuest(quest);
+  const journal = page.parent;
+  const sheet = journal?.sheet;
+  if (!sheet) throw new Error("Не удалось открыть журнал.");
+  await sheet.render(true, { pageId: page.id });
+  sheet.goToPage?.(page.id);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = sheet.element instanceof HTMLElement ? sheet.element : sheet.element?.[0];
+  const pageElement = root?.querySelector?.(`.journal-entry-page[data-page-id="${page.id}"]`) ?? root;
+  const sections = Array.from(pageElement?.querySelectorAll?.(".journal-page-content section.side-quest") ?? []);
+  const section = source.sourceSectionId
+    ? sections.find((candidate) => candidate.dataset.sideQuestId === source.sourceSectionId)
+    : sections[source.sourceSectionIndex];
+  (section ?? pageElement)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+}
+
+function investigationHeadingParts(value) {
+  const heading = normalizeText(value, 240);
+  const match = heading.match(/^(.*?)\s*\/\s*Изыскани(?:е|я)\s*(\d+)\s*$/iu);
+  const topicName = normalizeText(match?.[1] ?? heading, 160);
+  return {
+    heading,
+    topicName,
+    title: topicName,
+    level: Math.clamp(Math.trunc(Number(match?.[2]) || 0), 0, 30),
+  };
+}
+
+function directChildHtml(nodes) {
+  return nodes.map((node) => node.outerHTML ?? node.textContent ?? "").join("\n").trim();
+}
+
+async function enrichInvestigationHtml(html) {
+  const content = normalizeInvestigationHtml(normalizeUuidLinkSyntax(html));
+  if (!content) return "";
+  return normalizeInvestigationHtml(await TextEditor.enrichHTML(content, { async: true }));
+}
+
+async function parseJournalInvestigationPage(page, reference = {}, existingInvestigation = null) {
+  const content = String(page?.text?.content ?? "");
+  if (!content) throw new Error("Страница журнала не содержит текста.");
+  const template = document.createElement("template");
+  template.innerHTML = content;
+  const sections = Array.from(template.content.querySelectorAll("section.research"));
+  const requestedIndex = Math.trunc(Number(reference.sourceSectionIndex));
+  const sourceResearchId = normalizeText(reference.sourceResearchId, 120);
+  let section = sourceResearchId
+    ? sections.find((candidate) => candidate.dataset.researchId === sourceResearchId)
+    : null;
+  section ??= Number.isInteger(requestedIndex) && requestedIndex >= 0 ? sections[requestedIndex] : null;
+  if (!section && reference.sourceHeading) {
+    section = sections.find((candidate) => normalizeText(candidate.querySelector("h1, h2, h3, h4, h5, h6")?.textContent, 240) === normalizeText(reference.sourceHeading, 240));
+  }
+  if (!(section instanceof HTMLElement)) throw new Error("Связанная секция research не найдена.");
+
+  const headingParts = investigationHeadingParts(section.querySelector("h1, h2, h3, h4, h5, h6")?.textContent);
+  if (!headingParts.topicName) throw new Error("У секции research нет заголовка.");
+  const previousSources = normalizeArray(existingInvestigation?.sources);
+  const sourceSections = Array.from(section.querySelectorAll(":scope > section.read"));
+  const sources = [];
+  for (const [sourceIndex, sourceSection] of sourceSections.entries()) {
+    const sourceName = normalizeText(sourceSection.querySelector("h1, h2, h3, h4, h5, h6")?.textContent, 240);
+    if (!sourceName) continue;
+    const childNodes = Array.from(sourceSection.childNodes);
+    const maximumNode = childNodes.find((node) => node instanceof HTMLElement && /Максимум\s+ОИ/iu.test(node.textContent ?? ""));
+    const checksNode = childNodes.find((node) => node instanceof HTMLElement && /Проверки\s+Изысканий/iu.test(node.textContent ?? ""));
+    const maximumMatch = String(maximumNode?.textContent ?? "").match(/Максимум\s+ОИ\s*:\s*(\d+)/iu);
+    const maxPoints = Math.max(0, Math.trunc(Number(maximumMatch?.[1]) || 0));
+    const checksIndex = checksNode ? childNodes.indexOf(checksNode) : -1;
+    const contentNodes = childNodes.filter((node) => {
+      if (node === maximumNode || node === checksNode) return false;
+      return !(node instanceof HTMLElement && /^H[1-6]$/.test(node.tagName));
+    });
+    const descriptionNodes = checksIndex < 0 ? contentNodes : contentNodes.filter((node) => childNodes.indexOf(node) < checksIndex);
+    const checkNodes = checksIndex < 0 ? [] : contentNodes.filter((node) => childNodes.indexOf(node) > checksIndex);
+    const previous = previousSources.find((entry) => investigationNameKey(entry.name) === investigationNameKey(sourceName))
+      ?? previousSources[sourceIndex];
+    sources.push({
+      id: previous?.id || randomId(),
+      name: sourceName,
+      description: await enrichInvestigationHtml(directChildHtml(descriptionNodes)),
+      checks: await enrichInvestigationHtml(directChildHtml(checkNodes)),
+      maxPoints,
+      points: Math.clamp(Math.trunc(Number(previous?.points) || 0), 0, maxPoints),
+    });
+  }
+
+  const revelations = [];
+  const revelationTable = section.querySelector(":scope > table");
+  for (const row of revelationTable?.querySelectorAll?.("tbody tr") ?? []) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < 2) continue;
+    const thresholdMatch = String(cells[0].textContent ?? "").match(/\d+/u);
+    if (!thresholdMatch) continue;
+    const revelationContent = await enrichInvestigationHtml(cells[1].innerHTML);
+    if (revelationContent) revelations.push({ threshold: Math.max(0, Number(thresholdMatch[0]) || 0), content: revelationContent });
+  }
+
+  return {
+    ...headingParts,
+    sourceUuid: page.uuid,
+    sourceResearchId: normalizeText(section.dataset.researchId, 120),
+    sourceSectionIndex: sections.indexOf(section),
+    sourceHeading: headingParts.heading,
+    sources,
+    revelations,
+  };
+}
+
+async function resolveJournalInvestigation(reference, existingInvestigation = null) {
+  const sourceUuid = normalizeText(reference?.sourceUuid, 500);
+  const page = sourceUuid ? await fromUuid(sourceUuid) : null;
+  if (page?.documentName !== "JournalEntryPage") throw new Error("Связанная страница журнала недоступна.");
+  return { page, source: await parseJournalInvestigationPage(page, reference, existingInvestigation) };
+}
+
+async function addJournalInvestigation(reference, userId = game.user?.id) {
+  if (!isPrimaryGM() || !game.settings.get(MODULE_ID, ENABLE_SETTING)) return null;
+  const user = game.users?.get(userId);
+  if (!user) return null;
+  const data = getData();
+  const existing = data.investigations.find((investigation) => (
+    investigation.sourceUuid === normalizeText(reference?.sourceUuid, 500)
+    && (
+      reference?.sourceResearchId && investigation.sourceResearchId === normalizeText(reference.sourceResearchId, 120)
+      || investigation.sourceSectionIndex === Math.trunc(Number(reference?.sourceSectionIndex))
+    )
+  ));
+  const oldTopicName = existing?.topicName;
+  const { source } = await resolveJournalInvestigation(reference, existing);
+  if (existing) {
+    Object.assign(existing, source);
+    syncInvestigationResearchPoints(data, oldTopicName && oldTopicName !== source.topicName ? [oldTopicName] : []);
+    await saveData(data);
+    return { updated: true, investigationId: existing.id };
+  }
+
+  const investigation = {
+    id: randomId(),
+    ...source,
+    createdBy: user.id,
+    createdAt: Date.now(),
+  };
+  data.investigations.push(investigation);
+  syncInvestigationResearchPoints(data);
+  await saveData(data);
+  broadcastResearchBanner(investigation.title);
+  return { added: true, investigationId: investigation.id };
+}
+
+function requestJournalInvestigation(reference) {
+  if (isPrimaryGM()) return addJournalInvestigation(reference);
+  const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+  if (!activeGM) {
+    ui.notifications?.warn?.("Для добавления изыскания мастер должен быть в сети.");
+    return Promise.resolve(null);
+  }
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-research-journal-create",
+    reference,
+    senderId: game.user?.id,
+  });
+  return Promise.resolve({ queued: true });
+}
+
+async function refreshJournalInvestigations() {
+  if (!isPrimaryGM()) return { updated: 0, errors: [] };
+  const data = getData();
+  let updated = 0;
+  const errors = [];
+  const resetTopicNames = [];
+  for (const investigation of data.investigations.filter((entry) => entry.sourceUuid)) {
+    try {
+      const oldTopicName = investigation.topicName;
+      const { source } = await resolveJournalInvestigation(investigation, investigation);
+      const before = JSON.stringify(investigation);
+      Object.assign(investigation, source);
+      if (oldTopicName !== source.topicName) resetTopicNames.push(oldTopicName);
+      if (before !== JSON.stringify(investigation)) updated += 1;
+    } catch (error) {
+      errors.push(`${investigation.title}: ${error.message}`);
+    }
+  }
+  syncInvestigationResearchPoints(data, resetTopicNames);
+  if (updated || resetTopicNames.length) await saveData(data);
+  if (errors.length) console.warn(`${MODULE_ID} | Ошибки обновления изысканий из журналов:\n${errors.join("\n")}`);
+  return { updated, errors };
+}
+
+async function openJournalInvestigation(investigation) {
+  const { page, source } = await resolveJournalInvestigation(investigation, investigation);
+  const journal = page.parent;
+  const sheet = journal?.sheet;
+  if (!sheet) throw new Error("Не удалось открыть журнал.");
+  await sheet.render(true, { pageId: page.id });
+  sheet.goToPage?.(page.id);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = sheet.element instanceof HTMLElement ? sheet.element : sheet.element?.[0];
+  const pageElement = root?.querySelector?.(`.journal-entry-page[data-page-id="${page.id}"]`) ?? root;
+  const sections = Array.from(pageElement?.querySelectorAll?.(".journal-page-content section.research") ?? []);
+  const section = source.sourceResearchId
+    ? sections.find((candidate) => candidate.dataset.researchId === source.sourceResearchId)
+    : sections[source.sourceSectionIndex];
+  (section ?? pageElement)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+}
+
+const shownResearchBanners = new Set();
+
+function showResearchBanner(message = {}) {
+  const id = normalizeText(message.id, 120);
+  if (!id || shownResearchBanners.has(id)) return;
+  shownResearchBanners.add(id);
+  const title = normalizeText(message.title, 160);
+  if (!title) return;
+  let layer = document.querySelector(".tsu-sidequest-banner-layer");
+  if (!(layer instanceof HTMLElement)) {
+    layer = document.createElement("div");
+    layer.className = "tsu-sidequest-banner-layer";
+    document.body.append(layer);
+  }
+  const banner = document.createElement("div");
+  banner.className = "tsu-sidequest-banner tsu-research-banner is-received";
+  banner.innerHTML = `<i class="fa-solid fa-magnifying-glass-chart"></i><span>Открыто новое Изыскание: <strong>${escapeHtml(title)}</strong></span>`;
+  layer.append(banner);
+  requestAnimationFrame(() => banner.classList.add("is-visible"));
+  setTimeout(() => banner.classList.remove("is-visible"), 4200);
+  setTimeout(() => {
+    banner.remove();
+    shownResearchBanners.delete(id);
+    if (!layer.childElementCount) layer.remove();
+  }, 5200);
+}
+
+function broadcastResearchBanner(title) {
+  const message = { type: "bastardhall-research-banner", id: randomId(), title: normalizeText(title, 160) };
+  showResearchBanner(message);
+  game.socket?.emit?.(SOCKET_CHANNEL, message);
+}
+
+const shownSideQuestBanners = new Set();
+
+function showSideQuestBanner(message = {}) {
+  const id = normalizeText(message.id, 120);
+  if (!id || shownSideQuestBanners.has(id)) return;
+  shownSideQuestBanners.add(id);
+  const title = normalizeText(message.title, 120);
+  const labels = { received: "получен", completed: "завершен", failed: "провален" };
+  const outcome = labels[message.outcome];
+  if (!title || !outcome) return;
+
+  let layer = document.querySelector(".tsu-sidequest-banner-layer");
+  if (!(layer instanceof HTMLElement)) {
+    layer = document.createElement("div");
+    layer.className = "tsu-sidequest-banner-layer";
+    document.body.append(layer);
+  }
+  const banner = document.createElement("div");
+  banner.className = `tsu-sidequest-banner is-${message.outcome}`;
+  banner.innerHTML = `<i class="fa-solid fa-book-open"></i><span>Саб-квест: <strong>${escapeHtml(title)}</strong> ${outcome}</span>`;
+  layer.append(banner);
+  requestAnimationFrame(() => banner.classList.add("is-visible"));
+  setTimeout(() => banner.classList.remove("is-visible"), 4200);
+  setTimeout(() => {
+    banner.remove();
+    shownSideQuestBanners.delete(id);
+    if (!layer.childElementCount) layer.remove();
+  }, 5200);
+}
+
+function broadcastSideQuestBanner(outcome, title) {
+  const message = { type: "bastardhall-sidequest-banner", id: randomId(), outcome, title: normalizeText(title, 120) };
+  showSideQuestBanner(message);
+  game.socket?.emit?.(SOCKET_CHANNEL, message);
 }
 
 function closestDropTarget(event) {
@@ -1384,11 +3359,44 @@ function closestDropTarget(event) {
     : null;
 }
 
+function refreshClimateDisplay(root) {
+  if (!root?.isConnected) return;
+  const data = getData();
+  const daytime = isDaytime(data);
+  const stage = getClimateStage(data);
+  const label = stage.eternalNight
+    ? "Вечная ночь"
+    : (data.climate.stormActive ? (daytime ? "Шторм" : "Штормовая ночь") : (daytime ? "День" : "Ночь"));
+
+  const badge = root.querySelector(".bh-climate-badge");
+  if (badge) {
+    badge.classList.toggle("is-night", !daytime);
+    const icon = badge.querySelector("i");
+    if (icon) icon.className = `fa-solid ${daytime ? "fa-sun" : "fa-moon"}`;
+    const labelElement = badge.querySelector("span");
+    if (labelElement) labelElement.textContent = label;
+    const timeElement = badge.querySelector("small");
+    if (timeElement) timeElement.textContent = currentWorldTimeLabel();
+  }
+
+  const weatherStatus = root.querySelector(".bh-weather-status");
+  if (weatherStatus) {
+    const icon = weatherStatus.querySelector("i");
+    if (icon) icon.className = `fa-solid ${daytime ? "fa-sun" : "fa-moon"}`;
+    const labelElement = weatherStatus.querySelector("strong");
+    if (labelElement) labelElement.textContent = label;
+  }
+}
+
 export class BastardhallSheet extends FormApplication {
   constructor(...args) {
     super(...args);
     this._view = "main";
     this._clockInterval = null;
+    this._sideQuestId = null;
+    this._investigationId = null;
+    this._viewRefreshPending = false;
+    this._viewRefreshPromise = null;
   }
 
   async close(options = {}) {
@@ -1403,7 +3411,7 @@ export class BastardhallSheet extends FormApplication {
       title: "Лист Бастардхолла",
       template: `modules/${MODULE_ID}/templates/campaigns/bastardhall.hbs`,
       classes: ["pf2e", "tsu-bastardhall-window"],
-      width: 980,
+      width: 1180,
       height: 900,
       resizable: true,
       closeOnSubmit: false,
@@ -1414,9 +3422,10 @@ export class BastardhallSheet extends FormApplication {
   getData() {
     const data = getData();
     const isGM = Boolean(game.user?.isGM);
+    const canEditFamilyTree = isPrimaryGM();
     const collectedMementos = new Set(data.inventory.filter((entry) => entry.category === "memento").map((entry) => entry.mementoId));
     const unlockedAreas = new Set(["Береговая Линия"]);
-    if (allPhantomsFound(data) || jinnivereReturned(data)) unlockedAreas.add("Замковые Территории");
+    if (allPhantomsFound(data)) unlockedAreas.add("Замковые Территории");
     for (const memento of data.mementos) {
       if (collectedMementos.has(memento.id)) unlockedAreas.add(memento.area);
     }
@@ -1424,14 +3433,21 @@ export class BastardhallSheet extends FormApplication {
     const research = data.research.map((topic, index) => {
       const points = Number(topic.points);
       const unknown = !Number.isFinite(points) || points < 0;
+      const managedByInvestigation = data.investigations.some((investigation) => investigationNameKey(investigation.topicName) === investigationNameKey(topic.name));
       return {
         ...topic,
         index,
         displayIndex: index + 1,
         unknown,
-        displayName: unknown && !isGM ? "Неизвестное Изыскание" : topic.name,
-        pointsLabel: unknown ? "—" : points,
+        managedByInvestigation,
+        displayName: unknown && !isGM ? "Неизвестное изыскание" : topic.name,
+        pointsLabel: unknown ? "-" : points,
       };
+    });
+    const researchBonuses = RESEARCH_BONUSES.flatMap((bonus) => {
+      const topic = research[bonus.topicIndex];
+      if (!topic || topic.unknown || Number(topic.points) < bonus.threshold) return [];
+      return [{ ...bonus, topicName: topic.name }];
     });
     const phantoms = data.phantoms.map((phantom, phantomIndex) => {
       const linkedActor = resolveActor(phantom.actorUuid);
@@ -1439,9 +3455,6 @@ export class BastardhallSheet extends FormApplication {
       return {
         ...phantom,
         phantomIndex,
-        canAronDrinks: phantom.id === "aron" && rank >= 1,
-        canAronCounteract: phantom.id === "aron" && rank >= 3,
-        canAuskenBlessing: phantom.id === "ausken" && rank >= 1,
         canAuskenRunes: phantom.id === "ausken" && rank >= 1,
         canEsmiraBooks: phantom.id === "esmira" && rank >= 3,
         aronDrinkLimit: rank >= 3 ? 3 : 2,
@@ -1449,14 +3462,14 @@ export class BastardhallSheet extends FormApplication {
         auskenBlessingTargets: rank >= 3 ? 2 : 1,
         linkedActorName: linkedActor?.name ?? "",
         linkedActorImg: linkedActor?.img ?? "",
-        rankRows: Array.from({ length: 4 }, (_value, rank) => ({
-          rank,
-          achieved: rank > 0 && phantom.rank >= rank,
-          current: phantom.rank === rank,
-          bonus: phantom.bonuses[rank] ?? "",
-          tier: rank === 1 ? "simple" : rank === 2 ? "greater" : rank === 3 ? "strong" : "",
-          img: rank === 1 ? data.soulhearts.images.simple : rank === 2 ? data.soulhearts.images.greater : rank === 3 ? data.soulhearts.images.strong : "",
-        })),
+        rankRows: Array.from({ length: 4 }, (_value, rowRank) => ({
+          rank: rowRank,
+          achieved: rowRank > 0 && phantom.rank >= rowRank,
+          current: phantom.rank === rowRank,
+          bonus: phantom.bonuses[rowRank] ?? "",
+          tier: rowRank === 1 ? "simple" : rowRank === 2 ? "greater" : rowRank === 3 ? "strong" : "",
+          img: rowRank === 1 ? data.soulhearts.images.simple : rowRank === 2 ? data.soulhearts.images.greater : rowRank === 3 ? data.soulhearts.images.strong : "",
+        })).filter((row) => isGM || row.rank <= rank),
       };
     });
     const mementos = data.mementos.map((memento, index) => ({
@@ -1464,35 +3477,180 @@ export class BastardhallSheet extends FormApplication {
       index,
       displayIndex: index + 1,
       collected: collectedMementos.has(memento.id),
-      displayBonus: mementoBonusText(memento, data),
-      isMedallion: memento.id === "irrokcis-medallion",
+      displayBonus: mementoBonusText(memento),
     }));
     const collectedMementoRows = mementos.filter((memento) => memento.collected);
     const inventory = data.inventory.slice().reverse();
     const currentTime = currentWorldTimeLabel();
     const daytime = isDaytime(data);
     const climateStage = getClimateStage(data);
+    const weatherRules = outdoorPenaltyRules(climateStage);
+    const climateStages = Object.entries(CLIMATE_STAGE_LABELS).map(([key, label]) => ({
+      key,
+      label,
+      ...(data.climate.stages[key] ?? createDefaultData().climate.stages[key]),
+    }));
+    const visibleSideQuests = data.sideQuests.filter((quest) => isGM || !quest.hidden);
+    const journalSideQuests = visibleSideQuests.filter((quest) => !quest.completed && !quest.failed && Boolean(quest.sourceUuid));
+    const manualSideQuests = visibleSideQuests.filter((quest) => !quest.completed && !quest.failed && !quest.sourceUuid);
+    const completedSideQuests = visibleSideQuests.filter((quest) => quest.completed || quest.failed);
+    const activeSideQuests = [...journalSideQuests, ...manualSideQuests];
+    const orderedSideQuests = [...activeSideQuests, ...completedSideQuests];
+    const dividerIndexes = new Set();
+    if (journalSideQuests.length > 0 && manualSideQuests.length > 0) {
+      dividerIndexes.add(journalSideQuests.length);
+    }
+    if (completedSideQuests.length > 0) dividerIndexes.add(activeSideQuests.length);
+    if (!orderedSideQuests.some((quest) => quest.id === this._sideQuestId)) this._sideQuestId = orderedSideQuests[0]?.id ?? null;
+    const sideQuests = orderedSideQuests.map((quest, index) => ({
+      ...quest,
+      selected: quest.id === this._sideQuestId,
+      noteCount: quest.notes.length,
+      hasDividerBefore: dividerIndexes.has(index),
+    }));
+    const selectedSideQuest = sideQuests.find((quest) => quest.selected);
+    if (selectedSideQuest) {
+      selectedSideQuest.notes = selectedSideQuest.notes.map((note) => ({
+        ...note,
+        createdLabel: formatSideQuestDate(note.createdAt),
+      }));
+    }
+    if (!data.investigations.some((investigation) => investigation.id === this._investigationId)) {
+      this._investigationId = data.investigations[0]?.id ?? null;
+    }
+    const investigations = data.investigations.map((investigation) => {
+      const totalPoints = investigation.sources.reduce((total, source) => total + Math.max(0, Number(source.points) || 0), 0);
+      const maxPoints = investigation.sources.reduce((total, source) => total + Math.max(0, Number(source.maxPoints) || 0), 0);
+      const selected = investigation.id === this._investigationId;
+      const sources = investigation.sources.map((source) => ({
+        ...source,
+        canDecrease: isGM && source.points > 0,
+        canIncrease: isGM && source.points < source.maxPoints,
+      }));
+      const revelations = investigation.revelations
+        .map((revelation) => ({ ...revelation, unlocked: totalPoints >= revelation.threshold }))
+        .filter((revelation) => isGM || revelation.unlocked);
+      return {
+        ...investigation,
+        selected,
+        sources,
+        revelations,
+        totalPoints,
+        maxPoints,
+        hasLevel: investigation.level > 0,
+      };
+    });
+    const selectedInvestigation = investigations.find((investigation) => investigation.selected);
+    const familyTreeSlots = FAMILY_TREE_SLOTS.map((definition) => familySlotView(
+      data.familyTree.slots.find((slot) => slot.id === definition.id),
+      definition,
+    ));
+    const familyTreeHeirs = FAMILY_TREE_HEIRS.map((definition) => familySlotView(
+      data.familyTree.customHeirs.find((slot) => slot.id === definition.id),
+      definition,
+    )).filter((slot) => isGM || slot.assigned);
+    const today = currentWorldDay();
+    const servantPhantoms = SERVANT_PHANTOMS.map((definition, servantIndex) => {
+      const stored = servantState(data, definition.id);
+      const remainingIds = remainingServantRecipes(stored);
+      const recipeRows = remainingIds.map((recipeId, index) => ({
+        ...(SERVANT_RECIPES[definition.id]?.find((recipe) => recipe.id === recipeId) ?? { id: recipeId, name: recipeId, englishName: "" }),
+        canMoveUp: index > 0,
+        canMoveDown: index < remainingIds.length - 1,
+      }));
+      return {
+        ...definition,
+        ...stored,
+        servantIndex,
+        recipeRows,
+        exhausted: definition.id !== "bakers" && recipeRows.length === 0,
+        emptyLabel: definition.id === "cooks" ? "поваров" : "пивоваров",
+        grantedToday: stored?.lastGrantedDay === today,
+        currentProduct: definition.id === "bakers"
+          ? `Пончик поэта ${unlockedAreas.has("Храм") ? "[Средний]" : "[Малый]"} ×2`
+          : "",
+      };
+    });
+    const visibleServantPhantoms = servantPhantoms.filter((servant) => isGM || servant.active);
+    const hasActiveServants = servantPhantoms.some((servant) => servant.active);
+    const aronPhantom = phantoms.find((phantom) => phantom.id === "aron");
+    const aronCooking = aronPhantom?.found ? {
+      active: true,
+      rank: aronPhantom.rank,
+      canDrinks: aronPhantom.rank >= 1,
+      canCounteract: aronPhantom.rank >= 3,
+      limit: aronPhantom.aronDrinkLimit,
+      selections: aronPhantom.rank >= 1 ? Array.from({ length: aronPhantom.aronDrinkLimit }, (_value, index) => ({ index: index + 1 })) : [],
+    } : null;
+    const auskenPhantom = phantoms.find((phantom) => phantom.id === "ausken");
+    const auskenBoon = auskenPhantom?.found && auskenPhantom.rank >= 1 ? {
+      active: true,
+      rank: auskenPhantom.rank,
+      maxTargets: auskenPhantom.auskenBlessingTargets,
+      grantedToday: data.boons.ausken.lastGrantedDay === today,
+    } : null;
+    const recipientCharacters = playerCharacters()
+      .filter((actor) => actorAllowedForUser(actor, game.user))
+      .map((actor) => ({ id: actor.id, name: actor.name }));
+    const showCookingTab = isGM || Boolean(aronCooking) || hasActiveServants || Boolean(auskenBoon) || data.boons.shelyn.active;
+    if (this._view === "cooking" && !showCookingTab) this._view = "main";
 
     return {
       data,
       isGM,
+      canEditFamilyTree,
       bonusHp: totalBonusHp(data),
       areas: AREA_NAMES.map((name, index) => ({ name, unlocked: unlockedAreas.has(name), wide: index === 0 })),
       collections: Object.entries(COLLECTIONS).map(([key, definition]) => ({ key, label: definition.label, count: Number(data.collections[key]) || 0 })),
       hearts: Object.entries(SOULHEARTS).map(([key, definition]) => ({ key, ...definition, count: Number(data.soulhearts[key]) || 0, img: data.soulhearts.images[key] })),
       research,
+      researchBonuses,
       phantoms,
       visiblePhantoms: phantoms.filter((phantom) => phantom.found),
+      servantPhantoms,
+      visibleServantPhantoms,
+      showServantBlock: isGM || hasActiveServants,
+      hasActiveServants,
+      showCookingTab,
+      hasCookingProviders: Boolean(aronCooking?.canDrinks) || hasActiveServants,
+      aronCooking,
+      auskenBoon,
+      showShelynBoon: isGM || data.boons.shelyn.active,
+      hasBoonProviders: Boolean(auskenBoon) || data.boons.shelyn.active,
+      shelynBlessings: SHELYN_BLESSINGS.map((entry) => ({ ...entry, selected: entry.id === data.boons.shelyn.choice })),
+      shelynGrantedToday: data.boons.shelyn.lastGrantedDay === today,
+      recipientCharacters,
       mementos,
+      accessBlocks: data.accessBlocks.map((block) => ({
+        ...block,
+        label: "Замковые территории",
+        open: accessBlockIsOpen(data, block),
+      })),
       collectedMementos: collectedMementoRows,
       inventory,
+      sideQuests,
+      selectedSideQuest,
+      investigations,
+      selectedInvestigation,
+      familyTreeSlots,
+      familyTreeHeirs,
+      familyTreeGenerations: FAMILY_TREE_GENERATIONS,
       currentTime,
       daytime,
       climateStage,
+      climateStages,
+      hasOutdoorPenalty: weatherRules.length > 0,
+      outdoorPenaltyDescription: outdoorPenaltyDescription(climateStage),
       allPhantomsFound: allPhantomsFound(data),
-      climateLabel: data.climate.stormActive ? (daytime ? "Шторм" : "Штормовая ночь") : (daytime ? "День" : "Ночь"),
+      climateLabel: climateStage.eternalNight
+        ? "Вечная ночь"
+        : (data.climate.stormActive ? (daytime ? "Шторм" : "Штормовая ночь") : (daytime ? "День" : "Ночь")),
       showMain: this._view === "main" || (this._view === "config" && !isGM),
+      showCooking: this._view === "cooking",
       showInventory: this._view === "inventory",
+      showFamilyTree: this._view === "family-tree",
+      showInvestigations: this._view === "investigations",
+      showSideQuests: this._view === "side-quests",
       showConfig: this._view === "config" && isGM,
       sceneRefs: splitRefs(data.climate.sceneRefs).map((ref, index) => {
         const scene = resolveScene(ref);
@@ -1501,28 +3659,55 @@ export class BastardhallSheet extends FormApplication {
     };
   }
 
+  async refreshCurrentView() {
+    this._viewRefreshPending = true;
+    if (this._viewRefreshPromise) return this._viewRefreshPromise;
+
+    this._viewRefreshPromise = (async () => {
+      while (this._viewRefreshPending) {
+        this._viewRefreshPending = false;
+        const root = getFormRoot(this.element);
+        const body = root?.querySelector?.(".bh-body");
+        const selector = VIEW_SELECTORS.find((candidate) => body?.querySelector?.(candidate));
+        const currentView = selector ? body.querySelector(selector) : null;
+        if (!body || !currentView) return;
+
+        const scrollTop = body.scrollTop;
+        const rendered = await foundry.applications.handlebars.renderTemplate(this.options.template, this.getData());
+        if (!currentView.isConnected) continue;
+        const template = document.createElement("template");
+        template.innerHTML = String(rendered).trim();
+        const nextView = template.content.querySelector(`.bh-body ${selector}`);
+        if (!nextView) return;
+
+        currentView.replaceWith(nextView);
+        body.scrollTop = scrollTop;
+        const listenerRoot = globalThis.jQuery ? globalThis.jQuery(nextView) : nextView;
+        this.activateListeners(listenerRoot);
+      }
+    })().catch((error) => {
+      console.error(`${MODULE_ID} | Partial Bastardhall view refresh failed`, error);
+      if (this.rendered) this.render(false);
+    }).finally(() => {
+      this._viewRefreshPromise = null;
+    });
+
+    return this._viewRefreshPromise;
+  }
+
   activateListeners(html) {
-    super.activateListeners(html);
     const root = getFormRoot(html);
     if (!root) return;
+    void enrichInvestigationLinks(root);
 
-    if (this._clockInterval) clearInterval(this._clockInterval);
-    const refreshClock = () => {
-      const badge = root.querySelector(".bh-climate-badge");
-      if (!badge?.isConnected) return;
-      const data = getData();
-      const daytime = isDaytime(data);
-      const label = data.climate.stormActive ? (daytime ? "Шторм" : "Штормовая ночь") : (daytime ? "День" : "Ночь");
-      badge.classList.toggle("is-night", !daytime);
-      const icon = badge.querySelector("i");
-      if (icon) icon.className = `fa-solid ${daytime ? "fa-sun" : "fa-moon"}`;
-      const labelElement = badge.querySelector("span");
-      if (labelElement) labelElement.textContent = label;
-      const timeElement = badge.querySelector("small");
-      if (timeElement) timeElement.textContent = currentWorldTimeLabel();
-    };
-    refreshClock();
-    this._clockInterval = setInterval(refreshClock, 1000);
+    const partialView = VIEW_SELECTORS.some((selector) => root.matches?.(selector));
+    if (!partialView) super.activateListeners(html);
+    if (!partialView) {
+      if (this._clockInterval) clearInterval(this._clockInterval);
+      const refreshClock = () => refreshClimateDisplay(root);
+      refreshClock();
+      this._clockInterval = setInterval(refreshClock, 1000);
+    }
 
     root.querySelector("[data-action='open-settings']")?.addEventListener("click", (event) => {
       event.preventDefault();
@@ -1543,7 +3728,7 @@ export class BastardhallSheet extends FormApplication {
       const resetButton = event.currentTarget;
       const confirmed = await Dialog.confirm({
         title: "Сбросить Лист Бастардхолла?",
-        content: "<p>Будут удалены собранные предметы, ранги фантомов, исследования и настройки листа. Зелёный туман вернётся на настроенные бордюры.</p><p><b>Это действие нельзя отменить.</b></p>",
+        content: "<p>Будут удалены собранные предметы, ранги фантомов, изыскания из журналов, очки исследований, связи семейного древа и настройки листа. Зелёный туман вернётся на настроенные бордюры.</p><p><b>Это действие нельзя отменить.</b></p>",
         yes: () => true,
         no: () => false,
         defaultYes: false,
@@ -1567,10 +3752,473 @@ export class BastardhallSheet extends FormApplication {
       button.addEventListener("click", (event) => {
         event.preventDefault();
         const view = button.dataset.view;
-        if (!new Set(["main", "inventory"]).has(view)) return;
+        if (!new Set(["main", "cooking", "inventory", "investigations", "side-quests", "family-tree"]).has(view)) return;
         this._view = view;
         this.render(false);
       });
+    });
+
+    root.querySelector("[data-action='refresh-investigations']")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      if (!game.user?.isGM) return;
+      const refreshButton = event.currentTarget;
+      refreshButton.disabled = true;
+      refreshButton.classList.add("is-spinning");
+      try {
+        const result = await refreshJournalInvestigations();
+        if (result.errors.length) {
+          ui.notifications?.warn?.(`Обновление изысканий завершено с ошибками: ${result.errors.length}. Подробности в консоли.`);
+        } else if (result.updated) {
+          ui.notifications?.info?.(`Изыскания обновлены из журналов: ${result.updated}. Очки источников сохранены.`);
+        } else {
+          ui.notifications?.info?.("Связанные журнальные изыскания уже актуальны.");
+        }
+      } finally {
+        if (refreshButton.isConnected) {
+          refreshButton.disabled = false;
+          refreshButton.classList.remove("is-spinning");
+        }
+      }
+    });
+
+    root.querySelectorAll("[data-action='select-investigation']").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        this._investigationId = button.dataset.investigationId;
+        void this.refreshCurrentView();
+      });
+    });
+
+    root.querySelectorAll("[data-action='step-investigation-source']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isPrimaryGM()) return;
+        const stepButton = event.currentTarget;
+        stepButton.disabled = true;
+        try {
+          const data = getData();
+          const investigation = data.investigations.find((entry) => entry.id === stepButton.dataset.investigationId);
+          const source = investigation?.sources.find((entry) => entry.id === stepButton.dataset.sourceId);
+          if (!investigation || !source) return;
+          const delta = Math.sign(Number(stepButton.dataset.step) || 0);
+          source.points = Math.clamp((Number(source.points) || 0) + delta, 0, Number(source.maxPoints) || 0);
+          syncInvestigationResearchPoints(data);
+          this._investigationId = investigation.id;
+          await saveData(data);
+        } finally {
+          if (stepButton.isConnected) stepButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='open-investigation-source']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const sourceButton = event.currentTarget;
+        const investigation = getData().investigations.find((entry) => entry.id === sourceButton.dataset.investigationId);
+        if (!investigation?.sourceUuid) return;
+        sourceButton.disabled = true;
+        try {
+          await openJournalInvestigation(investigation);
+        } catch (error) {
+          console.warn(`${MODULE_ID} | Не удалось открыть источник изыскания`, error);
+          ui.notifications?.warn?.(`Не удалось открыть журнал: ${error.message}`);
+        } finally {
+          if (sourceButton.isConnected) sourceButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='delete-investigation']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isPrimaryGM()) return;
+        const deleteButton = event.currentTarget;
+        const investigationId = deleteButton.dataset.investigationId;
+        const investigation = getData().investigations.find((entry) => entry.id === investigationId);
+        if (!investigation) return;
+        const confirmed = await Dialog.confirm({
+          title: "Удалить изыскание?",
+          content: `<p>Удалить изыскание <b>${escapeHtml(investigation.title)}</b> и все очки его источников?</p><p><b>Это действие нельзя отменить.</b></p>`,
+          yes: () => true,
+          no: () => false,
+          defaultYes: false,
+        });
+        if (!confirmed) return;
+        deleteButton.disabled = true;
+        try {
+          const data = getData();
+          const index = data.investigations.findIndex((entry) => entry.id === investigationId);
+          if (index < 0) return;
+          const [removed] = data.investigations.splice(index, 1);
+          syncInvestigationResearchPoints(data, [removed.topicName]);
+          if (this._investigationId === investigationId) this._investigationId = null;
+          await saveData(data);
+        } finally {
+          if (deleteButton.isConnected) deleteButton.disabled = false;
+        }
+      });
+    });
+
+    const aronItemSelects = [...root.querySelectorAll("[data-aron-item]")];
+    if (aronItemSelects.length) {
+      const aronRank = phantomRank(getData(), "aron");
+      void phantomItemOptions("drinks", aronRank).then((options) => {
+        for (const select of aronItemSelects) {
+          if (!select.isConnected) continue;
+          select.replaceChildren();
+          const empty = document.createElement("option");
+          empty.value = "";
+          empty.textContent = "— не брать —";
+          select.append(empty);
+          for (const entry of options) {
+            const option = document.createElement("option");
+            option.value = entry.uuid;
+            option.textContent = `${entry.name} (ур. ${entry.level})`;
+            select.append(option);
+          }
+        }
+      }).catch((error) => {
+        console.warn(`${MODULE_ID} | Не удалось загрузить напитки Арона`, error);
+        for (const select of aronItemSelects) if (select.isConnected) select.innerHTML = '<option value="">Список недоступен</option>';
+      });
+    }
+
+    root.querySelectorAll('[data-action="toggle-servant"]').forEach((checkbox) => {
+      checkbox.addEventListener("change", async (event) => {
+        if (!isPrimaryGM()) return;
+        const input = event.currentTarget;
+        input.disabled = true;
+        try {
+          const data = getData();
+          const servant = servantState(data, input.dataset.servant);
+          if (!servant) return;
+          servant.active = Boolean(input.checked);
+          await saveData(data);
+        } finally {
+          if (input.isConnected) input.disabled = false;
+        }
+      });
+    });
+
+    root.querySelector('[data-action="toggle-shelyn"]')?.addEventListener("change", async (event) => {
+      if (!isPrimaryGM()) return;
+      const input = event.currentTarget;
+      input.disabled = true;
+      try {
+        const data = getData();
+        data.boons.shelyn.active = Boolean(input.checked);
+        await saveData(data);
+      } finally {
+        if (input.isConnected) input.disabled = false;
+      }
+    });
+
+    root.querySelectorAll('[data-action="move-recipe"]').forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const moveButton = event.currentTarget;
+        moveButton.disabled = true;
+        const request = {
+          serviceId: moveButton.dataset.servant,
+          recipeId: moveButton.dataset.recipe,
+          direction: Number(moveButton.dataset.direction),
+          senderId: game.user?.id,
+        };
+        try {
+          if (isPrimaryGM()) await moveServantRecipe(request.serviceId, request.recipeId, request.direction, request.senderId);
+          else game.socket?.emit?.(SOCKET_CHANNEL, { type: "bastardhall-servant-order", ...request });
+        } finally {
+          if (moveButton.isConnected) moveButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll('[data-action="reset-servant-recipes"]').forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (!isPrimaryGM()) return;
+        const resetButton = event.currentTarget;
+        resetButton.disabled = true;
+        try {
+          const data = getData();
+          const servant = servantState(data, resetButton.dataset.servant);
+          if (!servant) return;
+          servant.usedRecipeIds = [];
+          await saveData(data);
+          ui.notifications?.info?.(`Запас ингредиентов для «${SERVANT_PHANTOMS.find((entry) => entry.id === servant.id)?.name ?? servant.id}» восстановлен.`);
+        } finally {
+          if (resetButton.isConnected) resetButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelector('[data-action="grant-daily-cooking"]')?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const grantButton = event.currentTarget;
+      const targets = Object.fromEntries([...root.querySelectorAll("[data-preparation-target]")].map((select) => [select.dataset.preparationTarget, select.value]));
+      const request = {
+        targets,
+        aronItems: [...root.querySelectorAll("[data-aron-item]")].map((select) => select.value).filter(Boolean),
+        senderId: game.user?.id,
+      };
+      grantButton.disabled = true;
+      try {
+        if (isPrimaryGM()) await grantDailyCooking(request, request.senderId);
+        else game.socket?.emit?.(SOCKET_CHANNEL, { type: "bastardhall-daily-cooking", ...request });
+      } finally {
+        if (grantButton.isConnected) grantButton.disabled = false;
+      }
+    });
+
+    root.querySelectorAll('[data-recipient-group="ausken"] input').forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const limit = Number(checkbox.closest("[data-recipient-group]")?.dataset.maxTargets) || 1;
+        const checked = [...root.querySelectorAll('[data-recipient-group="ausken"] input:checked')];
+        if (checked.length > limit) {
+          checkbox.checked = false;
+          ui.notifications?.warn?.(`Аускен может благословить не более ${limit} персонажей.`);
+        }
+      });
+    });
+
+    root.querySelector('[data-action="grant-daily-boons"]')?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const grantButton = event.currentTarget;
+      const checkedIds = (group) => [...root.querySelectorAll(`[data-recipient-group="${group}"] input:checked`)].map((input) => input.value);
+      const request = {
+        auskenActorIds: checkedIds("ausken"),
+        shelynChoice: root.querySelector("[data-shelyn-choice]")?.value ?? "tangy",
+        senderId: game.user?.id,
+      };
+      grantButton.disabled = true;
+      try {
+        if (isPrimaryGM()) await grantDailyBoons(request, request.senderId);
+        else game.socket?.emit?.(SOCKET_CHANNEL, { type: "bastardhall-daily-boons", ...request });
+      } finally {
+        if (grantButton.isConnected) grantButton.disabled = false;
+      }
+    });
+
+    root.querySelector("[data-action='add-side-quest']")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const draft = await promptSideQuest();
+        if (!draft?.title) return;
+        if (isPrimaryGM()) {
+          const quest = await createSideQuest(draft);
+          if (quest) this._sideQuestId = quest.id;
+        } else {
+          const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+          if (!activeGM) {
+            ui.notifications?.warn?.("Для создания квеста мастер должен быть в сети.");
+            return;
+          }
+          emitSideQuestCreate(draft);
+          ui.notifications?.info?.("Квест отправлен мастеру и появится в общем списке.");
+        }
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    root.querySelector("[data-action='refresh-side-quests']")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      if (!game.user?.isGM) return;
+      const refreshButton = event.currentTarget;
+      refreshButton.disabled = true;
+      refreshButton.classList.add("is-spinning");
+      try {
+        const result = await refreshJournalSideQuests();
+        if (result.errors.length) {
+          ui.notifications?.warn?.(`Обновление завершено с ошибками: ${result.errors.length}. Подробности в консоли.`);
+        } else if (result.updated) {
+          ui.notifications?.info?.(`Сайд-квесты обновлены из журналов: ${result.updated}. Заметки и статусы сохранены.`);
+        } else {
+          ui.notifications?.info?.("Связанные журнальные сайд-квесты уже актуальны.");
+        }
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.classList.remove("is-spinning");
+      }
+    });
+
+    root.querySelectorAll(".bh-sidequest-list-item[data-quest-id]").forEach((card) => {
+      card.addEventListener("click", (event) => {
+        if (event.target instanceof Element && event.target.closest(".bh-sidequest-actions button")) return;
+        event.preventDefault();
+        this._sideQuestId = card.dataset.questId;
+        void this.refreshCurrentView();
+      });
+    });
+
+    root.querySelectorAll("[data-action='open-side-quest-source']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const sourceButton = event.currentTarget;
+        const quest = getData().sideQuests.find((entry) => entry.id === sourceButton.dataset.questId);
+        if (!quest?.sourceUuid) return;
+        sourceButton.disabled = true;
+        try {
+          await openJournalSideQuest(quest);
+        } catch (error) {
+          console.warn(`${MODULE_ID} | Не удалось открыть источник сайд-квеста`, error);
+          ui.notifications?.warn?.(`Не удалось открыть журнал: ${error.message}`);
+        } finally {
+          sourceButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='edit-side-quest']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!game.user?.isGM) return;
+        const editButton = event.currentTarget;
+        const questId = editButton.dataset.questId;
+        const quest = getData().sideQuests.find((entry) => entry.id === questId);
+        if (!quest) return;
+        editButton.disabled = true;
+        try {
+          const draft = await promptSideQuest(quest);
+          if (!draft?.title) return;
+          const data = getData();
+          const stored = data.sideQuests.find((entry) => entry.id === questId);
+          if (!stored) return;
+          Object.assign(stored, draft);
+          this._sideQuestId = stored.id;
+          await saveData(data);
+        } finally {
+          editButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='delete-side-quest']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!game.user?.isGM) return;
+        const deleteButton = event.currentTarget;
+        const questId = deleteButton.dataset.questId;
+        const quest = getData().sideQuests.find((entry) => entry.id === questId);
+        if (!quest) return;
+        const confirmed = await Dialog.confirm({
+          title: "Удалить сайд-квест?",
+          content: `<p>Удалить сайд-квест <b>${escapeHtml(quest.title)}</b> вместе со всеми заметками?</p><p><b>Это действие нельзя отменить.</b></p>`,
+          yes: () => true,
+          no: () => false,
+          defaultYes: false,
+        });
+        if (!confirmed) return;
+        deleteButton.disabled = true;
+        try {
+          const data = getData();
+          const questIndex = data.sideQuests.findIndex((entry) => entry.id === questId);
+          if (questIndex < 0) return;
+          data.sideQuests.splice(questIndex, 1);
+          if (this._sideQuestId === questId) this._sideQuestId = null;
+          await saveData(data);
+        } finally {
+          deleteButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='toggle-side-quest-visibility']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!game.user?.isGM) return;
+        const visibilityButton = event.currentTarget;
+        const questId = visibilityButton.dataset.questId;
+        visibilityButton.disabled = true;
+        try {
+          const data = getData();
+          const quest = data.sideQuests.find((entry) => entry.id === questId);
+          if (!quest) return;
+          quest.hidden = !quest.hidden;
+          this._sideQuestId = quest.id;
+          await saveData(data);
+        } finally {
+          visibilityButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='toggle-side-quest-completed']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const completedButton = event.currentTarget;
+        const questId = completedButton.dataset.questId;
+        const completed = completedButton.dataset.completed !== "true";
+        completedButton.disabled = true;
+        try {
+          if (isPrimaryGM()) {
+            if (await setSideQuestCompleted(questId, completed)) this._sideQuestId = questId;
+          } else {
+            const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+            if (!activeGM) {
+              ui.notifications?.warn?.("Для изменения квеста мастер должен быть в сети.");
+              return;
+            }
+            emitSideQuestCompleted(questId, completed);
+          }
+        } finally {
+          completedButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='toggle-side-quest-failed']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const failedButton = event.currentTarget;
+        const questId = failedButton.dataset.questId;
+        const failed = failedButton.dataset.failed !== "true";
+        failedButton.disabled = true;
+        try {
+          if (isPrimaryGM()) {
+            if (await setSideQuestFailed(questId, failed)) this._sideQuestId = questId;
+          } else {
+            const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+            if (!activeGM) {
+              ui.notifications?.warn?.("Для изменения квеста мастер должен быть в сети.");
+              return;
+            }
+            emitSideQuestFailed(questId, failed);
+          }
+        } finally {
+          failedButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelector("[data-action='add-side-quest-note']")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const noteButton = event.currentTarget;
+      const questId = noteButton.dataset.questId;
+      noteButton.disabled = true;
+      try {
+        const text = await promptSideQuestNote();
+        if (!text) return;
+        if (isPrimaryGM()) await addSideQuestNote(questId, text);
+        else {
+          emitSideQuestNote(questId, text);
+          ui.notifications?.info?.("Заметка отправлена мастеру.");
+        }
+      } finally {
+        noteButton.disabled = false;
+      }
     });
 
     root.querySelectorAll("[data-action='open-inventory-item']").forEach((button) => {
@@ -1615,9 +4263,38 @@ export class BastardhallSheet extends FormApplication {
         const delta = Number(button.dataset.researchStep);
         const topic = data.research[index];
         if (!topic) return;
-        topic.points = Math.max(-1, (Number(topic.points) || 0) + delta);
+        const currentPoints = Number(topic.points);
+        topic.points = Math.max(-1, (Number.isFinite(currentPoints) ? currentPoints : -1) + delta);
         await saveData(data);
       });
+    });
+
+    root.querySelector('[name="outdoorPenaltyActive"]')?.addEventListener("change", async (event) => {
+      if (!isPrimaryGM()) return;
+      const checkbox = event.currentTarget;
+      checkbox.disabled = true;
+      try {
+        const data = getData();
+        data.climate.outdoorPenaltyActive = Boolean(checkbox.checked);
+        await saveData(data);
+      } finally {
+        if (checkbox.isConnected) checkbox.disabled = false;
+      }
+    });
+
+    root.querySelector('[data-action="tower-lightning"]')?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      if (!isPrimaryGM()) return;
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await rollTowerLightning();
+      } catch (error) {
+        console.error(`${MODULE_ID} | Tower lightning roll failed`, error);
+        ui.notifications?.error?.(`Не удалось выполнить проверку молнии: ${error.message}`);
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
     });
 
     root.querySelector('[name="stormActive"]')?.addEventListener("change", async (event) => {
@@ -1663,6 +4340,20 @@ export class BastardhallSheet extends FormApplication {
       });
     });
 
+    root.querySelectorAll("[data-action='clear-family-slot']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isPrimaryGM()) return;
+        const clearButton = event.currentTarget;
+        const data = getData();
+        const slot = storedFamilySlot(data, clearButton.dataset.familySection, clearButton.dataset.slotId);
+        if (!slot) return;
+        Object.assign(slot, { actorUuid: "", name: "", img: "", notes: "" });
+        await saveData(data);
+      });
+    });
+
     root.addEventListener("dragover", (event) => {
       const target = closestDropTarget(event);
       if (!target && this._view === "config") return;
@@ -1699,6 +4390,21 @@ export class BastardhallSheet extends FormApplication {
       dropData = JSON.parse(event.dataTransfer?.getData("text/plain") || "{}");
     }
     const document = await getDocumentFromDrop(dropData);
+
+    if (target?.dataset.dropKind === "family-tree") {
+      if (!isPrimaryGM() || document?.documentName !== "Actor") {
+        ui.notifications?.warn?.("Перетащите сюда актёра из каталога актёров. Изменять семейное древо может только мастер.");
+        return;
+      }
+      const data = getData();
+      const section = target.dataset.familySection;
+      const slot = storedFamilySlot(data, section, target.dataset.slotId);
+      if (!slot) return;
+      assignFamilyActor(slot, document);
+      await saveData(data);
+      ui.notifications?.info?.(`«${document.name}» добавлен в семейное древо Арудора.`);
+      return;
+    }
 
     if (target?.dataset.dropKind === "scene") {
       if (!game.user?.isGM || document?.documentName !== "Scene") {
@@ -1798,9 +4504,11 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: false,
-    onChange: () => {
+    onChange: (enabled) => {
       ui.actors?.render?.(true);
-      queueReconcile();
+      lastObservedNightActive = Boolean(enabled) && !isDaytime(getData());
+      queueReconcile({ restoreNightPresets: !enabled });
+      void rebuildAccessBlockLinks();
     },
   });
   game.settings.register(MODULE_ID, DATA_SETTING, {
@@ -1810,35 +4518,135 @@ Hooks.once("init", () => {
     type: Object,
     default: createDefaultData(),
     onChange: () => {
-      Object.values(ui.windows ?? {}).find((app) => app?.id === APP_ID)?.render?.(false);
+      const app = Object.values(ui.windows ?? {}).find((windowApp) => windowApp?.id === APP_ID);
+      if (typeof app?.refreshCurrentView === "function") void app.refreshCurrentView();
+      else app?.render?.(false);
       queueReconcile();
     },
   });
 });
 
 Hooks.on("renderActorDirectory", addActorDirectoryButton);
+Hooks.on("renderWallConfig", (app, element) => setTimeout(() => injectAccessBlockConfig(app, element), 0));
+Hooks.on("renderRegionConfig", (app, element) => setTimeout(() => injectAccessBlockConfig(app, element), 0));
 Hooks.on("renderEffectsPanel", hideManagedEffectPanelIcons);
-Hooks.on("updateWorldTime", () => queueReconcile());
+Hooks.on("updateWorldTime", () => {
+  queueReconcile({ observeNightTransition: true });
+  const app = Object.values(ui.windows ?? {}).find((windowApp) => windowApp?.id === APP_ID);
+  const root = getFormRoot(app?.element);
+  if (root) refreshClimateDisplay(root);
+  if (app?._view === "cooking" && typeof app.refreshCurrentView === "function") void app.refreshCurrentView();
+});
 Hooks.on("createActor", () => queueReconcile({ forceActors: true }));
+Hooks.on("updateWall", (document) => void (async () => {
+  await syncAccessBlockDocument(document);
+  await restoreAccessWall(document);
+})());
+Hooks.on("updateRegion", (document, changed) => void (async () => {
+  await syncAccessBlockDocument(document);
+  const accessChange = pendingRegionAccessChanges.get(document);
+  pendingRegionAccessChanges.delete(document);
+  if (!accessChange?.changed) return;
+  if (accessChange.enabled) queueReconcile({ forceMementos: true });
+  else await restoreAccessRegion(document);
+})());
+Hooks.on("preUpdateRegion", (document, changed) => captureRegionAccessState(document, changed));
+Hooks.on("deleteWall", (document) => void removeAccessBlockDocument(document));
+Hooks.on("deleteRegion", (document) => void removeAccessBlockDocument(document));
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   game.socket?.on?.(SOCKET_CHANNEL, async (message) => {
-    if (!isPrimaryGM() || message?.type !== "bastardhall-deposit" || !message.uuid) return;
+    if (message?.type === "bastardhall-daily-result") {
+      if (message.recipientId === game.user?.id && message.message) {
+        const level = ["info", "warn", "error"].includes(message.level) ? message.level : "info";
+        ui.notifications?.[level]?.(message.message);
+      }
+      return;
+    }
+    if (message?.type === "bastardhall-sidequest-banner") {
+      showSideQuestBanner(message);
+      return;
+    }
+    if (message?.type === "bastardhall-research-banner") {
+      showResearchBanner(message);
+      return;
+    }
+    if (!isPrimaryGM()) return;
     try {
-      const item = await fromUuid(message.uuid);
-      await depositItem(item, message.senderId);
+      if (message?.type === "bastardhall-servant-order" && message.serviceId && message.recipeId) {
+        await moveServantRecipe(message.serviceId, message.recipeId, message.direction, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-daily-cooking") {
+        await grantDailyCooking(message, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-daily-boons") {
+        await grantDailyBoons(message, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-note" && message.questId && message.text) {
+        await addSideQuestNote(message.questId, message.text, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-create" && message.title) {
+        await createSideQuest({ title: message.title, description: message.description }, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-completed" && message.questId) {
+        await setSideQuestCompleted(message.questId, message.completed, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-failed" && message.questId) {
+        await setSideQuestFailed(message.questId, message.failed, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-journal-create" && message.reference) {
+        await addJournalSideQuest(message.reference, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-research-journal-create" && message.reference) {
+        await addJournalInvestigation(message.reference, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-deposit" && message.uuid) {
+        const item = await fromUuid(message.uuid);
+        await depositItem(item, message.senderId);
+      }
     } catch (error) {
-      console.error(`${MODULE_ID} | Bastardhall deposit failed`, error);
+      console.error(`${MODULE_ID} | Bastardhall socket action failed`, error);
     }
   });
 
   const module = game.modules?.get(MODULE_ID);
   if (module) {
+    const sideQuestSheets = Array.from(module.api?.sideQuestSheets ?? []).filter((entry) => entry?.id !== "bastardhall");
+    sideQuestSheets.push({
+      id: "bastardhall",
+      label: "Бастардхолл",
+      isActive: () => Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING)),
+      addFromJournal: requestJournalSideQuest,
+    });
+    const researchSheets = Array.from(module.api?.researchSheets ?? []).filter((entry) => entry?.id !== "bastardhall");
+    researchSheets.push({
+      id: "bastardhall",
+      label: "Бастардхолл",
+      isActive: () => Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING)),
+      addFromJournal: requestJournalInvestigation,
+    });
     module.api = {
       ...(module.api ?? {}),
       openBastardhallSheet,
+      refreshBastardhallJournalSideQuests: refreshJournalSideQuests,
+      refreshBastardhallJournalInvestigations: refreshJournalInvestigations,
+      sideQuestSheets,
+      researchSheets,
       reconcileBastardhall: () => queueReconcile({ forceActors: true, forceScenes: true, forceMementos: true }),
     };
   }
-  queueReconcile();
+  const data = getData();
+  await rebuildAccessBlockLinks();
+  const enabled = Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING));
+  lastObservedNightActive = enabled && !isDaytime(data);
+  queueReconcile({ restoreNightPresets: !lastObservedNightActive });
 });

@@ -3112,6 +3112,142 @@
   grid-column: 5;
 }
 
+.chat-message .tsu-ritual-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.chat-message .tsu-ritual-card .tsu-ritual-header {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border-light-2, rgba(0, 0, 0, 0.25));
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 2.5rem 1fr;
+  padding-bottom: 0.45rem;
+}
+
+.chat-message .tsu-ritual-card .tsu-ritual-header img {
+  border: 0;
+  height: 2.5rem;
+  object-fit: cover;
+  width: 2.5rem;
+}
+
+.chat-message .tsu-ritual-card .tsu-ritual-header h3,
+.chat-message .tsu-ritual-card .tsu-ritual-header p,
+.chat-message .tsu-ritual-card .tsu-ritual-check-summary p,
+.chat-message .tsu-ritual-card .tsu-ritual-phase h4 {
+  margin: 0;
+}
+
+.chat-message .tsu-ritual-check-summary {
+  display: grid;
+  font-size: var(--font-size-12);
+  gap: 0.2rem;
+}
+
+.chat-message .tsu-ritual-phase {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.chat-message .tsu-ritual-card .tsu-ritual-phase h4 {
+  font-size: var(--font-size-16);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.chat-message .tsu-ritual-buttons {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.chat-message .tsu-ritual-buttons button {
+  align-items: center;
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: auto 1fr auto;
+  line-height: 1.2;
+  margin: 0;
+  min-height: 2rem;
+  text-align: left;
+}
+
+.chat-message .tsu-ritual-buttons button strong {
+  white-space: nowrap;
+}
+
+.chat-message .tsu-ritual-results {
+  display: grid;
+  gap: 0.2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chat-message .tsu-ritual-result {
+  align-items: center;
+  border-left: 3px solid rgba(0, 0, 0, 0.3);
+  display: flex;
+  font-size: var(--font-size-12);
+  gap: 0.4rem;
+  justify-content: space-between;
+  padding: 0.25rem 0.35rem;
+}
+
+.chat-message .tsu-ritual-result > span:last-child {
+  white-space: nowrap;
+}
+
+.chat-message .tsu-ritual-result .fa-circle-h,
+.chat-message .tsu-ritual-primary-result .fa-circle-h {
+  margin-right: 0.25rem;
+}
+
+.chat-message .tsu-ritual-result--criticalSuccess {
+  border-color: #1f7a35;
+  color: #174f27;
+}
+
+.chat-message .tsu-ritual-result--success {
+  border-color: #3d6f95;
+}
+
+.chat-message .tsu-ritual-result--failure {
+  border-color: #a56b18;
+}
+
+.chat-message .tsu-ritual-result--criticalFailure {
+  border-color: #9d2525;
+  color: #6f1616;
+}
+
+.chat-message .tsu-ritual-aggregate {
+  background: rgba(60, 35, 15, 0.09);
+  border: 1px solid rgba(60, 35, 15, 0.22);
+  border-radius: 3px;
+  padding: 0.35rem 0.45rem;
+}
+
+.chat-message .tsu-ritual-primary-result {
+  border-left: 4px solid currentColor;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.chat-message .tsu-ritual-card footer {
+  border-top: 1px solid var(--color-border-light-2, rgba(0, 0, 0, 0.2));
+  font-size: var(--font-size-11);
+  opacity: 0.8;
+  padding-top: 0.35rem;
+}
+
+.chat-message .tsu-ritual-warning {
+  color: #8a4e12;
+  margin: 0;
+}
+
 .tsu-correction-editor {
   display: grid;
   gap: 8px;

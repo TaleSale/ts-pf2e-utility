@@ -1,0 +1,46 @@
+{
+  "TS_PF2E_UTILITY": {
+    "Settings": {
+      "RitualChecks": {
+        "Name": "Проверки Ритуалов",
+        "Hint": "Добавляет выбор ранга ритуала и общий процесс вторичных и первичной проверок в чате: КС, обстоятельственные бонусы и штрафы, понижение степени успеха и перебросы за Очко героя."
+      }
+    },
+    "RitualChecks": {
+      "ChooseRankTitle": "Сотворить «{ritual}»",
+      "ChooseRank": "Ранг ритуала",
+      "ChooseCheckTitle": "Выбор заклинателя и проверки",
+      "CasterAndCheck": "Заклинатель и проверка",
+      "Cast": "Сотворить",
+      "Roll": "Бросить",
+      "Rank": "{rank}-й ранг",
+      "DC": "КС {dc}",
+      "DCPair": "КС втор. {secondary}, перв. {primary}",
+      "PrimaryCheck": "Первичная проверка",
+      "SecondaryCheck": "Вторичная проверка",
+      "SecondaryChecks": "Вторичные проверки",
+      "SecondaryProgress": "Вторичные проверки: {current}/{required}",
+      "NoSecondaryRequired": "Вторичные проверки не требуются.",
+      "WaitingForSecondary": "Ожидание вторичных заклинателей.",
+      "PrimaryModifier": "Модификатор обстоятельства: {modifier}",
+      "SecondaryBonusLabel": "Вторичные проверки ритуала: критический успех",
+      "SecondaryPenaltyLabel": "Вторичные проверки ритуала: провал",
+      "RitualResult": "Результат ритуала",
+      "HeroReroll": "Переброс за Очко героя",
+      "RerollHint": "Переброс за Очко героя заменяет прежний результат и пересчитывает ритуал, пока не сделана первичная проверка.",
+      "NoChecksRecognized": "В тексте ритуала не удалось распознать автоматизируемую проверку.",
+      "Lore": "Знания",
+      "RollLabel": "{ritual}: {check}",
+      "Outcomes": {
+        "criticalFailure": "Критический провал",
+        "failure": "Провал",
+        "success": "Успех",
+        "criticalSuccess": "Критический успех"
+      },
+      "Notifications": {
+        "GMRequired": "Для общего процесса ритуала нужен активный ведущий.",
+        "NoEligibleCheck": "Ни у одного доступного заклинателя нет подходящей характеристики для «{check}»."
+      }
+    }
+  }
+}

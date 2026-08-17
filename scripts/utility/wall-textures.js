@@ -1,8 +1,9 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260813-bastion-grass2";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260816-swamp-floor1";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
+const SETTING_BUILD_DEFAULTS = "wallTextureBuildDefaults";
 const I18N_ROOT = "Settings.WallTextures";
 const DOOR_I18N_ROOT = "Settings.DoorTexturePresets";
 const FLAG_ROOT = "wallTexture";
@@ -107,7 +108,9 @@ function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBott
 
 let redrawTimeout = null;
 let doorSwingIndicatorRedrawTimeout = null;
-const propagatingWalls = new Set();
+let currentBuildTextureDefaults = null;
+const propagatingWallUpdates = new Set();
+const PROPAGATION_OPTION = "tsuWallTexturePropagation";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
@@ -127,6 +130,19 @@ Hooks.once("init", () => {
     config: true,
     default: true,
     type: Boolean,
+  });
+
+  game.settings.register(MODULE_ID, SETTING_BUILD_DEFAULTS, {
+    scope: "client",
+    config: false,
+    default: {
+      enabled: true,
+      mode: "wall",
+      style: DEFAULT_STYLE,
+      flipX: false,
+      flipY: false,
+    },
+    type: Object,
   });
 });
 
@@ -148,6 +164,42 @@ function getFlagData(wall) {
 
 function isEnabled(value) {
   return value === true || value === "true" || value === "on" || value === 1 || value === "1";
+}
+
+function normalizeBuildTextureDefaults(value = {}) {
+  const mode = value.mode === "border" ? "border" : "wall";
+  return {
+    enabled: isEnabled(value.enabled),
+    mode,
+    style: normalizeStyleKey(value.style || getDefaultStyle(null, mode), null, mode),
+    flipX: isEnabled(value.flipX),
+    flipY: isEnabled(value.flipY),
+  };
+}
+
+function getCurrentBuildTextureDefaults() {
+  if (currentBuildTextureDefaults) return foundry.utils.deepClone(currentBuildTextureDefaults);
+
+  let saved = null;
+  try {
+    saved = game.settings.get(MODULE_ID, SETTING_BUILD_DEFAULTS);
+  } catch (_error) {
+    // The setting is unavailable only during the earliest init phase.
+  }
+  currentBuildTextureDefaults = normalizeBuildTextureDefaults(saved ?? {
+    enabled: true,
+    mode: "wall",
+    style: DEFAULT_STYLE,
+  });
+  return foundry.utils.deepClone(currentBuildTextureDefaults);
+}
+
+function rememberBuildTextureDefaults(wall) {
+  if (isWindowWall(wall)) return;
+  currentBuildTextureDefaults = normalizeBuildTextureDefaults(getPropagatedTextureFlags(wall));
+  void game.settings.set(MODULE_ID, SETTING_BUILD_DEFAULTS, currentBuildTextureDefaults).catch((error) => {
+    console.warn(`${MODULE_ID} | Failed to remember the wall construction texture`, error);
+  });
 }
 
 function getMatchingEndpointPairs(sourceWall, targetWall) {
@@ -834,17 +886,36 @@ function findConnectedWallTextureFlags(sourceWall) {
 }
 
 function getConnectedTextureWalls(sourceWall) {
-  const sourceCoords = getWallCoords(sourceWall);
-  if (!sourceCoords) return [];
+  if (!getWallCoords(sourceWall)) return [];
 
-  const walls = canvas?.scene?.walls ?? [];
+  const mode = getTextureMode(sourceWall);
+  const walls = [...(canvas?.scene?.walls ?? [])]
+    .filter((wall) => supportsWallTexture(wall) && getTextureMode(wall) === mode);
+  const wallsByEndpoint = buildWallEndpointMap(walls);
   const connected = [];
-  for (const wall of walls) {
-    if (wall.id === sourceWall.id || !supportsWallTexture(wall)) continue;
-    if (getTextureMode(wall) !== getTextureMode(sourceWall)) continue;
+  const visited = new Set([sourceWall.id]);
+  const queue = [sourceWall];
 
-    if (wallsConnectForTexture(sourceWall, wall)) connected.push(wall);
+  while (queue.length) {
+    const wall = queue.shift();
+    const coords = getWallCoords(wall);
+    if (!coords) continue;
+    const endpoints = [
+      { endpoint: "start", x: coords.x1, y: coords.y1 },
+      { endpoint: "end", x: coords.x2, y: coords.y2 },
+    ];
+
+    for (const point of endpoints) {
+      if (isWallEndpointClosed(wall, point.endpoint)) continue;
+      for (const entry of wallsByEndpoint.get(pointKey(point.x, point.y)) ?? []) {
+        if (visited.has(entry.wall.id) || isWallEndpointClosed(entry.wall, entry.endpoint)) continue;
+        visited.add(entry.wall.id);
+        connected.push(entry.wall);
+        queue.push(entry.wall);
+      }
+    }
   }
+
   return connected;
 }
 
@@ -866,8 +937,6 @@ function getPropagatedTextureFlags(wall) {
 }
 
 async function copyTextureToConnectedWalls(sourceWall) {
-  if (propagatingWalls.has(sourceWall.id)) return;
-
   const flags = getPropagatedTextureFlags(sourceWall);
   if (!hasTextureFlags(sourceWall)) return;
 
@@ -887,12 +956,11 @@ async function copyTextureToConnectedWalls(sourceWall) {
   }
 
   if (!updates.length) return;
-
-  propagatingWalls.add(sourceWall.id);
+  updates.forEach((update) => propagatingWallUpdates.add(update._id));
   try {
-    await canvas.scene.updateEmbeddedDocuments("Wall", updates);
+    await canvas.scene.updateEmbeddedDocuments("Wall", updates, { [PROPAGATION_OPTION]: true });
   } finally {
-    propagatingWalls.delete(sourceWall.id);
+    updates.forEach((update) => propagatingWallUpdates.delete(update._id));
   }
 }
 
@@ -902,14 +970,14 @@ Hooks.on("preCreateWall", (wall, data) => {
 
   const existingFlags = foundry.utils.getProperty(data, `flags.${MODULE_ID}.${FLAG_ROOT}`)
     ?? wall.getFlag?.(MODULE_ID, FLAG_ROOT);
-  if (existingFlags) return;
+  if (existingFlags && Object.keys(existingFlags).length > 0) return;
 
   const coords = getWallCoords(data);
   if (!coords) return;
 
-  const connectedFlags = findConnectedWallTextureFlags(data);
-  if (!connectedFlags) return;
-  const mode = connectedFlags.mode === "border" || WALL_TEXTURE_STYLES[connectedFlags.style]?.borderOnly
+  const textureFlags = findConnectedWallTextureFlags(data) ?? getCurrentBuildTextureDefaults();
+  if (!textureFlags || !isEnabled(textureFlags.enabled)) return;
+  const mode = textureFlags.mode === "border" || WALL_TEXTURE_STYLES[textureFlags.style]?.borderOnly
     ? "border"
     : "wall";
 
@@ -917,11 +985,11 @@ Hooks.on("preCreateWall", (wall, data) => {
     flags: {
       [MODULE_ID]: {
         [FLAG_ROOT]: {
-          enabled: isEnabled(connectedFlags.enabled),
+          enabled: true,
           mode,
-          style: normalizeStyleKey(connectedFlags.style || getDefaultStyle(data, mode), data, mode),
-          flipX: isEnabled(connectedFlags.flipX),
-          flipY: isEnabled(connectedFlags.flipY),
+          style: normalizeStyleKey(textureFlags.style || getDefaultStyle(data, mode), data, mode),
+          flipX: isEnabled(textureFlags.flipX),
+          flipY: isEnabled(textureFlags.flipY),
         },
       },
     },
@@ -1667,9 +1735,13 @@ Hooks.on("canvasTearDown", () => {
   clearWallTextureContainer();
 });
 Hooks.on("createWall", scheduleWallTextureRedraw);
-Hooks.on("updateWall", (wall, change) => {
+Hooks.on("updateWall", (wall, change, options, userId) => {
   if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${FLAG_ROOT}`)) {
-    void copyTextureToConnectedWalls(wall);
+    if (!options?.[PROPAGATION_OPTION] && !propagatingWallUpdates.has(wall.id)) {
+      if (!userId || userId === game.user?.id) rememberBuildTextureDefaults(wall);
+      void copyTextureToConnectedWalls(wall).finally(scheduleWallTextureRedraw);
+      return;
+    }
   }
   scheduleWallTextureRedraw();
 });

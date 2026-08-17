@@ -1016,3 +1016,40 @@ form.ts-journal-sheet .journal-sidebar footer.action-buttons button:focus {
   color: var(--hover-text-color) !important;
   -webkit-text-fill-color: currentColor !important;
 }
+
+.journal-sheet .journal-page-content section.side-quest > :is(h1, h2, h3, h4, h5, h6),
+.journal-sheet .journal-page-content section.research > :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+}
+
+.journal-sheet .journal-page-content .tsu-sidequest-journal-send,
+.journal-sheet .journal-page-content .tsu-research-journal-send {
+  align-items: center !important;
+  background: rgba(247, 240, 220, .82) !important;
+  border: 1px solid currentColor !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  display: inline-flex !important;
+  float: none;
+  height: 27px !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  margin: 0 8px 3px 0 !important;
+  min-width: 29px !important;
+  padding: 0 !important;
+  vertical-align: middle;
+  width: 29px !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.journal-sheet .journal-page-content .tsu-sidequest-journal-send:hover,
+.journal-sheet .journal-page-content .tsu-research-journal-send:hover {
+  background: rgba(223, 204, 143, .94) !important;
+}
+
+.journal-sheet .journal-page-content .tsu-sidequest-journal-send > i,
+.journal-sheet .journal-page-content .tsu-research-journal-send > i {
+  margin: 0 !important;
+  pointer-events: none;
+}

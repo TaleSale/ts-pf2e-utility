@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20260813-bastion-grass2";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260813-bastion-grass2";
+import { ASSETS } from "./scene-assets.js?v=20260816-swamp-floor1";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260816-swamp-floor1";
 
 const GALLERY_FLAG = "bastionGallery";
 
@@ -8,7 +8,7 @@ const FLOOR_STYLES = Object.freeze([
   ["uneven-limestone", "Uneven limestone"], ["cave-brown", "Brown cave"],
   ["cave-grey-pebbles", "Grey cave pebbles"], ["flagstone-grey", "Grey flagstone"],
   ["brick-red", "Red brick"], ["wood-walnut", "Walnut boards"], ["wood-alder", "Alder boards"],
-  ["wood-outdoor", "Outdoor boards"], ["grass-meadow", "Meadow grass"], ["path-dirt", "Dirt path"],
+  ["wood-outdoor", "Outdoor boards"], ["grass-meadow", "Meadow grass"], ["swamp", "Swamp"], ["path-dirt", "Dirt path"],
   ["path-cobblestone", "Cobblestone path"], ["carpet-red", "Red carpet"],
   ["carpet-blue", "Blue carpet"], ["carpet-red-ornate", "Ornate red carpet"],
   ["carpet-blue-heraldic", "Heraldic blue carpet"], ["carpet-green-gold", "Green-gold carpet"],
