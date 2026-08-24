@@ -37,8 +37,8 @@ def svg_size(path: Path) -> tuple[int, int]:
 
 def validate() -> None:
     entries = manifest_entries()
-    if len(entries) != 123 or len(entries) != len(set(entries)):
-        raise AssertionError(f"Expected 123 unique manifest entries, got {len(entries)} / {len(set(entries))} unique")
+    if len(entries) != 130 or len(entries) != len(set(entries)):
+        raise AssertionError(f"Expected 130 unique manifest entries, got {len(entries)} / {len(set(entries))} unique")
 
     counts = {"scene-assets": 0, "scene-floors": 0, "scene-walls": 0}
     exact_alpha = 0
@@ -71,6 +71,13 @@ def validate() -> None:
                     chroma_ratio = magenta.histogram()[255] / max(1, visible)
                     worst_chroma = max(worst_chroma, (chroma_ratio, filename))
                     exact_alpha += 1
+                elif filename.startswith("rubble-"):
+                    ref_alpha = reference.convert("RGBA").getchannel("A")
+                    out_alpha = output.convert("RGBA").getchannel("A")
+                    if ImageChops.difference(ref_alpha, out_alpha).getbbox() is not None:
+                        raise AssertionError(f"Rubble alpha mask changed: {filename}")
+                    if out_alpha.getextrema()[1] == 0:
+                        raise AssertionError(f"Rubble overlay is fully transparent: {filename}")
         counts[directory] += 1
 
     if SOURCE.count("...Object.keys(BASTION_COMPLETE_TEXTURE_REDIRECTS)") != 1 or SOURCE.count("...BASTION_COMPLETE_TEXTURE_REDIRECTS,") != 1:

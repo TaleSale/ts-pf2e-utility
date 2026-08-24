@@ -15,6 +15,9 @@
         <button type="button" class="bh-settings-button" data-action="{{#if showConfig}}close-settings{{else}}open-settings{{/if}}" title="{{#if showConfig}}Вернуться к листу{{else}}Настройки Бастардхолла{{/if}}">
           <i class="fa-solid {{#if showConfig}}fa-arrow-left{{else}}fa-gear{{/if}}"></i>
         </button>
+        <button type="button" class="bh-settings-button bh-broadcast-button" data-action="broadcast-sheet" title="Открыть текущую вкладку у игроков" aria-label="Открыть текущую вкладку у игроков">
+          <i class="fa-solid fa-eye"></i>
+        </button>
       {{/if}}
       <div class="bh-climate-badge {{#unless daytime}}is-night{{/unless}}">
         <i class="fa-solid {{#if daytime}}fa-sun{{else}}fa-moon{{/if}}"></i>
@@ -168,15 +171,14 @@
         </header>
 
         <section class="bh-daily-section">
-          <div class="bh-section-title"><i class="fa-solid fa-utensils"></i><div><h2>Готовка</h2><p>Выберите получателя для каждого доступного помощника. Очередь блюд можно менять до выдачи.</p></div></div>
+          <div class="bh-section-title"><i class="fa-solid fa-utensils"></i><div><h2>Готовка</h2><p>Выберите получателя для каждого доступного помощника. Для Арона и пекарей можно выбрать двух персонажей: порции распределяются поровну.</p></div></div>
           <div class="bh-daily-grid">
             {{#if aronCooking}}
               <article class="bh-daily-card is-active">
                 <header><div><strong>Арон Мордримус</strong><small>Трактирщик · ранг {{aronCooking.rank}}</small></div><span>{{#if aronCooking.canDrinks}}до {{aronCooking.limit}} в день{{else}}Напитки не открыты{{/if}}</span></header>
                 {{#if aronCooking.canDrinks}}
-                  <label class="bh-recipient"><span>Получатель</span><select data-preparation-target="aron"><option value="">— персонаж не выбран —</option>{{#each recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>
                   <div class="bh-aron-selections">
-                    {{#each aronCooking.selections}}<label><span>Напиток {{index}}</span><select data-aron-item><option value="">Загрузка списка…</option></select></label>{{/each}}
+                    {{#each aronCooking.selections}}<label><span>Напиток {{index}}</span><select data-aron-item><option value="">Загрузка списка…</option></select><span>Получатель</span><select data-preparation-target="aron"><option value="">— персонаж не выбран —</option>{{#each @root.recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>{{/each}}
                   </div>
                   <p class="bh-daily-note">Напитки получают признак «насыщенный». Общий лимит действует на всю группу.</p>
                 {{else}}
@@ -190,10 +192,28 @@
               </article>
             {{/if}}
 
-            {{#each visibleServantPhantoms}}
-              <article class="bh-daily-card {{#if active}}is-active{{else}}is-locked{{/if}}">
-                <header><div><strong>{{name}}</strong><small>{{location}}</small></div><span>{{#if active}}{{#if grantedToday}}Сегодня выдано{{else}}Готовы{{/if}}{{else}}Не открыты{{/if}}</span></header>
-                <p>{{description}}</p>
+             {{#each visibleServantPhantoms}}
+               <article class="bh-daily-card {{#if active}}is-active{{else}}is-locked{{/if}}">
+                 <header>
+                   <div><strong>{{name}}</strong><small>{{location}}</small></div>
+                   <div class="bh-servant-status">
+                      {{#if isRankedServant}}
+                       <div class="bh-servant-level">
+                         {{#if active}}
+                           {{#if @root.isGM}}
+                             <div class="bh-servant-level-actions">
+                               <button type="button" data-action="step-servant-rank" data-servant="{{id}}" data-direction="1" title="Повысить уровень" {{#unless canIncreaseRank}}disabled{{/unless}}><i class="fa-solid fa-chevron-up"></i></button>
+                               <button type="button" data-action="step-servant-rank" data-servant="{{id}}" data-direction="-1" title="Понизить уровень" {{#unless canDecreaseRank}}disabled{{/unless}}><i class="fa-solid fa-chevron-down"></i></button>
+                             </div>
+                           {{/if}}
+                         {{/if}}
+                         <small>ур. {{rank}}</small>
+                       </div>
+                     {{/if}}
+                     <span>{{#if active}}{{#if grantedToday}}Сегодня выдано{{else}}Готовы{{/if}}{{else}}Не открыты{{/if}}</span>
+                   </div>
+                 </header>
+                 <p>{{description}}</p>
                 {{#if currentProduct}}<div class="bh-current-product"><i class="fa-solid fa-cookie-bite"></i><span>{{currentProduct}}</span><small>насыщенные</small></div>{{/if}}
                 {{#if recipeRows.length}}
                   <ol class="bh-recipe-order">
@@ -207,7 +227,7 @@
                 {{/if}}
                 {{#if exhausted}}<div class="bh-ingredients-empty"><i class="fa-solid fa-basket-shopping"></i> У {{emptyLabel}} закончились ингредиенты</div>{{/if}}
                 {{#if ../isGM}}{{#if exhausted}}<button type="button" class="bh-reset-ingredients" data-action="reset-servant-recipes" data-servant="{{id}}"><i class="fa-solid fa-arrow-rotate-left"></i> Восстановить готовку</button>{{/if}}{{/if}}
-                <label class="bh-recipient"><span>Получатель</span><select data-preparation-target="{{id}}" {{#unless active}}disabled{{/unless}}><option value="">— персонаж не выбран —</option>{{#each @root.recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>
+                <div class="bh-recipient-list">{{#each recipientSlots}}<label class="bh-recipient"><span>Получатель {{index}}</span><select data-preparation-target="{{../id}}" {{#unless ../active}}disabled{{/unless}}><option value="">— персонаж не выбран —</option>{{#each @root.recipientCharacters}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>{{/each}}</div>
               </article>
             {{/each}}
           </div>
@@ -332,7 +352,18 @@
               <img class="bh-family-frame" src="modules/ts-pf2e-utility/layout/BoB/audora-family-frame.png" alt="">
               {{#if crowned}}<i class="fa-solid fa-crown bh-family-crown" title="Владелец замка на момент начала проклятия"></i>{{/if}}
               <div class="bh-family-name">{{#if assigned}}{{name}}{{/if}}</div>
-              {{#if @root.canEditFamilyTree}}{{#if assigned}}<button type="button" class="bh-family-clear" data-action="clear-family-slot" data-family-section="slots" data-slot-id="{{id}}" title="Очистить портрет"><i class="fa-solid fa-xmark"></i></button>{{/if}}{{/if}}
+              {{#if assigned}}
+                <div class="bh-family-controls">
+                  {{#if @root.canEditFamilyTree}}<button type="button" class="bh-family-control bh-family-clear" data-action="clear-family-slot" data-family-section="slots" data-slot-id="{{id}}" title="Удалить текущую версию портрета" aria-label="Удалить текущую версию портрета"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+                  {{#if portraitCount}}
+                    <div class="bh-family-version-controls" aria-label="Версии портрета">
+                      {{#if hasPreviousPortrait}}<button type="button" class="bh-family-control" data-action="step-family-portrait" data-family-section="slots" data-slot-id="{{id}}" data-direction="-1" title="Предыдущая версия портрета" aria-label="Предыдущая версия портрета"><i class="fa-solid fa-chevron-left"></i></button>{{/if}}
+                      {{#if hasNextPortrait}}<button type="button" class="bh-family-control" data-action="step-family-portrait" data-family-section="slots" data-slot-id="{{id}}" data-direction="1" title="Следующая версия портрета" aria-label="Следующая версия портрета"><i class="fa-solid fa-chevron-right"></i></button>{{/if}}
+                    </div>
+                  {{/if}}
+                  {{#if img}}<button type="button" class="bh-family-control bh-family-expand" data-action="expand-family-portrait" data-image="{{img}}" data-title="{{name}}" title="Развернуть портрет" aria-label="Развернуть портрет"><i class="fa-solid fa-expand"></i></button>{{/if}}
+                </div>
+              {{/if}}
               {{#if assigned}}<div class="bh-family-tooltip"><b>{{name}}</b><p>{{#if notes}}{{notes}}{{else}}Описание в заметках актёра отсутствует.{{/if}}</p></div>{{/if}}
             </article>
           {{/each}}
@@ -340,20 +371,31 @@
 
         {{#if familyTreeHeirs}}
           <section class="bh-family-custom">
-            {{#if isGM}}<p>Эти восемь мест скрыты от игроков. Каждое открывается автоматически, когда вы переносите сюда актёра.</p>{{/if}}
-            <div class="bh-family-heir-stage">
-              <div class="bh-family-shelf" style="--bh-shelf-y: 209px"></div>
-              <div class="bh-family-shelf" style="--bh-shelf-y: 419px"></div>
+            {{#if isGM}}<p>Пустые места видны только мастеру. Новую строку можно добавить кнопкой «+» внизу.</p>{{/if}}
+            <div class="bh-family-heir-stage" style="--bh-family-heir-height: {{familyTreeHeirStageHeight}}px">
+              {{#each familyTreeHeirRows}}<div class="bh-family-shelf" style="--bh-shelf-y: {{shelfY}}px"></div>{{/each}}
               {{#each familyTreeHeirs}}
                 <article class="bh-family-member bh-family-heir {{#if assigned}}is-assigned{{else}}is-empty{{/if}}" data-drop-kind="family-tree" data-family-section="customHeirs" data-slot-id="{{id}}" style="--bh-family-x: {{xPercent}}%; --bh-family-y: {{y}}px">
                   <div class="bh-family-photo">{{#if assigned}}{{#if img}}<img src="{{img}}" alt="{{name}}">{{/if}}{{/if}}</div>
                   <img class="bh-family-frame" src="modules/ts-pf2e-utility/layout/BoB/audora-family-frame.png" alt="">
                   <div class="bh-family-name">{{#if assigned}}{{name}}{{/if}}</div>
-                  {{#if @root.canEditFamilyTree}}{{#if assigned}}<button type="button" class="bh-family-clear" data-action="clear-family-slot" data-family-section="customHeirs" data-slot-id="{{id}}" title="Скрыть и очистить наследника"><i class="fa-solid fa-xmark"></i></button>{{/if}}{{/if}}
+                  {{#if assigned}}
+                    <div class="bh-family-controls">
+                      {{#if @root.canEditFamilyTree}}<button type="button" class="bh-family-control bh-family-clear" data-action="clear-family-slot" data-family-section="customHeirs" data-slot-id="{{id}}" title="Удалить текущую версию портрета" aria-label="Удалить текущую версию портрета"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+                      {{#if portraitCount}}
+                        <div class="bh-family-version-controls" aria-label="Версии портрета">
+                          {{#if hasPreviousPortrait}}<button type="button" class="bh-family-control" data-action="step-family-portrait" data-family-section="customHeirs" data-slot-id="{{id}}" data-direction="-1" title="Предыдущая версия портрета" aria-label="Предыдущая версия портрета"><i class="fa-solid fa-chevron-left"></i></button>{{/if}}
+                          {{#if hasNextPortrait}}<button type="button" class="bh-family-control" data-action="step-family-portrait" data-family-section="customHeirs" data-slot-id="{{id}}" data-direction="1" title="Следующая версия портрета" aria-label="Следующая версия портрета"><i class="fa-solid fa-chevron-right"></i></button>{{/if}}
+                        </div>
+                      {{/if}}
+                      {{#if img}}<button type="button" class="bh-family-control bh-family-expand" data-action="expand-family-portrait" data-image="{{img}}" data-title="{{name}}" title="Развернуть портрет" aria-label="Развернуть портрет"><i class="fa-solid fa-expand"></i></button>{{/if}}
+                    </div>
+                  {{/if}}
                   {{#if assigned}}<div class="bh-family-tooltip"><b>{{name}}</b><p>{{#if notes}}{{notes}}{{else}}Описание в заметках актёра отсутствует.{{/if}}</p></div>{{/if}}
                 </article>
               {{/each}}
             </div>
+            {{#if canEditFamilyTree}}<button type="button" class="bh-family-add-row" data-action="add-family-heir-row" title="Добавить строку наследников" aria-label="Добавить строку наследников"><i class="fa-solid fa-plus"></i></button>{{/if}}
           </section>
         {{/if}}
       </div>
@@ -374,29 +416,29 @@
                 {{#if selected}}
                   <div class="bh-investigation-source-counters">
                     {{#each sources}}
-                      <div class="bh-investigation-source-counter">
-                        <span title="{{name}}">{{name}}</span>
+                       <div class="bh-investigation-source-counter {{#unless ../../isGM}}is-player{{/unless}}">
+                         <span title="{{displayName}}">{{displayName}}</span>
                         {{#if ../../isGM}}<button type="button" data-action="step-investigation-source" data-investigation-id="{{../id}}" data-source-id="{{id}}" data-step="-1" title="Уменьшить ОИ" {{#unless canDecrease}}disabled{{/unless}}><i class="fa-solid fa-caret-down"></i></button>{{/if}}
                         <strong>{{points}} / {{maxPoints}}</strong>
                         {{#if ../../isGM}}<button type="button" data-action="step-investigation-source" data-investigation-id="{{../id}}" data-source-id="{{id}}" data-step="1" title="Увеличить ОИ" {{#unless canIncrease}}disabled{{/unless}}><i class="fa-solid fa-caret-up"></i></button>{{/if}}
                       </div>
                     {{/each}}
-                  </div>
-                {{/if}}
-                {{#if selected}}
-                  <footer>
-                    <button type="button" class="bh-sidequest-icon-button bh-sidequest-source" data-action="open-investigation-source" data-investigation-id="{{id}}" title="Открыть источник в журнале" aria-label="Открыть источник в журнале"><i class="fa-solid fa-book-open"></i></button>
-                    {{#if ../isGM}}<button type="button" class="bh-sidequest-icon-button bh-sidequest-delete" data-action="delete-investigation" data-investigation-id="{{id}}" title="Удалить изыскание" aria-label="Удалить изыскание"><i class="fa-solid fa-trash"></i></button>{{/if}}
-                  </footer>
-                {{/if}}
-              </article>
+                 </div>
+                 {{/if}}
+                 {{#if selected}}{{#if ../isGM}}
+                   <footer>
+                     <button type="button" class="bh-sidequest-icon-button bh-sidequest-source" data-action="open-investigation-source" data-investigation-id="{{id}}" title="Открыть источник в журнале" aria-label="Открыть источник в журнале"><i class="fa-solid fa-book-open"></i></button>
+                     <button type="button" class="bh-sidequest-icon-button bh-sidequest-delete" data-action="delete-investigation" data-investigation-id="{{id}}" title="Удалить изыскание" aria-label="Удалить изыскание"><i class="fa-solid fa-trash"></i></button>
+                   </footer>
+                 {{/if}}{{/if}}
+               </article>
             {{else}}
               <p class="bh-empty">Изысканий пока нет. Откройте журнал и нажмите кнопку у заголовка <code>section.research</code>.</p>
             {{/each}}
           </div>
         </aside>
 
-        <section class="bh-panel bh-investigation-detail">
+         <section class="bh-panel bh-investigation-detail{{#if selectedInvestigation.researchBonusExcluded}} is-research-bonus-excluded{{/if}}">
           {{#if selectedInvestigation}}
             <header>
               <div><p>Изыскание</p><h2>{{selectedInvestigation.title}}</h2></div>
@@ -405,12 +447,12 @@
                 <strong>{{selectedInvestigation.totalPoints}} / {{selectedInvestigation.maxPoints}} ОИ</strong>
               </div>
             </header>
-            <div class="bh-investigation-sources">
-              {{#each selectedInvestigation.sources}}
-                <article>
-                  <header><h3>{{name}}</h3><span>{{points}} / {{maxPoints}} ОИ</span></header>
-                  {{#if description}}<div class="bh-investigation-description">{{{description}}}</div>{{/if}}
-                  {{#if checks}}<div class="bh-investigation-checks"><h4><i class="fa-solid fa-dice-d20"></i> Проверки изыскания</h4>{{{checks}}}</div>{{/if}}
+             <div class="bh-investigation-sources">
+               {{#each selectedInvestigation.sources}}
+                 <article class="{{#unless visible}}is-hidden{{/unless}}">
+                   <header><h3>{{name}}</h3><div class="bh-investigation-source-heading-actions"><span>{{points}} / {{maxPoints}} ОИ</span>{{#if @root.isGM}}<button type="button" class="bh-investigation-source-visibility" data-action="toggle-investigation-source-visibility" data-investigation-id="{{investigationId}}" data-source-id="{{id}}" title="{{#if visible}}Скрыть источник от игроков{{else}}Показать источник игрокам{{/if}}" aria-label="{{#if visible}}Скрыть источник от игроков{{else}}Показать источник игрокам{{/if}}"><i class="fa-solid {{#if visible}}fa-eye{{else}}fa-eye-slash{{/if}}"></i></button>{{/if}}</div></header>
+                   {{#if description}}<div class="bh-investigation-description">{{{description}}}</div>{{/if}}
+                   {{#if checks}}<div class="bh-investigation-checks"><h4><i class="fa-solid fa-dice-d20"></i> Проверки изыскания</h4>{{{checks}}}</div>{{/if}}
                 </article>
               {{else}}
                 <p class="bh-empty">В журнале нет вложенных секций <code>section.read</code>.</p>

@@ -64,6 +64,7 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
       "pack-src/utility/Token_Adjectives_UtTokAdj000001.json",
       "pack-src/utility/Quick_Effects_UtQuickFx00001.json",
       "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
+      "pack-src/utility/Open_Bastardhall_Sheet_UtBastSheet00001.json",
     ]),
     iconUpdates: Object.freeze({
       UtActSync0000001: "icons/svg/upgrade.svg",

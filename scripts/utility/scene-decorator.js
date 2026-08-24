@@ -1,5 +1,5 @@
 import { MODULE_ID, t } from "../core.js";
-import { ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetPlacementLevelData } from "./scene-assets.js";
+import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetPlacementLevelData } from "./scene-assets.js?v=20260823-statues-size-v2";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_PRESETS = "sceneDecoratorPresets";
@@ -977,7 +977,7 @@ async function applyLayout() {
   applying = true;
   const generationId = foundry.utils.randomID?.() ?? crypto.randomUUID(); const grid=Number(canvas.dimensions.size??100);
   const placementLevel=getAssetPlacementLevelData();
-  const data=layout.map((item)=>{const asset=ASSETS[item.key],dims=assetDimensions(asset,item.size);const layer=item.onObject?"overhead":asset.layer;const sort=layer==="ground"?-100:layer==="overhead"?100:0;return {name:t(asset.labelKey,asset.fallback),texture:{src:asset.src,anchorX:.5,anchorY:.5,scaleX:1,scaleY:1},x:Math.round(item.x),y:Math.round(item.y),width:Math.round(dims.width*grid),height:Math.round(dims.height*grid),rotation:snapQuarterTurn(item.rotation),elevation:placementLevel.elevation,levels:placementLevel.levels,sort,restrictions:{light:false,weather:false},flags:{[MODULE_ID]:{[ASSET_FLAG]:{key:item.key,layer,level:placementLevel.level,lightId:null,generationId,preset:presetKey,seed,onObject:item.onObject??null}}}};});
+  const data=layout.map((item)=>{const asset=ASSETS[item.key],dims=assetDimensions(asset,item.size);const layer=item.onObject?"overhead":asset.layer;const sort=layer==="ground"?-100:layer==="overhead"?100:0;return {name:t(asset.labelKey,asset.fallback),texture:{src:asset.src,anchorX:.5,anchorY:.5,scaleX:1,scaleY:1},x:Math.round(item.x),y:Math.round(item.y),width:Math.round(dims.width*grid),height:Math.round(dims.height*grid),rotation:snapQuarterTurn(item.rotation),elevation:placementLevel.elevation,levels:placementLevel.levels,sort,restrictions:{light:false,weather:false},flags:{[MODULE_ID]:{[ASSET_FLAG]:{key:item.key,layer,level:placementLevel.level,lightId:null,generationId,preset:presetKey,seed,onObject:item.onObject??null,geometryVersion:ASSET_GEOMETRY_VERSION}}}};});
   try {
     setApplyProgress(0, data.length);
     const created=await createDocumentsInChunks("Tile",data,(done)=>setApplyProgress(done,data.length));

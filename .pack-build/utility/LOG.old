@@ -1,8 +1,15 @@
-2026/07/25-16:01:20.648 4140 Recovering log #122
-2026/07/25-16:01:20.651 4140 Delete type=0 #122
-2026/07/25-16:01:20.651 4140 Delete type=3 #120
-2026/07/25-16:01:20.667 67b0 Level-0 table #127: started
-2026/07/25-16:01:20.667 67b0 Level-0 table #127: 0 bytes OK
-2026/07/25-16:01:20.667 67b0 Delete type=0 #125
-2026/07/25-16:01:20.667 67b0 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
-2026/07/25-16:01:20.667 67b0 Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/08/17-20:35:10.852 a5e8 Recovering log #130
+2026/08/17-20:35:10.863 a5e8 Delete type=0 #130
+2026/08/17-20:35:10.863 a5e8 Delete type=3 #128
+2026/08/17-20:35:10.869 9d4c Level-0 table #135: started
+2026/08/17-20:35:10.872 9d4c Level-0 table #135: 873 bytes OK
+2026/08/17-20:35:10.878 9d4c Delete type=0 #133
+2026/08/17-20:35:10.878 9d4c Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/08/17-20:35:10.878 9d4c Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at '!macros!UtBastSheet00001' @ 13 : 1
+2026/08/17-20:35:10.878 9d4c Compacting 1@1 + 1@2 files
+2026/08/17-20:35:10.881 9d4c Generated table #136@1: 5 keys, 1434 bytes
+2026/08/17-20:35:10.881 9d4c Compacted 1@1 + 1@2 files => 1434 bytes
+2026/08/17-20:35:10.886 9d4c compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/08/17-20:35:10.886 9d4c Delete type=2 #119
+2026/08/17-20:35:10.886 9d4c Delete type=2 #135
+2026/08/17-20:35:10.886 9d4c Manual compaction at level-1 from '!macros!UtBastSheet00001' @ 13 : 1 .. '~' @ 0 : 0; will stop at (end)

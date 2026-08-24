@@ -2,7 +2,7 @@ import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20260816-swamp-floor1";
+} from "../utility/texture-presets.js?v=20260823-statues-size-v2";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";
@@ -10,7 +10,8 @@ const EFFECT_FLAG = "bastardhallEffect";
 const DARKNESS_FLAG = "bastardhallDarkness";
 const NIGHT_TEXTURE_PRESET_FLAG = "bastardhallNightTexturePreset";
 const ACCESS_BLOCK_FLAG = "bastardhallAccess";
-const pendingRegionAccessChanges = new WeakMap();
+const ACCESS_REGION_COLOR = "#16a298";
+const managedAccessUpdates = new WeakSet();
 const APP_ID = "tsu-bastardhall-sheet";
 const VIEW_SELECTORS = Object.freeze([
   ".bh-tracker-tab",
@@ -20,6 +21,14 @@ const VIEW_SELECTORS = Object.freeze([
   ".bh-sidequest-view",
   ".bh-family-tree-view",
   ".bh-config-view",
+]);
+const BASTARDHALL_VIEWS = Object.freeze([
+  "main",
+  "cooking",
+  "inventory",
+  "investigations",
+  "side-quests",
+  "family-tree",
 ]);
 
 const FAMILY_TREE_SLOTS = Object.freeze([
@@ -39,11 +48,21 @@ const FAMILY_TREE_SLOTS = Object.freeze([
   { id: "generation-5-unknown-heir", generation: 5, x: 790, y: 1095 },
 ]);
 
-const FAMILY_TREE_HEIRS = Object.freeze(Array.from({ length: 8 }, (_value, index) => ({
-  id: `custom-heir-${index + 1}`,
-  x: 200 + ((index % 4) * 200),
-  y: index < 4 ? 42 : 252,
-})));
+const FAMILY_TREE_HEIRS_PER_ROW = 4;
+const FAMILY_TREE_HEIR_ROW_HEIGHT = 210;
+const FAMILY_TREE_HEIR_SHELF_START = 209;
+const FAMILY_TREE_HEIR_STAGE_PADDING = 20;
+
+function customFamilyHeirDefinitions(rowCount = 1) {
+  const rows = Math.max(1, Math.trunc(Number(rowCount) || 1));
+  return Array.from({ length: rows * FAMILY_TREE_HEIRS_PER_ROW }, (_value, index) => ({
+    id: `custom-heir-${index + 1}`,
+    x: 200 + ((index % FAMILY_TREE_HEIRS_PER_ROW) * 200),
+    y: 42 + (Math.floor(index / FAMILY_TREE_HEIRS_PER_ROW) * FAMILY_TREE_HEIR_ROW_HEIGHT),
+  }));
+}
+
+const FAMILY_TREE_HEIRS = Object.freeze(customFamilyHeirDefinitions());
 
 const FAMILY_TREE_GENERATIONS = Object.freeze([
   { number: 1, label: "I поколение", shelfY: 382 },
@@ -140,18 +159,23 @@ const SERVANT_PHANTOMS = Object.freeze([
   },
 ]);
 
+const RANKED_SERVANT_IDS = Object.freeze(["cooks", "brewers"]);
+const SERVANT_MAX_RANK = 2;
+
 const SERVANT_RECIPES = Object.freeze({
   cooks: Object.freeze([
     { id: "egg-cream-fizz", name: "Шипучий яичный коктейль", englishName: "Egg Cream Fizz", slug: "egg-cream-fizz" },
     { id: "galvanic-chew", name: "Гальваническая жвачка", englishName: "Galvanic Chew", slug: "galvanic-chew" },
     { id: "cooperative-waffles-greater", name: "Вафли товарищества [Большие]", englishName: "Cooperative Waffles (Greater)", slug: "cooperative-waffles-greater" },
     { id: "diplomats-charcuterie", name: "Шаркутери дипломата", englishName: "Diplomat's Charcuterie", slug: "diplomats-charcuterie" },
+    { id: "crackling-bubble-gum-moderate", name: "Жвачка-трещотка [Средняя]", englishName: "Crackling Bubble Gum (Moderate)", slug: "crackling-bubble-gum-moderate", minRank: 2 },
   ]),
   brewers: Object.freeze([
     { id: "fury-cocktail-lesser", name: "Коктейль «Ярость» [Малый] — скорбный", englishName: "Fury Cocktail (Lesser) — Mournful", slug: "fury-cocktail-lesser", variant: "mournful", suffix: "Скорбный" },
     { id: "soothing-toddy", name: "Успокаивающий коктейль — виски", englishName: "Soothing Toddy — Whiskey", slug: "soothing-toddy", variant: "whiskey", suffix: "Виски" },
     { id: "silvertongue-mutagen-moderate", name: "Мутаген красноречия [Средний]", englishName: "Silvertongue Mutagen (Moderate)", slug: "silvertongue-mutagen-moderate" },
     { id: "bottled-catharsis-moderate", name: "Катарсис в бутылке [Средний]", englishName: "Bottled Catharsis (Moderate)", slug: "bottled-catharsis-moderate" },
+    { id: "arbor-wine", name: "Садовое вино", englishName: "Arbor Wine", slug: "arbor-wine", minRank: 2 },
   ]),
 });
 
@@ -165,10 +189,15 @@ function createDefaultServantPhantoms() {
   return SERVANT_PHANTOMS.map((servant) => ({
     id: servant.id,
     active: false,
+    rank: 0,
     lastGrantedDay: null,
     recipeOrder: (SERVANT_RECIPES[servant.id] ?? []).map((recipe) => recipe.id),
     usedRecipeIds: [],
   }));
+}
+
+function isRankedServant(id) {
+  return RANKED_SERVANT_IDS.includes(id);
 }
 
 const LEGACY_RESEARCH_TOPICS = Object.freeze([
@@ -223,6 +252,23 @@ const RESEARCH_BONUSES = Object.freeze([
     threshold: 21,
     description: "Вы получаете бонус обстоятельства +4 к спасброскам против проклятий.",
   },
+  {
+    topicIndex: 0,
+    threshold: 8,
+    description: "ПИ теперь понимают эти причуды и получают бонус обстоятельства +2 ко всем проверкам, совершаемым для проведения изысканий по отдельным Арудорам.",
+  },
+]);
+
+const RESEARCH_TAB_ROLL_OPTION = "bastardhall:research-tab";
+const RESEARCH_EXCLUDED_ROLL_OPTION = "bastardhall:research-excluded";
+const RESEARCH_FAMILY_EXCLUDED_TOPIC_INDICES = Object.freeze([0, 1, 10, 12, 17]);
+const RESEARCH_FAMILY_EXCLUDED_TOPIC_KEYS = Object.freeze([
+  "семья арудора",
+  "бастардхолл",
+  "проклятие",
+  "проклятие бастардхолла",
+  "флорин киндлер",
+  "великарн",
 ]);
 
 const DEFAULT_NIGHT_NPC_RULES = JSON.stringify([
@@ -360,14 +406,14 @@ function createDefaultMementos() {
 
 function createDefaultData() {
   return {
-    version: 21,
+    version: 26,
     inventory: [],
     sideQuests: [],
     investigations: [],
     familyTree: {
-      crest: { id: "crest", actorUuid: "", name: "", img: "", notes: "" },
-      slots: FAMILY_TREE_SLOTS.map(({ id }) => ({ id, actorUuid: "", name: "", img: "", notes: "" })),
-      customHeirs: FAMILY_TREE_HEIRS.map(({ id }) => ({ id, actorUuid: "", name: "", img: "", notes: "" })),
+      crest: { id: "crest", portraits: [] },
+      slots: FAMILY_TREE_SLOTS.map(({ id }) => ({ id, portraits: [] })),
+      customHeirs: FAMILY_TREE_HEIRS.map(({ id }) => ({ id, portraits: [] })),
     },
     soulhearts: {
       simple: 0,
@@ -568,6 +614,27 @@ function investigationNameKey(value) {
   return normalizeText(value, 160).toLocaleLowerCase("ru-RU").replace(/\s+/g, " ");
 }
 
+function investigationTopicName(value) {
+  const heading = normalizeText(value, 240);
+  return heading ? investigationHeadingParts(heading).topicName : "";
+}
+
+function investigationTopicKey(value) {
+  return investigationNameKey(investigationTopicName(value));
+}
+
+function normalizeInvestigationSourceName(value) {
+  return normalizeText(value, 240);
+}
+
+function investigationSourceDisplayName(value) {
+  const name = normalizeInvestigationSourceName(value);
+  return normalizeText(
+    name.replace(/@UUID\[[^\]]+\](?:\{([^{}]*)\})?/giu, (_match, linkName) => linkName ?? "").replace(/\s+/gu, " "),
+    240,
+  );
+}
+
 function normalizeInvestigationHtml(value, maxLength = 50000) {
   return String(value ?? "").trim().slice(0, maxLength);
 }
@@ -576,12 +643,15 @@ function normalizeInvestigations(entries) {
   return normalizeArray(entries).flatMap((rawInvestigation, investigationIndex) => {
     if (!rawInvestigation || typeof rawInvestigation !== "object") return [];
     const title = normalizeText(rawInvestigation.title, 160);
-    const topicName = normalizeText(rawInvestigation.topicName, 160) || title;
+    const rawTopicName = normalizeText(rawInvestigation.topicName, 240)
+      || normalizeText(rawInvestigation.sourceHeading, 240)
+      || title;
+    const topicName = investigationTopicName(rawTopicName);
     if (!title || !topicName) return [];
     const investigationId = normalizeText(rawInvestigation.id, 120) || `investigation-${investigationIndex + 1}`;
     const sources = normalizeArray(rawInvestigation.sources).flatMap((rawSource, sourceIndex) => {
       if (!rawSource || typeof rawSource !== "object") return [];
-      const name = normalizeText(rawSource.name, 240);
+      const name = normalizeInvestigationSourceName(rawSource.name);
       if (!name) return [];
       const maximum = Math.max(0, Math.trunc(Number(rawSource.maxPoints) || 0));
       return [{
@@ -591,6 +661,7 @@ function normalizeInvestigations(entries) {
         checks: normalizeInvestigationHtml(rawSource.checks),
         maxPoints: maximum,
         points: Math.clamp(Math.trunc(Number(rawSource.points) || 0), 0, maximum),
+        visible: rawSource.visible === true,
       }];
     });
     const revelations = normalizeArray(rawInvestigation.revelations).flatMap((rawRevelation) => {
@@ -620,12 +691,12 @@ function normalizeInvestigations(entries) {
 function syncInvestigationResearchPoints(data, resetTopicNames = []) {
   const totals = new Map();
   for (const investigation of normalizeArray(data.investigations)) {
-    const key = investigationNameKey(investigation.topicName);
+    const key = investigationTopicKey(investigation.topicName);
     if (!key) continue;
     const points = normalizeArray(investigation.sources).reduce((total, source) => total + Math.max(0, Number(source.points) || 0), 0);
     totals.set(key, (totals.get(key) ?? 0) + points);
   }
-  const resetKeys = new Set(normalizeArray(resetTopicNames).map(investigationNameKey).filter(Boolean));
+  const resetKeys = new Set(normalizeArray(resetTopicNames).map((name) => investigationTopicKey(name)).filter(Boolean));
   for (const topic of normalizeArray(data.research)) {
     const key = investigationNameKey(topic.name);
     if (totals.has(key)) topic.points = totals.get(key);
@@ -633,14 +704,97 @@ function syncInvestigationResearchPoints(data, resetTopicNames = []) {
   }
 }
 
+function investigationSourcePoints(investigation, visibleOnly = false) {
+  return normalizeArray(investigation?.sources).reduce((total, source) => {
+    if (visibleOnly && source.visible !== true) return total;
+    return total + Math.max(0, Number(source.points) || 0);
+  }, 0);
+}
+
+function investigationSourceMaximum(investigation, visibleOnly = false) {
+  return normalizeArray(investigation?.sources).reduce((total, source) => {
+    if (visibleOnly && source.visible !== true) return total;
+    return total + Math.max(0, Number(source.maxPoints) || 0);
+  }, 0);
+}
+
+function normalizeFamilyPortrait(rawPortrait) {
+  const portrait = rawPortrait && typeof rawPortrait === "object" ? rawPortrait : {};
+  return {
+    actorUuid: normalizeText(portrait.actorUuid, 500),
+    name: normalizeText(portrait.name, 160),
+    img: normalizeText(portrait.img, 1000),
+    notes: normalizeText(portrait.notes, 4000),
+  };
+}
+
+function familyPortraitHasData(portrait) {
+  return Boolean(portrait.actorUuid || portrait.name || portrait.img || portrait.notes);
+}
+
+function customFamilyHeirSlotIndex(slot, fallbackIndex = 0) {
+  const match = String(slot?.id ?? "").match(/^custom-heir-(\d+)$/);
+  return match ? Math.max(0, Number(match[1]) - 1) : fallbackIndex;
+}
+
+function customFamilyHeirRowCount(slots) {
+  const storedHeirs = normalizeArray(slots);
+  const highestSlotIndex = storedHeirs.reduce((highest, slot, index) => (
+    Math.max(highest, customFamilyHeirSlotIndex(slot, index))
+  ), -1);
+  return Math.max(1, Math.ceil((highestSlotIndex + 1) / FAMILY_TREE_HEIRS_PER_ROW));
+}
+
+function familySlotHasPortraitData(slot) {
+  return normalizeArray(slot?.portraits).some((portrait) => familyPortraitHasData(normalizeFamilyPortrait(portrait)))
+    || familyPortraitHasData(normalizeFamilyPortrait(slot));
+}
+
+function migrateFamilyTreeHeirs(rawTree) {
+  const tree = rawTree && typeof rawTree === "object" ? rawTree : {};
+  const storedHeirs = normalizeArray(tree.customHeirs);
+  let highestAssignedIndex = -1;
+  for (const [index, slot] of storedHeirs.entries()) {
+    if (familySlotHasPortraitData(slot)) highestAssignedIndex = Math.max(highestAssignedIndex, customFamilyHeirSlotIndex(slot, index));
+  }
+  const retainedCount = Math.max(
+    FAMILY_TREE_HEIRS_PER_ROW,
+    Math.ceil((highestAssignedIndex + 1) / FAMILY_TREE_HEIRS_PER_ROW) * FAMILY_TREE_HEIRS_PER_ROW,
+  );
+  return {
+    ...tree,
+    customHeirs: storedHeirs.filter((slot, index) => (
+      customFamilyHeirSlotIndex(slot, index) < retainedCount || familySlotHasPortraitData(slot)
+    )),
+  };
+}
+
+function migrateFamilyTreePortraits(rawTree) {
+  const tree = rawTree && typeof rawTree === "object" ? rawTree : {};
+  const migrateSlot = (rawSlot) => {
+    const slot = rawSlot && typeof rawSlot === "object" ? rawSlot : {};
+    if (normalizeArray(slot.portraits).length || !familyPortraitHasData(normalizeFamilyPortrait(slot))) return slot;
+    return { ...slot, portraits: [normalizeFamilyPortrait(slot)] };
+  };
+  return {
+    ...tree,
+    crest: migrateSlot(tree.crest),
+    slots: normalizeArray(tree.slots).map(migrateSlot),
+    customHeirs: normalizeArray(tree.customHeirs).map(migrateSlot),
+  };
+}
+
 function normalizeFamilySlot(rawSlot, definition) {
   const slot = rawSlot && typeof rawSlot === "object" ? rawSlot : {};
+  const storedPortraits = normalizeArray(slot.portraits)
+    .map(normalizeFamilyPortrait)
+    .filter(familyPortraitHasData);
+  const portraits = storedPortraits.length
+    ? storedPortraits
+    : [normalizeFamilyPortrait(slot)].filter(familyPortraitHasData);
   return {
     id: definition.id,
-    actorUuid: normalizeText(slot.actorUuid, 500),
-    name: normalizeText(slot.name, 160),
-    img: normalizeText(slot.img, 1000),
-    notes: normalizeText(slot.notes, 4000),
+    portraits,
   };
 }
 
@@ -648,13 +802,14 @@ function normalizeFamilyTree(rawTree) {
   const tree = rawTree && typeof rawTree === "object" ? rawTree : {};
   const storedSlots = normalizeArray(tree.slots);
   const storedHeirs = normalizeArray(tree.customHeirs);
+  const heirDefinitions = customFamilyHeirDefinitions(customFamilyHeirRowCount(storedHeirs));
   return {
     crest: normalizeFamilySlot(tree.crest, { id: "crest" }),
     slots: FAMILY_TREE_SLOTS.map((definition) => normalizeFamilySlot(
       storedSlots.find((slot) => slot?.id === definition.id),
       definition,
     )),
-    customHeirs: FAMILY_TREE_HEIRS.map((definition) => normalizeFamilySlot(
+    customHeirs: heirDefinitions.map((definition) => normalizeFamilySlot(
       storedHeirs.find((slot) => slot?.id === definition.id),
       definition,
     )),
@@ -682,7 +837,32 @@ function normalizeData(raw) {
     recursive: true,
     overwrite: true,
   });
-  data.version = 21;
+  if (storedVersion < 22) data.familyTree = migrateFamilyTreePortraits(data.familyTree);
+  if (storedVersion < 25) data.familyTree = migrateFamilyTreeHeirs(data.familyTree);
+  if (storedVersion < 23) {
+    data.investigations = normalizeArray(data.investigations).map((investigation) => ({
+      ...investigation,
+      sources: normalizeArray(investigation?.sources).map((source) => ({
+        ...source,
+        visible: source?.visible === true,
+      })),
+    }));
+  }
+  if (storedVersion < 24) {
+    data.servantPhantoms = normalizeArray(raw?.servantPhantoms).map((servant) => (
+      servant?.id === "brewers" && servant.rank === undefined
+        ? { ...servant, rank: servant.active === true ? 1 : 0 }
+        : servant
+    ));
+  }
+  if (storedVersion < 26) {
+    data.servantPhantoms = normalizeArray(data.servantPhantoms).map((servant) => (
+      servant?.id === "cooks" && servant.active === true && Number(servant.rank) < 1
+        ? { ...servant, rank: 1 }
+        : servant
+    ));
+  }
+  data.version = 26;
   data.inventory = stackInventoryEntries(data.inventory);
   if (storedVersion < 19) data.investigations = [];
   if (storedVersion < 20) data.mementos = normalizeArray(data.mementos).map((memento) => ({ regionUuids: "", ...memento }));
@@ -775,9 +955,14 @@ function normalizeData(raw) {
     const recipeIds = (SERVANT_RECIPES[definition.id] ?? []).map((recipe) => recipe.id);
     const storedOrder = [...new Set(normalizeArray(stored.recipeOrder).map(String))];
     const recipeOrder = [...storedOrder.filter((id) => recipeIds.includes(id)), ...recipeIds.filter((id) => !storedOrder.includes(id))];
+    const hasStoredRank = stored.rank !== undefined && stored.rank !== null && stored.rank !== "";
+    const rank = isRankedServant(definition.id)
+      ? Math.clamp(Math.trunc(Number(hasStoredRank ? stored.rank : (stored.active === true ? 1 : 0)) || 0), 0, SERVANT_MAX_RANK)
+      : 0;
     return {
       id: definition.id,
-      active: stored.active === true,
+      active: isRankedServant(definition.id) ? rank > 0 : stored.active === true,
+      rank,
       lastGrantedDay: stored.lastGrantedDay !== null && stored.lastGrantedDay !== undefined && Number.isInteger(Number(stored.lastGrantedDay)) ? Number(stored.lastGrantedDay) : null,
       recipeOrder,
       usedRecipeIds: [...new Set(normalizeArray(stored.usedRecipeIds).map(String).filter((id) => recipeIds.includes(id)))],
@@ -1273,6 +1458,12 @@ function researchPoints(data, topicIndex) {
   return Number.isFinite(points) ? points : -1;
 }
 
+function researchFamilyBonusExcluded(topicName, topicIndex = -1) {
+  const topicKey = investigationNameKey(investigationHeadingParts(topicName).topicName);
+  return RESEARCH_FAMILY_EXCLUDED_TOPIC_INDICES.includes(topicIndex)
+    || RESEARCH_FAMILY_EXCLUDED_TOPIC_KEYS.includes(topicKey);
+}
+
 function researchSearchEffect() {
   return {
     name: "Поиск дверей и тайников",
@@ -1288,6 +1479,23 @@ function researchSearchEffect() {
       predicate: [{ not: "check:statistic:initiative" }],
     }],
     img: "icons/magic/perception/eye-ringed-glow-angry-small-teal.webp",
+  };
+}
+
+function researchFamilyEffect() {
+  return {
+    name: "Семья Арудора",
+    description: "ПИ теперь понимают эти причуды и получают бонус обстоятельства +2 ко всем проверкам, совершаемым для проведения изысканий по отдельным Арудорам.",
+    rules: [{
+      key: "FlatModifier",
+      label: "Семья Арудора",
+      selector: "skill-check",
+      slug: "bastardhall-audora-research",
+      type: "circumstance",
+      value: 2,
+      predicate: ["action:research", RESEARCH_TAB_ROLL_OPTION, { not: RESEARCH_EXCLUDED_ROLL_OPTION }],
+    }],
+    img: "icons/sundries/books/book-open-brown-black.webp",
   };
 }
 
@@ -1424,8 +1632,10 @@ function mementoRules(memento, key) {
 
 async function reconcileActorEffects(data, nightActive, stormActive, campaignEnabled = true) {
   const hp = totalBonusHp(data);
+  const familyResearchPoints = researchPoints(data, 0);
   const searchResearchPoints = researchPoints(data, 1);
   const curseResearchPoints = researchPoints(data, 10);
+  const familyResearch = researchFamilyEffect();
   const searchResearch = researchSearchEffect();
   const curseSaveResearch = researchCurseSaveEffect(curseResearchPoints);
   const pcNightActive = pcNightPenaltyActive(data, nightActive);
@@ -1461,6 +1671,13 @@ async function reconcileActorEffects(data, nightActive, stormActive, campaignEna
       "icons/magic/air/weather-clouds-rain.webp",
     ));
 
+    await syncEffect(actor, "research-family-audora", campaignEnabled && playerCharacter && familyResearchPoints >= 8, () => effectSource(
+      "research-family-audora",
+      `Бастардхолл: ${familyResearch.name}`,
+      familyResearch.description,
+      familyResearch.rules,
+      familyResearch.img,
+    ));
     await syncEffect(actor, "research-search", campaignEnabled && playerCharacter && searchResearchPoints >= 11, () => effectSource(
       "research-search",
       `Бастардхолл: ${searchResearch.name}`,
@@ -1583,163 +1800,192 @@ async function restoreNightTexturePresets(data = getData()) {
   }
 }
 
-async function disableMementoWalls(memento) {
-  for (const ref of splitRefs(memento.wallUuids)) {
-    try {
-      const wall = await fromUuid(ref);
-      if (wall?.documentName !== "Wall") continue;
-      const stored = wall.getFlag(MODULE_ID, "wallTexture") ?? {};
-      if (stored.enabled === false) continue;
-      
-      const originalRestrictions = {
-        light: wall.light,
-        move: wall.move,
-        sight: wall.sight,
-        sound: wall.sound,
-      };
+function wallRestrictionValue(type) {
+  return globalThis.CONST?.WALL_SENSE_TYPES?.[type]
+    ?? globalThis.CONST?.WALL_RESTRICTION_TYPES?.[type]
+    ?? (type === "NONE" ? 0 : 1);
+}
 
-      await wall.update({
-        light: 0,
-        move: 0,
-        sight: 0,
-        sound: 0,
-        [`flags.${MODULE_ID}.wallTexture`]: {
-          ...stored,
-          enabled: false,
-          originalRestrictions,
-        },
-      });
-    } catch (error) {
-      console.warn(`${MODULE_ID} | Failed to disable Bastardhall border ${ref}`, error);
-    }
+function accessWallTexture(wall, open, borderEnabled = !open) {
+  const current = wall.getFlag?.(MODULE_ID, "wallTexture") ?? {};
+  const next = {
+    ...current,
+    enabled: borderEnabled,
+    mode: "border",
+    style: "border-green-fog",
+  };
+  if (current.originalRestrictions !== undefined) next["-=originalRestrictions"] = null;
+  return next;
+}
+
+function accessWallStateUpdates(wall, open, borderEnabled = !open) {
+  const none = wallRestrictionValue("NONE");
+  const normal = wallRestrictionValue("NORMAL");
+  const desiredRestriction = open ? none : normal;
+  const updates = {};
+  for (const property of ["light", "move", "sight", "sound"]) {
+    if (Number(wall[property]) !== Number(desiredRestriction)) updates[property] = desiredRestriction;
+  }
+
+  const current = wall.getFlag?.(MODULE_ID, "wallTexture") ?? null;
+  const desiredEnabled = borderEnabled;
+  const textureChanged = !current
+    || accessFlagEnabled(current.enabled) !== desiredEnabled
+    || current.mode !== "border"
+    || current.style !== "border-green-fog"
+    || current.originalRestrictions !== undefined;
+  if (textureChanged) updates[`flags.${MODULE_ID}.wallTexture`] = accessWallTexture(wall, open, borderEnabled);
+  return updates;
+}
+
+async function applyAccessWallState(wall, open, borderEnabled = !open) {
+  if (accessDocumentName(wall) !== "Wall" || managedAccessUpdates.has(wall)) return;
+  const updates = accessWallStateUpdates(wall, open, borderEnabled);
+  if (!Object.keys(updates).length) return;
+
+  managedAccessUpdates.add(wall);
+  try {
+    await wall.update(updates);
+  } finally {
+    managedAccessUpdates.delete(wall);
   }
 }
 
-async function reconcileMementoRegionBehaviors(memento, collected) {
-  for (const ref of splitRefs(memento.regionUuids)) {
-    try {
-      const region = await fromUuid(ref);
-      if (accessDocumentName(region) !== "Region") continue;
-      const access = region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
-      if (!accessFlagEnabled(access?.enabled) || access.stage !== memento.id) continue;
-      const originalDisabled = accessOriginalDisabled(access) ?? {};
-      for (const behavior of region.behaviors?.contents ?? []) {
-        if (collected) await behavior.update({ disabled: false });
-        else {
-          const disabled = originalDisabled[behavior.uuid];
-          if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
-        }
-      }
-      if (collected) {
-        if (region.color !== "#16a298") await region.update({ color: "#16a298" });
-      } else if (access.originalColor !== undefined && region.color !== access.originalColor) {
-        await region.update({ color: access.originalColor });
-      }
-    } catch (error) {
-      console.warn(`${MODULE_ID} | Failed to reconcile Bastardhall region behavior ${ref}`, error);
-    }
+function accessWallLooksOpen(wall) {
+  const texture = wall?.getFlag?.(MODULE_ID, "wallTexture");
+  if (!texture || texture.mode !== "border" || texture.style !== "border-green-fog") return false;
+  return ["light", "move", "sight", "sound"].every((property) => (
+    Number(wall[property]) === Number(wallRestrictionValue("NONE"))
+  ));
+}
+
+function accessRegionFlagUpdate(region) {
+  const current = region?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
+  if (!current || typeof current !== "object") return null;
+  if (current.originalDisabled === undefined && current.originalColor === undefined) return null;
+  return {
+    ...current,
+    "-=originalDisabled": null,
+    "-=originalColor": null,
+  };
+}
+
+async function applyAccessRegionState(region) {
+  if (accessDocumentName(region) !== "Region" || managedAccessUpdates.has(region)) return;
+  const updates = {};
+  if (region.color !== ACCESS_REGION_COLOR) updates.color = ACCESS_REGION_COLOR;
+  const access = accessRegionFlagUpdate(region);
+  if (access) updates[`flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}`] = access;
+  const behaviors = [...(region.behaviors?.contents ?? [])].filter((behavior) => behavior.disabled !== true);
+  if (!Object.keys(updates).length && !behaviors.length) return;
+
+  managedAccessUpdates.add(region);
+  try {
+    for (const behavior of behaviors) await behavior.update({ disabled: true });
+    if (Object.keys(updates).length) await region.update(updates);
+  } finally {
+    managedAccessUpdates.delete(region);
   }
 }
 
 async function restoreMementoRegionBehaviors(data) {
-  for (const memento of accessBlockEntries(data)) {
-    for (const ref of splitRefs(memento.regionUuids)) {
-      try {
-        const region = await fromUuid(ref);
-        const access = region?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
-        const originalDisabled = accessOriginalDisabled(access) ?? {};
-        for (const behavior of region?.behaviors?.contents ?? []) {
-          const disabled = originalDisabled[behavior.uuid];
-          if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
-        }
-        if (access?.originalColor !== undefined && region.color !== access.originalColor) {
-          await region.update({ color: access.originalColor });
-        }
-      } catch (error) {
-        console.warn(`${MODULE_ID} | Failed to restore Bastardhall region behavior ${ref}`, error);
-      }
+  for (const region of await managedAccessDocuments(data, "Region")) {
+    try {
+      await applyAccessRegionState(region);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Failed to reset Bastardhall region ${region.uuid}`, error);
     }
   }
 }
 
-async function restoreAccessRegion(region) {
-  if (accessBlockStage(region)) return;
-  const access = region?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
-  const originalDisabled = accessOriginalDisabled(access) ?? {};
-  for (const behavior of region?.behaviors?.contents ?? []) {
-    const disabled = originalDisabled[behavior.uuid];
-    if (disabled !== undefined && behavior.disabled !== disabled) await behavior.update({ disabled });
+async function reconcileAccessBlocks(data, enabled) {
+  const wallStates = new Map();
+  const regionStates = new Map();
+  const currentStates = new Map();
+  for (const entry of accessBlockEntries(data)) {
+    const open = enabled && accessBlockIsOpen(data, entry);
+    const previous = lastAccessBlockStates.get(entry.id);
+    const changed = previous !== undefined && previous !== open;
+    currentStates.set(entry.id, open);
+    for (const ref of splitRefs(entry.wallUuids)) wallStates.set(ref, { open, changed });
+    for (const ref of splitRefs(entry.regionUuids)) regionStates.set(ref, { open, changed });
   }
-  if (access?.originalColor !== undefined && region.color !== access.originalColor) {
-    await region.update({ color: access.originalColor });
+
+  for (const wall of await managedAccessDocuments(data, "Wall")) {
+    try {
+      const state = wallStates.get(wall.uuid);
+      if (state?.open) await applyAccessWallState(wall, true);
+      else if (state && (state.changed || accessWallLooksOpen(wall))) await applyAccessWallState(wall, false);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Failed to reconcile Bastardhall wall ${wall.uuid}`, error);
+    }
   }
+  for (const region of await managedAccessDocuments(data, "Region")) {
+    try {
+      if (regionStates.get(region.uuid)?.open) await applyAccessRegionState(region);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Failed to reconcile Bastardhall region ${region.uuid}`, error);
+    }
+  }
+  lastAccessBlockStates = currentStates;
 }
 
 async function restoreMementoWalls(data) {
-  for (const memento of accessBlockEntries(data)) {
-    for (const ref of splitRefs(memento.wallUuids)) {
-      try {
-        const wall = await fromUuid(ref);
-        if (wall?.documentName !== "Wall") continue;
-        const stored = wall.getFlag(MODULE_ID, "wallTexture");
-        if (stored?.enabled !== false) continue;
-
-        const restrictions = stored.originalRestrictions ?? {};
-        const updates = {
-          [`flags.${MODULE_ID}.wallTexture`]: {
-            ...stored,
-            enabled: true,
-            "-=originalRestrictions": null,
-          }
-        };
-
-        if (restrictions.light !== undefined) updates.light = restrictions.light;
-        if (restrictions.move !== undefined) updates.move = restrictions.move;
-        if (restrictions.sight !== undefined) updates.sight = restrictions.sight;
-        if (restrictions.sound !== undefined) updates.sound = restrictions.sound;
-
-        await wall.update(updates);
-      } catch (error) {
-        console.warn(`${MODULE_ID} | Failed to restore Bastardhall border ${ref}`, error);
-      }
+  for (const wall of await managedAccessDocuments(data, "Wall")) {
+    try {
+      await applyAccessWallState(wall, false);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Failed to restore Bastardhall border ${wall.uuid}`, error);
     }
   }
 }
 
 async function resetBastardhallData() {
   if (!game.user?.isGM) return;
-  const previous = getData();
-  await restoreMementoWalls(previous);
-  await restoreMementoRegionBehaviors(previous);
-  await restoreNightTexturePresets(previous);
-  for (const actor of game.actors?.contents ?? []) {
-    if (actor.getFlag?.(MODULE_ID, "phantomDaily")) await actor.unsetFlag(MODULE_ID, "phantomDaily");
-    const dailyEffects = [
-      ...managedEffects(actor, "ausken-blessing"),
-      ...managedEffects(actor, "shelyn-grace"),
-    ];
-    if (dailyEffects.length) await actor.deleteEmbeddedDocuments("Item", [...new Set(dailyEffects.map((item) => item.id))]);
-  }
-  const resetData = createDefaultData();
-  resetData.inventory = [];
-  resetData.sideQuests = [];
-  resetData.investigations = [];
-  await game.settings.set(MODULE_ID, DATA_SETTING, resetData);
-  await rebuildAccessBlockLinks();
+  while (activeReconcile) await activeReconcile;
+  resetInProgress = true;
+  try {
+    const previous = getData();
+    await restoreMementoWalls(previous);
+    await restoreMementoRegionBehaviors(previous);
+    await restoreNightTexturePresets(previous);
+    for (const actor of game.actors?.contents ?? []) {
+      if (actor.getFlag?.(MODULE_ID, "phantomDaily")) await actor.unsetFlag(MODULE_ID, "phantomDaily");
+      const dailyEffects = [
+        ...managedEffects(actor, "ausken-blessing"),
+        ...managedEffects(actor, "shelyn-grace"),
+      ];
+      if (dailyEffects.length) await actor.deleteEmbeddedDocuments("Item", [...new Set(dailyEffects.map((item) => item.id))]);
+    }
+    const resetData = createDefaultData();
+    resetData.inventory = [];
+    resetData.sideQuests = [];
+    resetData.investigations = [];
+    await game.settings.set(MODULE_ID, DATA_SETTING, resetData);
+    await rebuildAccessBlockLinks();
 
-  // Foundry can retain an indexed array when replacing an Object setting in some
-  // versions. Verify the persisted value and explicitly remove inventory keys.
-  const persisted = clone(game.settings.get(MODULE_ID, DATA_SETTING) ?? {});
-  if (normalizeArray(persisted.inventory).length) {
-    persisted.inventory = [];
-    await game.settings.set(MODULE_ID, DATA_SETTING, persisted);
-  }
+    // Foundry can retain an indexed array when replacing an Object setting in some
+    // versions. Verify the persisted value and explicitly remove inventory keys.
+    const persisted = clone(game.settings.get(MODULE_ID, DATA_SETTING) ?? {});
+    if (normalizeArray(persisted.inventory).length) {
+      persisted.inventory = [];
+      await game.settings.set(MODULE_ID, DATA_SETTING, persisted);
+    }
 
-  const normalized = getData();
-  const remaining = normalized.inventory.length;
-  if (remaining) throw new Error(`Не удалось очистить инвентарь: осталось предметов — ${remaining}.`);
-  if (normalized.sideQuests.length) throw new Error("Не удалось очистить список сайд-квестов.");
-  if (normalized.investigations.length) throw new Error("Не удалось очистить список изысканий.");
+    const normalized = getData();
+    const remaining = normalized.inventory.length;
+    if (remaining) throw new Error(`Не удалось очистить инвентарь: осталось предметов — ${remaining}.`);
+    if (normalized.sideQuests.length) throw new Error("Не удалось очистить список сайд-квестов.");
+    if (normalized.investigations.length) throw new Error("Не удалось очистить список изысканий.");
+  } finally {
+    resetInProgress = false;
+    pendingReconcile = null;
+    lastAccessBlockStates = new Map();
+    lastActorSignature = null;
+    lastSceneSignature = null;
+    lastMementoSignature = null;
+    await queueReconcile({ forceActors: true, forceScenes: true, forceMementos: true, restoreNightPresets: true });
+  }
 }
 
 function actorReconcileSignature(data, nightActive, stormActive, enabled) {
@@ -1796,6 +2042,8 @@ let lastActorSignature = null;
 let lastSceneSignature = null;
 let lastMementoSignature = null;
 let lastObservedNightActive = null;
+let resetInProgress = false;
+let lastAccessBlockStates = new Map();
 
 async function runReconcile(request) {
   const data = getData();
@@ -1829,13 +2077,7 @@ async function runReconcile(request) {
 
   const mementoSignature = mementoReconcileSignature(data, enabled);
   if (request.forceMementos || mementoSignature !== lastMementoSignature) {
-      if (enabled) {
-        for (const memento of accessBlockEntries(data)) {
-          const open = accessBlockIsOpen(data, memento);
-          if (open) await disableMementoWalls(memento);
-          await reconcileMementoRegionBehaviors(memento, open);
-        }
-    }
+    await reconcileAccessBlocks(data, enabled);
     lastMementoSignature = mementoSignature;
   }
 }
@@ -1848,6 +2090,7 @@ function queueReconcile({ forceActors = false, forceScenes = false, forceMemento
   pendingReconcile.forceMementos ||= forceMementos;
   pendingReconcile.observeNightTransition ||= observeNightTransition;
   pendingReconcile.restoreNightPresets ||= restoreNightPresets;
+  if (resetInProgress) return activeReconcile;
   if (activeReconcile) return activeReconcile;
 
   activeReconcile = (async () => {
@@ -1860,7 +2103,7 @@ function queueReconcile({ forceActors = false, forceScenes = false, forceMemento
     .catch((error) => console.error(`${MODULE_ID} | Bastardhall automation failed`, error))
     .finally(() => {
       activeReconcile = null;
-      if (pendingReconcile) queueReconcile();
+      if (pendingReconcile && !resetInProgress) queueReconcile();
     });
   return activeReconcile;
 }
@@ -1905,16 +2148,30 @@ function actorFamilyNotes(actor) {
   return candidates.map(plainTextFromHtml).find(Boolean) ?? "";
 }
 
-function familySlotView(slot, definition) {
-  const actor = resolveActor(slot.actorUuid);
-  const assigned = Boolean(slot.actorUuid);
+function familyPortraitKey(section, id) {
+  return `${section}:${id}`;
+}
+
+function familySlotView(slot, definition, activeIndex = 0) {
+  const portraits = normalizeArray(slot?.portraits);
+  const portraitIndex = portraits.length
+    ? Math.max(0, Math.min(portraits.length - 1, Math.trunc(Number(activeIndex) || 0)))
+    : 0;
+  const portrait = portraits[portraitIndex] ?? null;
+  const actor = resolveActor(portrait?.actorUuid);
+  const assigned = Boolean(portrait);
   return {
     ...definition,
     ...slot,
     assigned,
-    name: actor?.name ?? slot.name,
-    img: actor?.img ?? slot.img,
-    notes: actor ? actorFamilyNotes(actor) : slot.notes,
+    actorUuid: portrait?.actorUuid ?? "",
+    name: actor?.name ?? portrait?.name ?? "",
+    img: actor?.img ?? portrait?.img ?? "",
+    notes: actor ? actorFamilyNotes(actor) : (portrait?.notes ?? ""),
+    portraitIndex,
+    portraitCount: portraits.length,
+    hasPreviousPortrait: portraitIndex > 0,
+    hasNextPortrait: portraitIndex < portraits.length - 1,
     xPercent: Number(definition.x ?? 500) / 10,
   };
 }
@@ -1926,10 +2183,25 @@ function storedFamilySlot(data, section, id) {
 }
 
 function assignFamilyActor(slot, actor) {
-  slot.actorUuid = actor.uuid;
-  slot.name = normalizeText(actor.name, 160);
-  slot.img = normalizeText(actor.img, 1000);
-  slot.notes = actorFamilyNotes(actor);
+  const portraits = normalizeArray(slot.portraits);
+  portraits.push({
+    actorUuid: normalizeText(actor.uuid, 500),
+    name: normalizeText(actor.name, 160),
+    img: normalizeText(actor.img, 1000),
+    notes: actorFamilyNotes(actor),
+  });
+  slot.portraits = portraits;
+  return portraits.length - 1;
+}
+
+function openFamilyPortrait(image, title) {
+  if (!image) return;
+  const ImagePopoutClass = globalThis.ImagePopout ?? globalThis.foundry?.applications?.apps?.ImagePopout;
+  if (typeof ImagePopoutClass === "function") {
+    new ImagePopoutClass(image, { title }).render(true);
+    return;
+  }
+  globalThis.open?.(image, "_blank", "noopener");
 }
 
 async function choosePhantom(data, heart) {
@@ -2112,9 +2384,15 @@ function servantState(data, id) {
   return data.servantPhantoms.find((entry) => entry.id === id) ?? null;
 }
 
+function availableServantRecipes(servant) {
+  const rank = isRankedServant(servant?.id) ? Math.clamp(Number(servant.rank) || 0, 0, SERVANT_MAX_RANK) : Infinity;
+  return (SERVANT_RECIPES[servant?.id] ?? []).filter((recipe) => rank >= (Number(recipe.minRank) || 0));
+}
+
 function remainingServantRecipes(servant) {
   const used = new Set(servant?.usedRecipeIds ?? []);
-  return normalizeArray(servant?.recipeOrder).filter((id) => !used.has(id));
+  const available = new Set(availableServantRecipes(servant).map((recipe) => recipe.id));
+  return normalizeArray(servant?.recipeOrder).filter((id) => available.has(id) && !used.has(id));
 }
 
 function actorAllowedForUser(actor, user) {
@@ -2124,6 +2402,26 @@ function actorAllowedForUser(actor, user) {
 function requestedActor(actorId, user) {
   const actor = game.actors?.get(normalizeText(actorId, 120));
   return actorAllowedForUser(actor, user) ? actor : null;
+}
+
+function requestedActors(actorIds, user, max = 1) {
+  const values = Array.isArray(actorIds) || (actorIds && typeof actorIds === "object")
+    ? normalizeArray(actorIds)
+    : actorIds ? [actorIds] : [];
+  return [...new Set(values.map((actorId) => requestedActor(actorId, user)).filter(Boolean))].slice(0, max);
+}
+
+function splitEvenly(values, count) {
+  const groups = Array.from({ length: count }, () => []);
+  values.forEach((value, index) => groups[index % count].push(value));
+  return groups;
+}
+
+function splitQuantity(quantity, count) {
+  const total = Math.max(0, Math.trunc(Number(quantity) || 0));
+  const base = Math.floor(total / count);
+  const remainder = total % count;
+  return Array.from({ length: count }, (_value, index) => base + (index < remainder ? 1 : 0));
 }
 
 function emitDailyResult(recipientId, message, level = "info") {
@@ -2156,8 +2454,8 @@ async function grantDailyCooking(request = {}, userId = game.user?.id) {
 
   const aron = data.phantoms.find((entry) => entry.id === "aron");
   const aronRank = aron?.found ? Number(aron.rank) || 0 : -1;
-  const aronActor = requestedActor(request.targets?.aron, user);
-  if (aronRank >= 1 && aronActor) {
+  const aronActors = requestedActors(request.targets?.aron, user, 2);
+  if (aronRank >= 1 && aronActors.length) {
     try {
       const max = aronRank >= 3 ? 3 : 2;
       const usedByGroup = playerCharacters().reduce((used, character) => used + dailyUses(character, "aronDrinks"), 0);
@@ -2167,11 +2465,15 @@ async function grantDailyCooking(request = {}, userId = game.user?.id) {
       if (!remaining) results.push("Напитки Арона сегодня уже выданы.");
       else if (!uuids.length) results.push("Для Арона не выбраны напитки.");
       else {
-        const count = await giveItems(aronActor, uuids, { infused: true });
-        if (count) {
-          await addDailyUses(aronActor, "aronDrinks", count);
-          results.push(`${aronActor.name} получает напитки Арона ×${count}.`);
+        const grants = [];
+        const itemGroups = splitEvenly(uuids, aronActors.length);
+        for (const [index, actor] of aronActors.entries()) {
+          const count = await giveItems(actor, itemGroups[index], { infused: true });
+          if (!count) continue;
+          await addDailyUses(actor, "aronDrinks", count);
+          grants.push(`${actor.name} ×${count}`);
         }
+        if (grants.length) results.push(`Напитки Арона получают: ${grants.join(", ")}.`);
       }
     } catch (error) {
       errors.push(`Арон: ${error.message}`);
@@ -2180,8 +2482,8 @@ async function grantDailyCooking(request = {}, userId = game.user?.id) {
 
   for (const definition of SERVANT_PHANTOMS) {
     const servant = servantState(data, definition.id);
-    const actor = requestedActor(request.targets?.[definition.id], user);
-    if (!servant?.active || !actor) continue;
+    const actors = requestedActors(request.targets?.[definition.id], user, definition.id === "bakers" ? 2 : 1);
+    if (!servant?.active || !actors.length) continue;
     if (servant.lastGrantedDay === today) {
       results.push(`${definition.name} сегодня уже выдали свою готовку.`);
       continue;
@@ -2193,10 +2495,17 @@ async function grantDailyCooking(request = {}, userId = game.user?.id) {
           id: moderate ? "poets-fritter-moderate" : "poets-fritter-lesser",
           slug: moderate ? "poets-fritter-moderate" : "poets-fritter-lesser",
         };
-        await givePreparedItem(actor, recipe, 2, { infused: true });
+        const grants = [];
+        const quantities = splitQuantity(2, actors.length);
+        for (const [index, actor] of actors.entries()) {
+          const quantity = quantities[index];
+          if (!quantity) continue;
+          await givePreparedItem(actor, recipe, quantity, { infused: true });
+          grants.push(`${actor.name} ×${quantity}`);
+        }
         servant.lastGrantedDay = today;
         changed = true;
-        results.push(`${actor.name} получает Пончик поэта ${moderate ? "[Средний]" : "[Малый]"} ×2 (насыщенные).`);
+        results.push(`Пончик поэта ${moderate ? "[Средний]" : "[Малый]"} ${actors.length === 1 ? "получает" : "получают"}: ${grants.join(", ")} (насыщенные).`);
         continue;
       }
 
@@ -2207,11 +2516,11 @@ async function grantDailyCooking(request = {}, userId = game.user?.id) {
         continue;
       }
       const quantity = await rollServantQuantity(definition.name);
-      await givePreparedItem(actor, recipe, quantity);
+      await givePreparedItem(actors[0], recipe, quantity);
       servant.usedRecipeIds.push(recipe.id);
       servant.lastGrantedDay = today;
       changed = true;
-      results.push(`${actor.name} получает «${recipe.name}» ×${quantity}.`);
+      results.push(`${actors[0].name} получает «${recipe.name}» ×${quantity}.`);
     } catch (error) {
       errors.push(`${definition.name}: ${error.message}`);
     }
@@ -2315,6 +2624,23 @@ async function moveServantRecipe(serviceId, recipeId, direction, userId = game.u
   await saveData(data);
 }
 
+async function stepServantRank(serviceId, direction, userId = game.user?.id) {
+  if (!isPrimaryGM()) return;
+  const user = game.users?.get(userId);
+  if (!user?.isGM) return;
+  const data = getData();
+  const servant = servantState(data, normalizeText(serviceId, 40));
+  if (!servant || !isRankedServant(servant.id) || !servant.active) return;
+  const delta = Math.sign(Number(direction) || 0);
+  if (!delta) return;
+  const current = Math.clamp(Number(servant.rank) || 1, 1, SERVANT_MAX_RANK);
+  const rank = Math.clamp(current + delta, 0, SERVANT_MAX_RANK);
+  if (rank === current) return;
+  servant.rank = rank;
+  servant.active = rank > 0;
+  await saveData(data);
+}
+
 function dailyUses(actor, key) {
   const stored = actor.getFlag?.(MODULE_ID, `phantomDaily.${key}`) ?? {};
   return Number(stored.day) === currentWorldDay() ? Number(stored.used) || 0 : 0;
@@ -2325,8 +2651,8 @@ async function addDailyUses(actor, key, amount) {
 }
 
 async function useAronDrinks(rank) {
-  const actor = (await choosePlayerCharacters("Напитки Арона", 1))[0];
-  if (!actor) return;
+  const actors = await choosePlayerCharacters("Напитки Арона", 2);
+  if (!actors.length) return;
   const max = rank >= 3 ? 3 : 2;
   const usedByGroup = playerCharacters().reduce((used, character) => used + dailyUses(character, "aronDrinks"), 0);
   const remaining = Math.max(0, max - usedByGroup);
@@ -2336,10 +2662,16 @@ async function useAronDrinks(rank) {
   }
   const uuids = await choosePhantomItems("Напитки Арона", await phantomItemOptions("drinks", rank), remaining);
   if (!uuids.length) return;
-  const count = await giveItems(actor, uuids, { infused: true });
-  if (count) {
+  const grants = [];
+  const itemGroups = splitEvenly(uuids, actors.length);
+  for (const [index, actor] of actors.entries()) {
+    const count = await giveItems(actor, itemGroups[index], { infused: true });
+    if (!count) continue;
     await addDailyUses(actor, "aronDrinks", count);
-    ui.notifications?.info?.(`${actor.name} получает напитки Арона: ${count}. Осталось сегодня: ${remaining - count}.`);
+    grants.push(`${actor.name} ×${count}`);
+  }
+  if (grants.length) {
+    ui.notifications?.info?.(`Напитки Арона получают: ${grants.join(", ")}. Осталось сегодня: ${remaining - uuids.length}.`);
   }
 }
 
@@ -2479,6 +2811,41 @@ function getFormRoot(html) {
   return null;
 }
 
+function hasOwnProperty(object, property) {
+  return Object.prototype.hasOwnProperty.call(object, property);
+}
+
+function applyBastardhallViewState(sheet, state = {}) {
+  if (!sheet || !state || typeof state !== "object") return;
+
+  if (hasOwnProperty(state, "view")) {
+    sheet._view = BASTARDHALL_VIEWS.includes(state.view) ? state.view : "main";
+  }
+  if (hasOwnProperty(state, "investigationId")) {
+    sheet._investigationId = normalizeText(state.investigationId, 120) || null;
+  }
+  if (hasOwnProperty(state, "sideQuestId")) {
+    sheet._sideQuestId = normalizeText(state.sideQuestId, 120) || null;
+  }
+}
+
+function getBastardhallViewState(sheet) {
+  return {
+    view: BASTARDHALL_VIEWS.includes(sheet?._view) ? sheet._view : "main",
+    investigationId: normalizeText(sheet?._investigationId, 120) || null,
+    sideQuestId: normalizeText(sheet?._sideQuestId, 120) || null,
+  };
+}
+
+function broadcastBastardhallSheet(sheet) {
+  if (!game.user?.isGM) return;
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-open-sheet",
+    senderId: game.user.id,
+    ...getBastardhallViewState(sheet),
+  });
+}
+
 function normalizeUuidLinkSyntax(value) {
   return String(value ?? "").replace(/@UUID\[([^\]]+)\]\{\\\s*/g, "@UUID[$1]{");
 }
@@ -2492,6 +2859,21 @@ async function enrichInvestigationLinks(root) {
     const enriched = await TextEditor.enrichHTML(content, { async: true });
     if (element.isConnected) element.innerHTML = enriched;
   }));
+
+  // Inline checks carry no investigation topic, so mark their tab context before PF2e rolls them.
+  for (const checks of root?.querySelectorAll?.(".bh-investigation-checks") ?? []) {
+    const excluded = checks.closest(".bh-investigation-detail")?.classList.contains("is-research-bonus-excluded") === true;
+    for (const check of checks.querySelectorAll("a.inline-check")) {
+      const options = String(check.dataset.pf2RollOptions ?? "")
+        .split(",")
+        .map((option) => option.trim())
+        .filter(Boolean);
+      if (!options.includes("action:research")) options.push("action:research");
+      if (!options.includes(RESEARCH_TAB_ROLL_OPTION)) options.push(RESEARCH_TAB_ROLL_OPTION);
+      if (excluded && !options.includes(RESEARCH_EXCLUDED_ROLL_OPTION)) options.push(RESEARCH_EXCLUDED_ROLL_OPTION);
+      check.dataset.pf2RollOptions = options.join(",");
+    }
+  }
 }
 
 /**
@@ -2559,23 +2941,6 @@ function isBastardhallEnabled() {
 function createAccessBlockFieldset(doc) {
   const fieldset = globalThis.document.createElement("fieldset");
   fieldset.className = "tsu-wall-texture-config tsu-bastardhall-access-block";
-  let originalDisabledInput = null;
-  let originalColorInput = null;
-  if (accessDocumentName(doc) === "Region") {
-    const access = doc.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG) ?? {};
-    const originalDisabled = accessOriginalDisabled(access) ?? Object.fromEntries(
-      (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
-    );
-    originalDisabledInput = globalThis.document.createElement("input");
-    originalDisabledInput.type = "hidden";
-    originalDisabledInput.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.originalDisabled`;
-    originalDisabledInput.value = JSON.stringify(originalDisabled);
-    originalColorInput = globalThis.document.createElement("input");
-    originalColorInput.type = "hidden";
-    originalColorInput.name = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}.originalColor`;
-    originalColorInput.value = String(access.originalColor ?? doc.color ?? "");
-    fieldset.append(originalDisabledInput, originalColorInput);
-  }
   const legend = globalThis.document.createElement("legend");
   legend.textContent = "Блок доступа Бастардхолла";
 
@@ -2599,13 +2964,6 @@ function createAccessBlockFieldset(doc) {
   enabledInput.value = currentEnabled ? "true" : "false";
   enabled.checked = currentEnabled;
   enabled.addEventListener("change", () => {
-    const wasEnabled = enabledInput.value === "true";
-    if (enabled.checked && !wasEnabled && originalDisabledInput && originalColorInput) {
-      originalDisabledInput.value = JSON.stringify(Object.fromEntries(
-        (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
-      ));
-      originalColorInput.value = String(doc.color ?? "");
-    }
     enabledInput.value = enabled.checked ? "true" : "false";
   });
   enabledFields.append(enabledInput, enabled);
@@ -2632,13 +2990,6 @@ function createAccessBlockFieldset(doc) {
     stage.append(element);
   }
   stage.addEventListener("change", () => {
-    const wasEnabled = enabledInput.value === "true";
-    if (stage.value && !wasEnabled && originalDisabledInput && originalColorInput) {
-      originalDisabledInput.value = JSON.stringify(Object.fromEntries(
-        (doc.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
-      ));
-      originalColorInput.value = String(doc.color ?? "");
-    }
     enabled.checked = Boolean(stage.value);
     enabledInput.value = enabled.checked ? "true" : "false";
   });
@@ -2668,7 +3019,9 @@ function injectAccessBlockConfig(app, element) {
     if (submitButton) submitButton.before(accessBlock);
     else form?.append(accessBlock);
   }
-  app.setPosition?.({ height: "auto" });
+  // Foundry can invoke renderWallConfig while the palette/application element
+  // is already being replaced. Calling setPosition then crashes in WallPalette._updatePosition.
+  // The form is scrollable, so do not force a resize from this late injection hook.
 }
 
 function accessDocumentName(document) {
@@ -2682,28 +3035,34 @@ function accessFlagEnabled(value) {
     || (Array.isArray(value) && value.some((entry) => entry === true || entry === "true" || entry === "on"));
 }
 
-function accessOriginalDisabled(access) {
-  if (access?.originalDisabled && typeof access.originalDisabled === "object") return access.originalDisabled;
-  if (typeof access?.originalDisabled !== "string") return null;
-  try {
-    const parsed = JSON.parse(access.originalDisabled);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
 function accessBlockStage(document) {
   const access = document?.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG);
   return accessFlagEnabled(access?.enabled) ? String(access.stage ?? "") : "";
 }
 
 function accessBlockEntries(data) {
-  return [...data.mementos, ...(data.accessBlocks ?? [])];
+  return [...(data?.mementos ?? []), ...(data?.accessBlocks ?? [])];
 }
 
 function accessBlockIsOpen(data, entry) {
   return entry.id === "phantoms" ? allPhantomsFound(data) : data.inventory.some((item) => item.category === "memento" && item.mementoId === entry.id);
+}
+
+async function managedAccessDocuments(data, documentName) {
+  const documents = new Map();
+  const property = documentName === "Wall" ? "wallUuids" : "regionUuids";
+  for (const entry of accessBlockEntries(data)) {
+    for (const ref of splitRefs(entry[property])) {
+      try {
+        const document = await fromUuid(ref);
+        if (accessDocumentName(document) !== documentName || !document?.uuid) continue;
+        documents.set(document.uuid, document);
+      } catch (_error) {
+        // A removed document is cleaned from the data by its delete hook.
+      }
+    }
+  }
+  return [...documents.values()];
 }
 
 async function syncAccessBlockDocument(document) {
@@ -2724,7 +3083,9 @@ async function syncAccessBlockDocument(document) {
       if (memento[property] !== previous) changed = true;
     }
   }
-  if (changed) await saveData(data);
+  if (!changed) return false;
+  await saveData(data);
+  return true;
 }
 
 async function removeAccessBlockDocument(document) {
@@ -2733,7 +3094,7 @@ async function removeAccessBlockDocument(document) {
   let changed = false;
   const documentName = accessDocumentName(document);
   const references = [[documentName === "Wall" ? "wallUuids" : "regionUuids", document.uuid]];
-  for (const memento of data.mementos) {
+  for (const memento of accessBlockEntries(data)) {
     for (const [property, reference] of references) {
       if (!reference) continue;
       const next = splitRefs(memento[property]).filter((ref) => ref !== reference);
@@ -2746,22 +3107,11 @@ async function removeAccessBlockDocument(document) {
   if (changed) await saveData(data);
 }
 
-async function restoreAccessWall(wall) {
-  if (accessBlockStage(wall)) return;
-  const stored = wall?.getFlag?.(MODULE_ID, "wallTexture");
-  if (stored?.enabled !== false) return;
-  const restrictions = stored.originalRestrictions ?? {};
-  const update = {
-    [`flags.${MODULE_ID}.wallTexture`]: {
-      ...stored,
-      enabled: true,
-      "-=originalRestrictions": null,
-    },
-  };
-  for (const property of ["light", "move", "sight", "sound"]) {
-    if (restrictions[property] !== undefined) update[property] = restrictions[property];
-  }
-  await wall.update(update);
+async function handleAccessDocumentChange(document) {
+  if (!isPrimaryGM() || managedAccessUpdates.has(document) || !isBastardhallEnabled()) return;
+  const documentName = accessDocumentName(document);
+  if (!document?.uuid || !["Wall", "Region"].includes(documentName)) return;
+  await syncAccessBlockDocument(document);
 }
 
 async function rebuildAccessBlockLinks() {
@@ -2789,26 +3139,6 @@ async function rebuildAccessBlockLinks() {
     memento.regionUuids = regionUuids;
   }
   if (changed) await saveData(data);
-}
-
-function captureRegionAccessState(region, changed) {
-  if (accessDocumentName(region) !== "Region") return;
-  const path = `flags.${MODULE_ID}.${ACCESS_BLOCK_FLAG}`;
-  const access = foundry.utils.getProperty(changed, path);
-  if (!access || typeof access !== "object") return;
-  const previousEnabled = accessFlagEnabled(region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG)?.enabled);
-  const nextEnabled = accessFlagEnabled(access.enabled);
-  pendingRegionAccessChanges.set(region, { changed: previousEnabled !== nextEnabled, enabled: nextEnabled });
-  if (!nextEnabled) return;
-  const current = region.getFlag?.(MODULE_ID, ACCESS_BLOCK_FLAG) ?? {};
-  if (current.originalDisabled === undefined && access.originalDisabled === undefined) {
-    foundry.utils.setProperty(changed, `${path}.originalDisabled`, Object.fromEntries(
-      (region.behaviors?.contents ?? []).map((behavior) => [behavior.uuid, behavior.disabled === true]),
-    ));
-  }
-  if (current.originalColor === undefined && access.originalColor === undefined) {
-    foundry.utils.setProperty(changed, `${path}.originalColor`, String(region.color ?? ""));
-  }
 }
 
 function randomId() {
@@ -3095,7 +3425,9 @@ async function openJournalSideQuest(quest) {
 
 function investigationHeadingParts(value) {
   const heading = normalizeText(value, 240);
-  const match = heading.match(/^(.*?)\s*\/\s*Изыскани(?:е|я)\s*(\d+)\s*$/iu);
+  // The heading may contain inline badges/modifiers after the research level.
+  // Only the stable "<topic> / Изыскание(я) <level>" prefix belongs to the topic name.
+  const match = heading.match(/^(.*?)\s*\/\s*Изыскани(?:е|я)\s*(\d+)/iu);
   const topicName = normalizeText(match?.[1] ?? heading, 160);
   return {
     heading,
@@ -3138,7 +3470,7 @@ async function parseJournalInvestigationPage(page, reference = {}, existingInves
   const sourceSections = Array.from(section.querySelectorAll(":scope > section.read"));
   const sources = [];
   for (const [sourceIndex, sourceSection] of sourceSections.entries()) {
-    const sourceName = normalizeText(sourceSection.querySelector("h1, h2, h3, h4, h5, h6")?.textContent, 240);
+    const sourceName = normalizeInvestigationSourceName(sourceSection.querySelector("h1, h2, h3, h4, h5, h6")?.textContent);
     if (!sourceName) continue;
     const childNodes = Array.from(sourceSection.childNodes);
     const maximumNode = childNodes.find((node) => node instanceof HTMLElement && /Максимум\s+ОИ/iu.test(node.textContent ?? ""));
@@ -3152,7 +3484,7 @@ async function parseJournalInvestigationPage(page, reference = {}, existingInves
     });
     const descriptionNodes = checksIndex < 0 ? contentNodes : contentNodes.filter((node) => childNodes.indexOf(node) < checksIndex);
     const checkNodes = checksIndex < 0 ? [] : contentNodes.filter((node) => childNodes.indexOf(node) > checksIndex);
-    const previous = previousSources.find((entry) => investigationNameKey(entry.name) === investigationNameKey(sourceName))
+    const previous = previousSources.find((entry) => investigationNameKey(investigationSourceDisplayName(entry.name)) === investigationNameKey(investigationSourceDisplayName(sourceName)))
       ?? previousSources[sourceIndex];
     sources.push({
       id: previous?.id || randomId(),
@@ -3161,6 +3493,7 @@ async function parseJournalInvestigationPage(page, reference = {}, existingInves
       checks: await enrichInvestigationHtml(directChildHtml(checkNodes)),
       maxPoints,
       points: Math.clamp(Math.trunc(Number(previous?.points) || 0), 0, maxPoints),
+      visible: previous?.visible === true,
     });
   }
 
@@ -3395,6 +3728,7 @@ export class BastardhallSheet extends FormApplication {
     this._clockInterval = null;
     this._sideQuestId = null;
     this._investigationId = null;
+    this._familyPortraitIndexes = new Map();
     this._viewRefreshPending = false;
     this._viewRefreshPromise = null;
   }
@@ -3430,12 +3764,17 @@ export class BastardhallSheet extends FormApplication {
       if (collectedMementos.has(memento.id)) unlockedAreas.add(memento.area);
     }
 
+    const investigationByTopic = new Map(data.investigations.map((investigation) => [investigationTopicKey(investigation.topicName), investigation]));
     const research = data.research.map((topic, index) => {
-      const points = Number(topic.points);
+      const investigation = investigationByTopic.get(investigationNameKey(topic.name));
+      const managedByInvestigation = Boolean(investigation);
+      const points = managedByInvestigation && !isGM
+        ? investigationSourcePoints(investigation, true)
+        : Number(topic.points);
       const unknown = !Number.isFinite(points) || points < 0;
-      const managedByInvestigation = data.investigations.some((investigation) => investigationNameKey(investigation.topicName) === investigationNameKey(topic.name));
       return {
         ...topic,
+        points,
         index,
         displayIndex: index + 1,
         unknown,
@@ -3518,12 +3857,16 @@ export class BastardhallSheet extends FormApplication {
     if (!data.investigations.some((investigation) => investigation.id === this._investigationId)) {
       this._investigationId = data.investigations[0]?.id ?? null;
     }
+    const researchTopicIndexes = new Map(research.map((topic, index) => [investigationNameKey(topic.name), index]));
     const investigations = data.investigations.map((investigation) => {
-      const totalPoints = investigation.sources.reduce((total, source) => total + Math.max(0, Number(source.points) || 0), 0);
-      const maxPoints = investigation.sources.reduce((total, source) => total + Math.max(0, Number(source.maxPoints) || 0), 0);
+      const visibleOnly = !isGM;
+      const totalPoints = investigationSourcePoints(investigation, visibleOnly);
+      const maxPoints = investigationSourceMaximum(investigation);
       const selected = investigation.id === this._investigationId;
-      const sources = investigation.sources.map((source) => ({
+      const sources = investigation.sources.filter((source) => isGM || source.visible === true).map((source) => ({
         ...source,
+        investigationId: investigation.id,
+        displayName: investigationSourceDisplayName(source.name),
         canDecrease: isGM && source.points > 0,
         canIncrease: isGM && source.points < source.maxPoints,
       }));
@@ -3538,21 +3881,41 @@ export class BastardhallSheet extends FormApplication {
         totalPoints,
         maxPoints,
         hasLevel: investigation.level > 0,
+        researchBonusExcluded: researchFamilyBonusExcluded(
+          investigation.topicName,
+          researchTopicIndexes.get(investigationTopicKey(investigation.topicName)) ?? -1,
+        ),
       };
     });
     const selectedInvestigation = investigations.find((investigation) => investigation.selected);
     const familyTreeSlots = FAMILY_TREE_SLOTS.map((definition) => familySlotView(
       data.familyTree.slots.find((slot) => slot.id === definition.id),
       definition,
+      this._familyPortraitIndexes.get(familyPortraitKey("slots", definition.id)),
     ));
-    const familyTreeHeirs = FAMILY_TREE_HEIRS.map((definition) => familySlotView(
+    const familyTreeHeirRowCount = customFamilyHeirRowCount(data.familyTree.customHeirs);
+    const familyTreeHeirViews = customFamilyHeirDefinitions(familyTreeHeirRowCount).map((definition) => familySlotView(
       data.familyTree.customHeirs.find((slot) => slot.id === definition.id),
       definition,
-    )).filter((slot) => isGM || slot.assigned);
+      this._familyPortraitIndexes.get(familyPortraitKey("customHeirs", definition.id)),
+    ));
+    const familyTreeHeirs = familyTreeHeirViews.filter((slot) => isGM || slot.assigned);
+    const familyTreeHeirRows = Array.from({ length: familyTreeHeirRowCount }, (_value, index) => ({
+      rowIndex: index,
+      shelfY: (index * FAMILY_TREE_HEIR_ROW_HEIGHT) + FAMILY_TREE_HEIR_SHELF_START,
+      hasAssigned: familyTreeHeirViews
+        .slice(index * FAMILY_TREE_HEIRS_PER_ROW, (index + 1) * FAMILY_TREE_HEIRS_PER_ROW)
+        .some((slot) => slot.assigned),
+    })).filter((row) => isGM || row.hasAssigned);
+    const familyTreeHeirStageRows = isGM
+      ? familyTreeHeirRowCount
+      : Math.max(1, ...familyTreeHeirRows.map((row) => row.rowIndex + 1));
+    const familyTreeHeirStageHeight = (familyTreeHeirStageRows * FAMILY_TREE_HEIR_ROW_HEIGHT) + FAMILY_TREE_HEIR_STAGE_PADDING;
     const today = currentWorldDay();
     const servantPhantoms = SERVANT_PHANTOMS.map((definition, servantIndex) => {
       const stored = servantState(data, definition.id);
       const remainingIds = remainingServantRecipes(stored);
+      const rank = isRankedServant(definition.id) ? Math.clamp(Number(stored?.rank) || 0, 0, SERVANT_MAX_RANK) : 0;
       const recipeRows = remainingIds.map((recipeId, index) => ({
         ...(SERVANT_RECIPES[definition.id]?.find((recipe) => recipe.id === recipeId) ?? { id: recipeId, name: recipeId, englishName: "" }),
         canMoveUp: index > 0,
@@ -3562,7 +3925,12 @@ export class BastardhallSheet extends FormApplication {
         ...definition,
         ...stored,
         servantIndex,
+        isRankedServant: isRankedServant(definition.id),
+        rank,
+        canIncreaseRank: isRankedServant(definition.id) && Boolean(stored?.active) && rank < SERVANT_MAX_RANK,
+        canDecreaseRank: isRankedServant(definition.id) && Boolean(stored?.active) && rank > 0,
         recipeRows,
+        recipientSlots: Array.from({ length: definition.id === "bakers" ? 2 : 1 }, (_value, index) => ({ index: index + 1 })),
         exhausted: definition.id !== "bakers" && recipeRows.length === 0,
         emptyLabel: definition.id === "cooks" ? "поваров" : "пивоваров",
         grantedToday: stored?.lastGrantedDay === today,
@@ -3634,6 +4002,8 @@ export class BastardhallSheet extends FormApplication {
       selectedInvestigation,
       familyTreeSlots,
       familyTreeHeirs,
+      familyTreeHeirRows,
+      familyTreeHeirStageHeight,
       familyTreeGenerations: FAMILY_TREE_GENERATIONS,
       currentTime,
       daytime,
@@ -3722,6 +4092,13 @@ export class BastardhallSheet extends FormApplication {
       this.render(false);
     });
 
+    root.querySelector("[data-action='broadcast-sheet']")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!game.user?.isGM) return;
+      broadcastBastardhallSheet(this);
+      ui.notifications?.info?.("Лист Бастардхолла открыт у игроков.");
+    });
+
     root.querySelector("[data-action='reset-sheet']")?.addEventListener("click", async (event) => {
       event.preventDefault();
       if (!game.user?.isGM) return;
@@ -3752,7 +4129,7 @@ export class BastardhallSheet extends FormApplication {
       button.addEventListener("click", (event) => {
         event.preventDefault();
         const view = button.dataset.view;
-        if (!new Set(["main", "cooking", "inventory", "investigations", "side-quests", "family-tree"]).has(view)) return;
+        if (!BASTARDHALL_VIEWS.includes(view)) return;
         this._view = view;
         this.render(false);
       });
@@ -3808,6 +4185,28 @@ export class BastardhallSheet extends FormApplication {
           await saveData(data);
         } finally {
           if (stepButton.isConnected) stepButton.disabled = false;
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-action='toggle-investigation-source-visibility']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!game.user?.isGM) return;
+        const visibilityButton = event.currentTarget;
+        const investigationId = visibilityButton.dataset.investigationId;
+        visibilityButton.disabled = true;
+        try {
+          const data = getData();
+          const investigation = data.investigations.find((entry) => entry.id === investigationId);
+          const source = investigation?.sources.find((entry) => entry.id === visibilityButton.dataset.sourceId);
+          if (!investigation || !source) return;
+          source.visible = !source.visible;
+          this._investigationId = investigation.id;
+          await saveData(data);
+        } finally {
+          if (visibilityButton.isConnected) visibilityButton.disabled = false;
         }
       });
     });
@@ -3893,11 +4292,12 @@ export class BastardhallSheet extends FormApplication {
         const input = event.currentTarget;
         input.disabled = true;
         try {
-          const data = getData();
-          const servant = servantState(data, input.dataset.servant);
-          if (!servant) return;
-          servant.active = Boolean(input.checked);
-          await saveData(data);
+        const data = getData();
+         const servant = servantState(data, input.dataset.servant);
+         if (!servant) return;
+         servant.active = Boolean(input.checked);
+         if (isRankedServant(servant.id)) servant.rank = servant.active ? Math.clamp(Number(servant.rank) || 1, 1, SERVANT_MAX_RANK) : 0;
+         await saveData(data);
         } finally {
           if (input.isConnected) input.disabled = false;
         }
@@ -3937,6 +4337,26 @@ export class BastardhallSheet extends FormApplication {
       });
     });
 
+    root.querySelectorAll('[data-action="step-servant-rank"]').forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (!game.user?.isGM) return;
+        const stepButton = event.currentTarget;
+        stepButton.disabled = true;
+        const request = {
+          serviceId: stepButton.dataset.servant,
+          direction: Number(stepButton.dataset.direction),
+          senderId: game.user?.id,
+        };
+        try {
+          if (isPrimaryGM()) await stepServantRank(request.serviceId, request.direction, request.senderId);
+          else game.socket?.emit?.(SOCKET_CHANNEL, { type: "bastardhall-servant-rank", ...request });
+        } finally {
+          if (stepButton.isConnected) stepButton.disabled = false;
+        }
+      });
+    });
+
     root.querySelectorAll('[data-action="reset-servant-recipes"]').forEach((button) => {
       button.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -3959,7 +4379,12 @@ export class BastardhallSheet extends FormApplication {
     root.querySelector('[data-action="grant-daily-cooking"]')?.addEventListener("click", async (event) => {
       event.preventDefault();
       const grantButton = event.currentTarget;
-      const targets = Object.fromEntries([...root.querySelectorAll("[data-preparation-target]")].map((select) => [select.dataset.preparationTarget, select.value]));
+      const targets = {};
+      root.querySelectorAll("[data-preparation-target]").forEach((select) => {
+        const targetId = select.dataset.preparationTarget;
+        if (!targets[targetId]) targets[targetId] = [];
+        if (select.value) targets[targetId].push(select.value);
+      });
       const request = {
         targets,
         aronItems: [...root.querySelectorAll("[data-aron-item]")].map((select) => select.value).filter(Boolean),
@@ -4340,6 +4765,26 @@ export class BastardhallSheet extends FormApplication {
       });
     });
 
+    root.querySelector("[data-action='add-family-heir-row']")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!isPrimaryGM()) return;
+      const addButton = event.currentTarget;
+      addButton.disabled = true;
+      try {
+        const data = getData();
+        const heirs = normalizeArray(data.familyTree.customHeirs);
+        const rowStart = heirs.length;
+        for (let index = 0; index < FAMILY_TREE_HEIRS_PER_ROW; index += 1) {
+          heirs.push({ id: `custom-heir-${rowStart + index + 1}`, portraits: [] });
+        }
+        data.familyTree.customHeirs = heirs;
+        await saveData(data);
+      } finally {
+        if (addButton.isConnected) addButton.disabled = false;
+      }
+    });
+
     root.querySelectorAll("[data-action='clear-family-slot']").forEach((button) => {
       button.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -4349,8 +4794,39 @@ export class BastardhallSheet extends FormApplication {
         const data = getData();
         const slot = storedFamilySlot(data, clearButton.dataset.familySection, clearButton.dataset.slotId);
         if (!slot) return;
-        Object.assign(slot, { actorUuid: "", name: "", img: "", notes: "" });
+        const portraits = normalizeArray(slot.portraits);
+        if (!portraits.length) return;
+        const key = familyPortraitKey(clearButton.dataset.familySection, clearButton.dataset.slotId);
+        const currentIndex = Math.max(0, Math.min(portraits.length - 1, Math.trunc(Number(this._familyPortraitIndexes.get(key)) || 0)));
+        portraits.splice(currentIndex, 1);
+        slot.portraits = portraits;
+        this._familyPortraitIndexes.set(key, Math.max(0, Math.min(currentIndex, portraits.length - 1)));
         await saveData(data);
+      });
+    });
+
+    root.querySelectorAll("[data-action='step-family-portrait']").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const stepButton = event.currentTarget;
+        const key = familyPortraitKey(stepButton.dataset.familySection, stepButton.dataset.slotId);
+        const slot = storedFamilySlot(getData(), stepButton.dataset.familySection, stepButton.dataset.slotId);
+        const portraits = normalizeArray(slot?.portraits);
+        if (portraits.length < 2) return;
+        const currentIndex = Math.max(0, Math.min(portraits.length - 1, Math.trunc(Number(this._familyPortraitIndexes.get(key)) || 0)));
+        const direction = Math.sign(Number(stepButton.dataset.direction) || 0);
+        this._familyPortraitIndexes.set(key, Math.max(0, Math.min(portraits.length - 1, currentIndex + direction)));
+        void this.refreshCurrentView();
+      });
+    });
+
+    root.querySelectorAll("[data-action='expand-family-portrait']").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const expandButton = event.currentTarget;
+        openFamilyPortrait(expandButton.dataset.image, expandButton.dataset.title);
       });
     });
 
@@ -4400,7 +4876,8 @@ export class BastardhallSheet extends FormApplication {
       const section = target.dataset.familySection;
       const slot = storedFamilySlot(data, section, target.dataset.slotId);
       if (!slot) return;
-      assignFamilyActor(slot, document);
+      const portraitIndex = assignFamilyActor(slot, document);
+      this._familyPortraitIndexes.set(familyPortraitKey(section, target.dataset.slotId), portraitIndex);
       await saveData(data);
       ui.notifications?.info?.(`«${document.name}» добавлен в семейное древо Арудора.`);
       return;
@@ -4468,13 +4945,20 @@ export class BastardhallSheet extends FormApplication {
   async _updateObject(_event, _formData) {}
 }
 
-export function openBastardhallSheet() {
+export function openBastardhallSheet(state = {}) {
   const existing = Object.values(ui.windows ?? {}).find((app) => app?.id === APP_ID);
   if (existing?.rendered) {
+    const hasState = state && typeof state === "object" && ["view", "investigationId", "sideQuestId"].some((key) => hasOwnProperty(state, key));
+    if (hasState) {
+      applyBastardhallViewState(existing, state);
+      existing.render(false);
+    }
     existing.bringToTop();
     return existing;
   }
-  return new BastardhallSheet().render(true);
+  const sheet = new BastardhallSheet();
+  applyBastardhallViewState(sheet, state);
+  return sheet.render(true);
 }
 
 function addActorDirectoryButton(_app, html) {
@@ -4487,7 +4971,7 @@ function addActorDirectoryButton(_app, html) {
   button.type = "button";
   button.className = "tsu-bastardhall-btn";
   button.title = "Лист Бастардхолла";
-  button.style.cssText = "min-width:32px;width:32px;height:32px;flex:0 0 32px;padding:0;margin-left:5px;background:#176b6c;color:#f0e6c7;border:1px solid #c9ad6a;display:flex;align-items:center;justify-content:center;";
+  button.style.cssText = "min-width:32px;width:32px;height:32px;flex:0 0 32px;padding:0;margin-left:0;background:#176b6c;color:#f0e6c7;border:1px solid #c9ad6a;display:flex;align-items:center;justify-content:center;";
   button.innerHTML = '<i class="fa-solid fa-castle"></i>';
   button.addEventListener("click", (event) => {
     event.preventDefault();
@@ -4507,7 +4991,7 @@ Hooks.once("init", () => {
     onChange: (enabled) => {
       ui.actors?.render?.(true);
       lastObservedNightActive = Boolean(enabled) && !isDaytime(getData());
-      queueReconcile({ restoreNightPresets: !enabled });
+      queueReconcile({ forceMementos: true, restoreNightPresets: !enabled });
       void rebuildAccessBlockLinks();
     },
   });
@@ -4521,7 +5005,7 @@ Hooks.once("init", () => {
       const app = Object.values(ui.windows ?? {}).find((windowApp) => windowApp?.id === APP_ID);
       if (typeof app?.refreshCurrentView === "function") void app.refreshCurrentView();
       else app?.render?.(false);
-      queueReconcile();
+      queueReconcile({ forceMementos: true });
     },
   });
 });
@@ -4538,24 +5022,28 @@ Hooks.on("updateWorldTime", () => {
   if (app?._view === "cooking" && typeof app.refreshCurrentView === "function") void app.refreshCurrentView();
 });
 Hooks.on("createActor", () => queueReconcile({ forceActors: true }));
-Hooks.on("updateWall", (document) => void (async () => {
-  await syncAccessBlockDocument(document);
-  await restoreAccessWall(document);
-})());
-Hooks.on("updateRegion", (document, changed) => void (async () => {
-  await syncAccessBlockDocument(document);
-  const accessChange = pendingRegionAccessChanges.get(document);
-  pendingRegionAccessChanges.delete(document);
-  if (!accessChange?.changed) return;
-  if (accessChange.enabled) queueReconcile({ forceMementos: true });
-  else await restoreAccessRegion(document);
-})());
-Hooks.on("preUpdateRegion", (document, changed) => captureRegionAccessState(document, changed));
+Hooks.on("createWall", (document) => void handleAccessDocumentChange(document).catch((error) => {
+  console.error(`${MODULE_ID} | Failed to process created Bastardhall wall`, error);
+}));
+Hooks.on("createRegion", (document) => void handleAccessDocumentChange(document).catch((error) => {
+  console.error(`${MODULE_ID} | Failed to process created Bastardhall region`, error);
+}));
+Hooks.on("updateWall", (document) => void handleAccessDocumentChange(document).catch((error) => {
+  console.error(`${MODULE_ID} | Failed to process Bastardhall wall`, error);
+}));
+Hooks.on("updateRegion", (document) => void handleAccessDocumentChange(document).catch((error) => {
+  console.error(`${MODULE_ID} | Failed to process Bastardhall region`, error);
+}));
 Hooks.on("deleteWall", (document) => void removeAccessBlockDocument(document));
 Hooks.on("deleteRegion", (document) => void removeAccessBlockDocument(document));
 
 Hooks.once("ready", async () => {
   game.socket?.on?.(SOCKET_CHANNEL, async (message) => {
+    if (message?.type === "bastardhall-open-sheet") {
+      const sender = game.users?.get?.(message.senderId);
+      if (!game.user?.isGM && sender?.isGM && sender.active) openBastardhallSheet(message);
+      return;
+    }
     if (message?.type === "bastardhall-daily-result") {
       if (message.recipientId === game.user?.id && message.message) {
         const level = ["info", "warn", "error"].includes(message.level) ? message.level : "info";
@@ -4575,6 +5063,10 @@ Hooks.once("ready", async () => {
     try {
       if (message?.type === "bastardhall-servant-order" && message.serviceId && message.recipeId) {
         await moveServantRecipe(message.serviceId, message.recipeId, message.direction, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-servant-rank" && message.serviceId) {
+        await stepServantRank(message.serviceId, message.direction, message.senderId);
         return;
       }
       if (message?.type === "bastardhall-daily-cooking") {

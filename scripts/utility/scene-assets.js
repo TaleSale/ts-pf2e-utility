@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260816-swamp-floor1";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260816-swamp-floor1";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260823-statues-size-v2";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260823-statues-size-v2";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -17,11 +17,23 @@ const MOVEMENT_STEP_RATIO = 0.1;
 const SIZE_STEP_CELLS = 0.1;
 const MIN_SIZE_CELLS = 0.2;
 const MAX_SIZE_CELLS = 6;
+export const ASSET_GEOMETRY_VERSION = 5;
+const ABOVE_WALL_COLUMN_KEYS = new Set(["columnStoneTopdown", "columnWoodTopdown"]);
 const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-assets/bench.webp": "scene-assets/bench-topdown-v2.webp",
-  "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
-  "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
-  "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v2.webp",
+  "scene-assets/bookshelf.webp": "scene-assets/bookshelf-wall-topdown-v4.webp",
+  "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v3.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
+  "scene-assets/cabinet.webp": "scene-assets/cabinet-wall-topdown-v3.webp",
+  "scene-assets/cabinet-topdown-v2.webp": "scene-assets/cabinet-wall-topdown-v3.webp",
+  "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
+  "scene-assets/cabinet-narrow-wall-topdown-v2.webp": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
+  "scene-assets/cabinet-narrow-topdown-v3.png": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
+  "scene-assets/column-stone-topdown-v1.png": "scene-assets/column-stone-topdown-v3.webp",
+  "scene-assets/column-stone-topdown-v2.webp": "scene-assets/column-stone-topdown-v3.webp",
+  "scene-assets/column-wood-topdown-v1.png": "scene-assets/column-wood-topdown-v3.webp",
+  "scene-assets/column-wood-topdown-v2.webp": "scene-assets/column-wood-topdown-v3.webp",
   "scene-assets/fireplace-brick.webp": "scene-assets/fireplace-brick-v3.webp",
   "scene-assets/fireplace-brick-v2.webp": "scene-assets/fireplace-brick-v3.webp",
   "scene-assets/fireplace-brick-v3.webp": "scene-assets/fireplace-brick-wall-topdown-v4.webp",
@@ -39,8 +51,22 @@ const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-assets/potted-tree.webp": "scene-assets/potted-tree-v2.webp",
   "scene-assets/round-table.webp": "scene-assets/round-table-four-legs.webp",
   "scene-assets/stonehenge-trilithon.webp": "scene-assets/stonehenge-trilithon-circle-v2.webp",
+  "scene-assets/statue.webp": "scene-assets/statue-knight-topdown-v3.webp",
+  "scene-assets/statue-knight-topdown-v2.webp": "scene-assets/statue-knight-topdown-v3.webp",
+  "scene-assets/statue-man-topdown-v1.webp": "scene-assets/statue-man-topdown-v2.webp",
+  "scene-assets/statue-woman-topdown-v1.webp": "scene-assets/statue-woman-topdown-v2.webp",
+  "scene-assets/statue-child-topdown-v1.webp": "scene-assets/statue-child-topdown-v2.webp",
   "scene-assets/stool.webp": "scene-assets/stool-v2.webp",
   "scene-assets/tableware-feast.webp": "scene-assets/tableware-feast-v2.webp",
+  "scene-assets/toilet-board-alder.webp": "scene-assets/toilet-board-alder-double-v3.webp",
+  "scene-assets/toilet-board-alder-square-v2.webp": "scene-assets/toilet-board-alder-square-v4.webp",
+  "scene-assets/toilet-board-alder-square-v3.webp": "scene-assets/toilet-board-alder-square-v4.webp",
+  "scene-assets/toilet-board-oak.webp": "scene-assets/toilet-board-oak-double-v3.webp",
+  "scene-assets/toilet-board-oak-square-v2.webp": "scene-assets/toilet-board-oak-square-v4.webp",
+  "scene-assets/toilet-board-oak-square-v3.webp": "scene-assets/toilet-board-oak-square-v4.webp",
+  "scene-assets/toilet-board-walnut.webp": "scene-assets/toilet-board-walnut-double-v3.webp",
+  "scene-assets/toilet-board-walnut-square-v2.webp": "scene-assets/toilet-board-walnut-square-v4.webp",
+  "scene-assets/toilet-board-walnut-square-v3.webp": "scene-assets/toilet-board-walnut-square-v4.webp",
   "scene-floors/forest-deciduous-floor.webp": "scene-assets/forest-deciduous-irregular-a.webp",
   "scene-floors/forest-mixed-floor.webp": "scene-assets/forest-deciduous-irregular-a.webp",
   "scene-floors/forest-pine-floor.webp": "scene-assets/forest-pine-irregular-a.webp",
@@ -62,6 +88,10 @@ export const LIGHT_PRESETS = Object.freeze({
 export const ASSETS = Object.freeze({
   table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1.549),
   chair: asset("Furniture", "Chair", "chair.webp", 0.5, "object", 437 / 512),
+  sofaGreen: asset("Furniture", "SofaGreen", "sofa-green-topdown-v1.webp", 2, "object", 2),
+  sofaBurgundy: asset("Furniture", "SofaBurgundy", "sofa-burgundy-topdown-v1.webp", 2, "object", 2),
+  armchairGreen: asset("Furniture", "ArmchairGreen", "armchair-green-topdown-v1.webp", 1, "object", 1),
+  armchairBurgundy: asset("Furniture", "ArmchairBurgundy", "armchair-burgundy-topdown-v1.webp", 1, "object", 1),
   bed: asset("Furniture", "Bed", "bed.webp", 1.8, "object", 521 / 1024),
   bedOak: asset("Furniture", "BedOak", "bed-oak.webp", 1.8, "object", 0.454),
   bedBlue: asset("Furniture", "BedBlue", "bed-blue.webp", 1.8, "object", 0.496),
@@ -70,8 +100,8 @@ export const ASSETS = Object.freeze({
   bedMessyBrown: asset("Furniture", "Unmade bed — brown", "bed-messy-brown.webp", 1.8, "object", 0.545, null, 0, "Choices.BedMessyBrown"),
   doubleBedRed: asset("Furniture", "DoubleBedRed", "double-bed-red.webp", 2, "object", 0.709),
   doubleBedLinen: asset("Furniture", "DoubleBedLinen", "double-bed-linen.webp", 2, "object", 0.774),
-  cabinet: asset("Furniture", "Cabinet", "cabinet.webp", 1.25, "object", 1024 / 362),
-  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow-wall-topdown-v2.webp", 0.44, "object", 0.62, null, 0, "CabinetSide"),
+  cabinet: asset("Furniture", "Cabinet", "cabinet-wall-topdown-v3.webp", 1.25, "object", 1.25 / 0.3),
+  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow-wall-topdown-v4.webp", 0.6, "object", 2, null, 0, "CabinetSide"),
   tree: asset("Nature", "Tree", "tree.webp", 2, "overhead", 1142 / 1140),
   ruins: asset("Ruins", "Ruins", "ruins.webp", 1.8, "object", 1100 / 1127),
   corpse: asset("Remains", "Corpse", "corpse.webp", 1.5, "object", 863 / 1024),
@@ -83,8 +113,8 @@ export const ASSETS = Object.freeze({
   roundTable: asset("Furniture", "RoundTable", "round-table-four-legs.webp", 1, "object", 1),
   stool: asset("Furniture", "Stool", "stool-v2.webp", 0.4, "object", 0.988),
   chest: asset("Furniture", "Chest", "chest.webp", 0.8, "object", 1024 / 728),
-  bookshelf: asset("Furniture", "Bookshelf", "bookshelf.webp", 1.2, "object", 1024 / 378),
-  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow-wall-topdown-v3.webp", 0.44, "object", 0.62, null, 0, "BookshelfSide"),
+  bookshelf: asset("Furniture", "Bookshelf", "bookshelf-wall-topdown-v4.webp", 1.2, "object", 4),
+  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow-wall-topdown-v4.webp", 0.6, "object", 2, null, 0, "BookshelfSide"),
   barrel: asset("Household", "Barrel", "barrel.webp", 0.6, "object", 644 / 768),
   barrelSide: asset("Household", "BarrelSide", "barrel-side.webp", 0.9, "object", 1.61),
   barrelsSideCluster: asset("Household", "BarrelsSideCluster", "barrels-side-cluster.webp", 1.4, "object", 0.615),
@@ -95,9 +125,12 @@ export const ASSETS = Object.freeze({
   bathtubCopper: asset("Household", "BathtubCopper", "bathtub-copper.webp", 1.5, "object", 0.676),
   sinkWood: asset("Household", "SinkWood", "sink-wood.webp", 0.8, "object", 0.691),
   sinkStone: asset("Household", "SinkStone", "sink-stone.webp", 0.8, "object", 0.704),
-  toiletBoardOak: asset("Household", "ToiletBoardOak", "toilet-board-oak.webp", 0.8, "object", 0.614),
-  toiletBoardAlder: asset("Household", "ToiletBoardAlder", "toilet-board-alder.webp", 0.8, "object", 0.614),
-  toiletBoardWalnut: asset("Household", "ToiletBoardWalnut", "toilet-board-walnut.webp", 0.8, "object", 0.617),
+  toiletBoardOak: asset("Household", "ToiletBoardOak", "toilet-board-oak-square-v4.webp", 1, "object", 1),
+  toiletBoardAlder: asset("Household", "ToiletBoardAlder", "toilet-board-alder-square-v4.webp", 1, "object", 1),
+  toiletBoardWalnut: asset("Household", "ToiletBoardWalnut", "toilet-board-walnut-square-v4.webp", 1, "object", 1),
+  toiletBoardOakDouble: asset("Household", "ToiletBoardOakDouble", "toilet-board-oak-double-v3.webp", 2, "object", 0.5),
+  toiletBoardAlderDouble: asset("Household", "ToiletBoardAlderDouble", "toilet-board-alder-double-v3.webp", 2, "object", 0.5),
+  toiletBoardWalnutDouble: asset("Household", "ToiletBoardWalnutDouble", "toilet-board-walnut-double-v3.webp", 2, "object", 0.5),
   cauldron: asset("Household", "Cauldron", "cauldron.webp", 0.7, "object", 741 / 768),
   candle: asset("Lighting", "Candle", "candle.webp", 0.2, "object", 512 / 445, "candle"),
   lantern: asset("Lighting", "Lantern", "lantern.webp", 0.3, "object", 315 / 512, "lantern"),
@@ -113,14 +146,23 @@ export const ASSETS = Object.freeze({
   bedrollFur: asset("Outdoors", "BedrollFur", "bedroll-fur.webp", 1.5, "object", 0.585),
   bedrollBlue: asset("Outdoors", "BedrollBlue", "bedroll-blue.webp", 1.5, "object", 0.568),
   bridge: asset("Outdoors", "Bridge", "bridge.webp", 3, "object", 1536 / 534),
+  utilityCart: asset("Vehicles", "UtilityCart", "cart-utility-topdown-v1.webp", 2.2, "object", 2 / 3),
+  freightWagon: asset("Vehicles", "FreightWagon", "wagon-freight-topdown-v1.webp", 3, "object", 2 / 3),
+  coveredWagon: asset("Vehicles", "CoveredWagon", "wagon-covered-topdown-v1.webp", 3.2, "object", 2 / 3),
+  openCarriage: asset("Vehicles", "OpenCarriage", "carriage-open-topdown-v1.webp", 3, "object", 2 / 3),
+  closedCarriage: asset("Vehicles", "ClosedCarriage", "carriage-closed-topdown-v1.webp", 3, "object", 2 / 3),
+  stagecoach: asset("Vehicles", "Stagecoach", "carriage-stagecoach-topdown-v1.webp", 3.2, "object", 2 / 3),
   well: asset("Outdoors", "Well", "well.webp", 1.5, "object", 952 / 1144),
+  beehive: asset("Outdoors", "Beehive", "beehive-skep-topdown-v1.webp", 1, "object", 1),
   pond: asset("Water", "Pond", "pond.webp", 3, "ground", 1110 / 954),
   lake: asset("Water", "Lake", "lake.webp", 5, "ground", 1536 / 817),
   brokenBoards: asset("Ruins", "BrokenBoards", "broken-boards.webp", 1.4, "object", 1024 / 822),
   fallenColumn: asset("Ruins", "FallenColumn", "fallen-column.webp", 1.8, "object", 1024 / 965),
   skeleton: asset("Remains", "Skeleton", "skeleton.webp", 1.5, "object", 775 / 1024),
+  coffinWood: asset("Remains", "CoffinWood", "coffin-wood-topdown-v1.webp", 1, "object", 1),
+  coffinStone: asset("Remains", "CoffinStone", "coffin-stone-topdown-v1.webp", 1, "object", 1),
   redRug: asset("Decor", "RedRug", "rug-red.webp", 1.8, "ground", 491 / 1024),
-  booksScrolls: asset("Decor", "BooksScrolls", "books-scrolls.webp", 0.8, "object", 768 / 576),
+  booksScrolls: asset("TabletopSets", "BooksScrolls", "books-scrolls.webp", 0.8, "overhead", 768 / 576),
   goldPile: asset("Decor", "GoldPile", "gold-pile.webp", 0.8, "object", 953 / 917, null, 0, "GoldPile"),
   mud: asset("Traces", "Mud", "mud.webp", 1.5, "ground", 1024 / 799),
   waterPuddle: asset("Traces", "WaterPuddle", "water-puddle.webp", 1.2, "ground", 1020 / 772),
@@ -136,8 +178,13 @@ export const ASSETS = Object.freeze({
   throne: asset("TempleStage", "Throne", "throne.webp", 1, "object", 615 / 1024),
   altar: asset("TempleStage", "Altar", "altar.webp", 1.5, "object", 1024 / 598),
   lectern: asset("TempleStage", "Lectern", "lectern.webp", 0.8, "object", 574 / 768),
-  statue: asset("TempleStage", "Statue", "statue.webp", 1.3, "overhead", 629 / 1024),
+  statue: asset("TempleStage", "StatueKnight", "statue-knight-topdown-v3.webp", 0.65, "overhead", 1),
+  statueMan: asset("TempleStage", "StatueMan", "statue-man-topdown-v2.webp", 0.65, "overhead", 1),
+  statueWoman: asset("TempleStage", "StatueWoman", "statue-woman-topdown-v2.webp", 0.65, "overhead", 1),
+  statueChild: asset("TempleStage", "StatueChild", "statue-child-topdown-v2.webp", 0.48, "overhead", 1),
   standingColumn: asset("TempleStage", "StandingColumn", "standing-column.webp", 1, "overhead", 655 / 817),
+  columnStoneTopdown: asset("TempleStage", "Stone column — ½ cell", "column-stone-topdown-v3.webp", 1, "overhead", 1, null, 0, "Choices.ColumnStoneTopdown"),
+  columnWoodTopdown: asset("TempleStage", "Wooden column — ½ cell", "column-wood-topdown-v3.webp", 1, "overhead", 1, null, 0, "Choices.ColumnWoodTopdown"),
   ritualCircle: asset("TempleStage", "RitualCircle", "ritual-circle.webp", 1.8, "ground", 1024 / 1016),
   ladder: asset("Transitions", "Ladder", "ladder.webp", 1.5, "ground", 1024 / 271),
   ladderVertical: asset("Transitions", "LadderVertical", "ladder-vertical.webp", 1.5, "ground", 234 / 1024),
@@ -150,16 +197,26 @@ export const ASSETS = Object.freeze({
   pottedFlowers: asset("Household", "PottedFlowers", "potted-flowers-v2.webp", 0.6, "object", 0.95),
   pottedHerbs: asset("Household", "PottedHerbs", "potted-herbs-v2.webp", 0.6, "object", 0.979),
   pottedTree: asset("Household", "PottedTree", "potted-tree-v2.webp", 0.75, "object", 0.964),
-  tablewareEmpty: asset("Household", "TablewareEmpty", "tableware-empty.webp", 0.65, "object", 0.965),
-  tablewareStew: asset("Household", "TablewareStew", "tableware-stew.webp", 0.7, "object", 1.364),
-  tablewareRoast: asset("Household", "TablewareRoast", "tableware-roast.webp", 0.7, "object", 0.798),
-  tablewareFish: asset("Household", "TablewareFish", "tableware-fish.webp", 0.75, "object", 1.593),
-  tablewareCheeseFruit: asset("Household", "TablewareCheeseFruit", "tableware-cheese-fruit.webp", 0.7, "object", 0.956),
-  tablewareBreakfast: asset("Household", "TablewareBreakfast", "tableware-breakfast.webp", 0.7, "object", 1.188),
-  tablewareTea: asset("Household", "TablewareTea", "tableware-tea.webp", 0.7, "object", 0.945),
-  tablewareAle: asset("Household", "TablewareAle", "tableware-ale.webp", 0.7, "object", 0.991),
-  tablewareWine: asset("Household", "TablewareWine", "tableware-wine.webp", 0.7, "object", 0.95),
-  tablewareFeast: asset("Household", "TablewareFeast", "tableware-feast-v2.webp", 0.8, "object", 0.955),
+  tablewareEmpty: asset("TabletopSets", "TablewareEmpty", "tableware-empty.webp", 0.65, "overhead", 0.965),
+  tablewareStew: asset("TabletopSets", "TablewareStew", "tableware-stew.webp", 0.7, "overhead", 1.364),
+  tablewareRoast: asset("TabletopSets", "TablewareRoast", "tableware-roast.webp", 0.7, "overhead", 0.798),
+  tablewareFish: asset("TabletopSets", "TablewareFish", "tableware-fish.webp", 0.75, "overhead", 1.593),
+  tablewareCheeseFruit: asset("TabletopSets", "TablewareCheeseFruit", "tableware-cheese-fruit.webp", 0.7, "overhead", 0.956),
+  tablewareBreakfast: asset("TabletopSets", "TablewareBreakfast", "tableware-breakfast.webp", 0.7, "overhead", 1.188),
+  tablewareTea: asset("TabletopSets", "TablewareTea", "tableware-tea.webp", 0.7, "overhead", 0.945),
+  tablewareAle: asset("TabletopSets", "TablewareAle", "tableware-ale.webp", 0.7, "overhead", 0.991),
+  tablewareWine: asset("TabletopSets", "TablewareWine", "tableware-wine.webp", 0.7, "overhead", 0.95),
+  tablewareFeast: asset("TabletopSets", "TablewareFeast", "tableware-feast-v2.webp", 0.8, "overhead", 0.955),
+  tabletopAlchemy: asset("TabletopSets", "TabletopAlchemy", "tabletop-set-alchemy-v1.webp", 0.9, "overhead", 1),
+  tabletopArcane: asset("TabletopSets", "TabletopArcane", "tabletop-set-arcane-v1.webp", 0.9, "overhead", 1),
+  tabletopWriting: asset("TabletopSets", "TabletopWriting", "tabletop-set-writing-v1.webp", 0.9, "overhead", 1),
+  tabletopWoodworking: asset("TabletopSets", "TabletopWoodworking", "tabletop-set-woodworking-v1.webp", 0.9, "overhead", 1),
+  tabletopMetalworking: asset("TabletopSets", "TabletopMetalworking", "tabletop-set-metalworking-v1.webp", 0.9, "overhead", 1),
+  tabletopTorture: asset("TabletopSets", "TabletopTorture", "tabletop-set-torture-v1.webp", 0.9, "overhead", 1),
+  tabletopBooks: asset("TabletopSets", "TabletopBooks", "tabletop-set-books-v1.webp", 0.9, "overhead", 1),
+  tabletopJewelry: asset("TabletopSets", "TabletopJewelry", "tabletop-set-jewelry-v1.webp", 0.9, "overhead", 1),
+  tabletopCartography: asset("TabletopSets", "TabletopCartography", "tabletop-set-cartography-v1.webp", 0.9, "overhead", 1),
+  tabletopMedicine: asset("TabletopSets", "TabletopMedicine", "tabletop-set-medicine-v1.webp", 0.9, "overhead", 1),
   paintingLandscape: asset("Decor", "PaintingLandscape", "painting-landscape-topdown-v2.webp", 0.9, "object", 4.613),
   paintingPortrait: asset("Decor", "PaintingPortrait", "painting-portrait-topdown-v2.webp", 0.7, "object", 4.016),
   paintingStillLife: asset("Decor", "PaintingStillLife", "painting-still-life-topdown-v2.webp", 0.7, "object", 2.893),
@@ -188,7 +245,7 @@ export const ASSETS = Object.freeze({
   harp: asset("MusicalInstruments", "Harp", "harp-topdown-v2.webp", 1, "object", 1.886),
 });
 
-const CATEGORIES = Object.freeze(["Furniture", "Household", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
+const CATEGORIES = Object.freeze(["Furniture", "Household", "TabletopSets", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Vehicles", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
 const LAYERS = Object.freeze({ ground: -100, object: 0, overhead: 100 });
 
 function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null) {
@@ -341,22 +398,50 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
   }
 }
 
-async function synchronizeNarrowAssetDimensions() {
+async function synchronizeRevisedAssetDimensions() {
   if (!game.user?.isGM) return;
-  const keys = new Set(["cabinetNarrow", "bookshelfNarrow"]);
+  const wallFurniture = new Set(["cabinet", "cabinetNarrow", "bookshelf", "bookshelfNarrow"]);
+  const narrowFurniture = new Set(["cabinetNarrow", "bookshelfNarrow"]);
+  const squareToilets = new Set(["toiletBoardOak", "toiletBoardAlder", "toiletBoardWalnut"]);
+  const resizedStatues = new Set(["statue", "statueMan", "statueWoman", "statueChild"]);
   for (const scene of game.scenes ?? []) {
+    const grid = Number(scene.grid?.size ?? 100);
     const updates = [];
     for (const tile of scene.tiles ?? []) {
-      const key = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.key;
-      if (!keys.has(key)) continue;
+      const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      const key = flag?.key;
+      if (!key || Number(flag.geometryVersion ?? 0) >= ASSET_GEOMETRY_VERSION) continue;
       const definition = ASSETS[key];
-      const maximum = Math.max(Number(tile.width) || 0, Number(tile.height) || 0);
-      if (!maximum) continue;
-      const desiredWidth = Math.max(1, Math.round(maximum * definition.aspect));
-      const desiredHeight = Math.max(1, Math.round(maximum));
-      if (desiredWidth !== Math.round(tile.width) || desiredHeight !== Math.round(tile.height)) {
-        updates.push({ _id: tile.id, width: desiredWidth, height: desiredHeight });
+      if (!definition) continue;
+      let desiredWidth = Math.max(1, Math.round(Number(tile.width) || grid * definition.size));
+      let desiredHeight = Math.max(1, Math.round(Number(tile.height) || desiredWidth / definition.aspect));
+      if (wallFurniture.has(key)) {
+        if (narrowFurniture.has(key) && desiredHeight > desiredWidth) {
+          const scale = desiredHeight / Math.max(1, grid * 0.44);
+          desiredWidth = Math.max(1, Math.round(grid * 0.6 * scale));
+        }
+        desiredHeight = Math.max(1, Math.round(desiredWidth / definition.aspect));
+      } else if (ABOVE_WALL_COLUMN_KEYS.has(key) || squareToilets.has(key)) {
+        desiredWidth = grid;
+        desiredHeight = grid;
+      } else if (resizedStatues.has(key)) {
+        const previousDefaultSize = 1;
+        const majorDimension = Math.max(desiredWidth, desiredHeight);
+        const scale = definition.size / previousDefaultSize;
+        desiredWidth = Math.max(1, Math.round(majorDimension * scale));
+        desiredHeight = desiredWidth;
+      } else continue;
+      const update = {
+        _id: tile.id,
+        width: desiredWidth,
+        height: desiredHeight,
+        [`flags.${MODULE_ID}.${FLAG_ROOT}.geometryVersion`]: ASSET_GEOMETRY_VERSION,
+      };
+      if (ABOVE_WALL_COLUMN_KEYS.has(key)) {
+        update.sort = LAYERS.overhead;
+        update[`flags.${MODULE_ID}.${FLAG_ROOT}.layer`] = "overhead";
       }
+      updates.push(update);
     }
     for (let offset = 0; offset < updates.length; offset += 100) {
       await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
@@ -364,10 +449,30 @@ async function synchronizeNarrowAssetDimensions() {
   }
 }
 
+function raiseColumnTileAboveWallTextures(tile) {
+  const document = tile?.document;
+  const key = document?.flags?.[MODULE_ID]?.[FLAG_ROOT]?.key;
+  if (!ABOVE_WALL_COLUMN_KEYS.has(key)) return;
+  const mesh = tile?.mesh;
+  const parent = mesh?.parent;
+  if (!mesh || !parent) return;
+  const sortLayers = canvas?.primary?.constructor?.SORT_LAYERS ?? {};
+  mesh.sortLayer = Number(sortLayers.TILES ?? 500) + 4;
+  mesh.sort = LAYERS.overhead;
+  parent.sortableChildren = true;
+  parent.sortDirty = true;
+}
+
 Hooks.once("ready", async () => {
   await migrateLegacySceneAssetPaths();
   await synchronizeSceneAssetPresetPaths();
-  await synchronizeNarrowAssetDimensions();
+  await synchronizeRevisedAssetDimensions();
+});
+
+Hooks.on("refreshTile", (tile) => raiseColumnTileAboveWallTextures(tile));
+
+Hooks.on("canvasReady", () => {
+  for (const tile of canvas?.tiles?.placeables ?? []) raiseColumnTileAboveWallTextures(tile);
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, (_preset, scene) => {
@@ -1216,7 +1321,7 @@ async function placeAsset(point) {
     levels: placementLevel.levels,
     sort: LAYERS[selectedLayer] ?? 0,
     restrictions: { light: false, weather: false },
-    flags: { [MODULE_ID]: { [FLAG_ROOT]: { key: selectedKey, layer: selectedLayer, level: placementLevel.level, lightId: null } } },
+    flags: { [MODULE_ID]: { [FLAG_ROOT]: { key: selectedKey, layer: selectedLayer, level: placementLevel.level, lightId: null, geometryVersion: ASSET_GEOMETRY_VERSION } } },
   };
   const [tile] = await scene.createEmbeddedDocuments("Tile", [tileData]);
   if (tile && definition.light) await createLinkedLight(tile, definition.light);
@@ -1239,6 +1344,7 @@ async function placeSet(point) {
       lightId: null,
       setId: set.id,
       batchId,
+      geometryVersion: ASSET_GEOMETRY_VERSION,
     };
     return {
       name: item.name,

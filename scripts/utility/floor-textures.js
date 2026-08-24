@@ -4,18 +4,80 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260816-swamp-floor1";
+} from "./texture-presets.js?v=20260823-statues-size-v2";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
 const CONTROL_NAME = "tsu-floors";
 const FLOOR_CONTAINER = "tsu-floor-textures";
+const COBWEB_ABOVE_CONTAINER = "tsu-cobweb-floor-above";
 const FOREST_CONTAINER = "tsu-forest-textures";
 const EDIT_CONTAINER = "tsu-floor-edit";
 const DEFAULT_STYLE = "uneven-limestone";
 const EPSILON = 0.01;
 const FLOOR_EDGE_WIDTH = 15;
 const LEVEL_NUMBER_FLAG = "floorLevelNumber";
+// Rubble pools must be initialized before FLOOR_STYLES calls rubbleStyle().
+// Keeping the images external; this is only the registry of their paths and geometry.
+const RUBBLE_ASSET_POOLS = Object.freeze({
+  stone: Object.freeze([
+    rubbleAsset("rubble-cutout-stone-01-v16.webp", 0.3451, 0.3674),
+    rubbleAsset("rubble-cutout-stone-02-v16.webp", 0.3674, 0.3451),
+    rubbleAsset("rubble-cutout-stone-03-v16.webp", 0.3451, 0.3674),
+    rubbleAsset("rubble-cutout-stone-04-v16.webp", 0.3674, 0.3451),
+    rubbleAsset("rubble-cutout-stone-05-v16.webp", 0.5047, 0.4898),
+    rubbleAsset("rubble-cutout-stone-06-v16.webp", 0.4676, 0.501),
+    rubbleAsset("rubble-cutout-stone-07-v16.webp", 0.4676, 0.501),
+    rubbleAsset("rubble-cutout-stone-08-v16.webp", 0.4305, 0.4119),
+    rubbleAsset("rubble-cutout-stone-09-v16.webp", 0.4156, 0.4305),
+    rubbleAsset("rubble-cutout-stone-10-v16.webp", 0.7756, 1.0391),
+    rubbleAsset("rubble-cutout-stone-11-v16.webp", 1.0428, 0.7719),
+    rubbleAsset("rubble-cutout-stone-12-v16.webp", 0.8758, 0.6271),
+  ]),
+  boards: Object.freeze([
+    rubbleAsset("rubble-cutout-boards-01-v16.webp", 0.3971, 0.3971),
+    rubbleAsset("rubble-cutout-boards-02-v16.webp", 0.3971, 0.3266),
+    rubbleAsset("rubble-cutout-boards-03-v16.webp", 0.3266, 0.3971),
+    rubbleAsset("rubble-cutout-boards-04-v16.webp", 0.3971, 0.6049),
+    rubbleAsset("rubble-cutout-boards-05-v16.webp", 0.4824, 0.5826),
+    rubbleAsset("rubble-cutout-boards-06-v16.webp", 0.4824, 0.5826),
+    rubbleAsset("rubble-cutout-boards-07-v16.webp", 0.6123, 0.4268),
+    rubbleAsset("rubble-cutout-boards-08-v16.webp", 0.5826, 0.4824),
+    rubbleAsset("rubble-cutout-boards-09-v16.webp", 1.0873, 0.7311),
+    rubbleAsset("rubble-cutout-boards-10-v16.webp", 0.7348, 1.0725),
+    rubbleAsset("rubble-cutout-boards-11-v16.webp", 1.0799, 0.7756),
+    rubbleAsset("rubble-cutout-boards-12-v16.webp", 0.7533, 1.0168),
+  ]),
+  brickGrey: Object.freeze([
+    rubbleAsset("rubble-cutout-brick-grey-01-v16.webp", 0.3859, 0.3859),
+    rubbleAsset("rubble-cutout-brick-grey-02-v16.webp", 0.3896, 0.3859),
+    rubbleAsset("rubble-cutout-brick-grey-03-v16.webp", 0.3859, 0.3934),
+    rubbleAsset("rubble-cutout-brick-grey-04-v16.webp", 0.3488, 0.3451),
+    rubbleAsset("rubble-cutout-brick-grey-05-v16.webp", 0.5752, 0.642),
+    rubbleAsset("rubble-cutout-brick-grey-06-v16.webp", 0.6123, 0.6494),
+    rubbleAsset("rubble-cutout-brick-grey-07-v16.webp", 0.6123, 0.6494),
+    rubbleAsset("rubble-cutout-brick-grey-08-v16.webp", 0.6494, 0.6086),
+    rubbleAsset("rubble-cutout-brick-grey-09-v16.webp", 0.616, 0.5678),
+    rubbleAsset("rubble-cutout-brick-grey-10-v16.webp", 0.8238, 0.9723),
+    rubbleAsset("rubble-cutout-brick-grey-11-v16.webp", 0.9203, 0.7199),
+    rubbleAsset("rubble-cutout-brick-grey-12-v16.webp", 0.6865, 0.9129),
+  ]),
+  brickRed: Object.freeze([
+    rubbleAsset("rubble-cutout-brick-red-01-v16.webp", 0.3637, 0.3637),
+    rubbleAsset("rubble-cutout-brick-red-02-v16.webp", 0.3785, 0.3154),
+    rubbleAsset("rubble-cutout-brick-red-03-v16.webp", 0.3637, 0.36),
+    rubbleAsset("rubble-cutout-brick-red-04-v16.webp", 0.3414, 0.3637),
+    rubbleAsset("rubble-cutout-brick-red-05-v16.webp", 0.5232, 0.6197),
+    rubbleAsset("rubble-cutout-brick-red-06-v16.webp", 0.6197, 0.5232),
+    rubbleAsset("rubble-cutout-brick-red-07-v16.webp", 0.5381, 0.6457),
+    rubbleAsset("rubble-cutout-brick-red-08-v16.webp", 0.5232, 0.6197),
+    rubbleAsset("rubble-cutout-brick-red-09-v16.webp", 0.527, 0.4824),
+    rubbleAsset("rubble-cutout-brick-red-10-v16.webp", 0.7459, 0.9871),
+    rubbleAsset("rubble-cutout-brick-red-11-v16.webp", 0.9908, 0.7459),
+    rubbleAsset("rubble-cutout-brick-red-12-v16.webp", 0.9908, 0.7459),
+  ]),
+});
+
 const FLOOR_STYLES = Object.freeze({
   [DEFAULT_STYLE]: Object.freeze({
     labelKey: "Settings.FloorTextures.Choices.UnevenLimestone",
@@ -34,11 +96,24 @@ const FLOOR_STYLES = Object.freeze({
   "swamp": floorStyle("Swamp", "Swamp", "swamp-floor-v1.png"),
   "path-dirt": floorStyle("PathDirt", "Dirt path", "path-dirt-floor.png", { kind: "cut", jitter: 4 }),
   "path-cobblestone": floorStyle("PathCobblestone", "Cobblestone path", "path-cobblestone-floor.png", { kind: "stone", jitter: 7, feather: 4 }),
+  "rubble-stone": rubbleStyle("RubbleStone", "Stone only", "rubble-stone-floor-v9.webp", { groups: ["stone"], spacingCells: 0.29, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "rubble-stone-boards": rubbleStyle("RubbleStoneBoards", "Stone and boards", "rubble-stone-boards-floor-v9.webp", { groups: ["stone", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "rubble-boards": rubbleStyle("RubbleBoards", "Boards only", "rubble-boards-floor-v9.webp", { groups: ["boards"], spacingCells: 0.31, chance: 0.74, scaleMin: 0.72, scaleMax: 0.94 }),
+  "rubble-brick-grey": rubbleStyle("RubbleBrickGrey", "Grey bricks", "rubble-brick-grey-floor-v9.webp", { groups: ["brickGrey"], spacingCells: 0.29, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "rubble-brick-red": rubbleStyle("RubbleBrickRed", "Red bricks", "rubble-brick-red-floor-v9.webp", { groups: ["brickRed"], spacingCells: 0.29, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "rubble-brick-grey-boards": rubbleStyle("RubbleBrickGreyBoards", "Grey bricks and boards", "rubble-brick-grey-boards-floor-v9.webp", { groups: ["brickGrey", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "rubble-brick-red-boards": rubbleStyle("RubbleBrickRedBoards", "Red bricks and boards", "rubble-brick-red-boards-floor-v9.webp", { groups: ["brickRed", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
   "carpet-red": floorStyle("CarpetRed", "Red carpet", "carpet-red-floor.png", carpetEdge("red")),
   "carpet-blue": floorStyle("CarpetBlue", "Blue carpet", "carpet-blue-floor.png", carpetEdge("blue")),
   "carpet-red-ornate": floorStyle("CarpetRedOrnate", "Ornate red carpet", "carpet-red-ornate-floor.webp", carpetEdge("red"), 0.5),
   "carpet-blue-heraldic": floorStyle("CarpetBlueHeraldic", "Ornate blue carpet", "carpet-blue-ornate-floor-v2.webp", carpetEdge("blue"), 0.5),
   "carpet-green-gold": floorStyle("CarpetGreenGold", "Green and gold carpet", "carpet-green-gold-floor.webp", carpetEdge("green"), 0.5),
+  "cobweb-below": cobwebStyle("CobwebBelow", "Cobweb below — full", "below", "patch"),
+  "cobweb-below-corner": cobwebStyle("CobwebBelowCorner", "Cobweb below — corner", "below", "corner"),
+  "cobweb-below-strip": cobwebStyle("CobwebBelowStrip", "Cobweb below — along edge", "below", "strip"),
+  "cobweb-above": cobwebStyle("CobwebAbove", "Cobweb above — full", "above", "patch"),
+  "cobweb-above-corner": cobwebStyle("CobwebAboveCorner", "Cobweb above — corner", "above", "corner"),
+  "cobweb-above-strip": cobwebStyle("CobwebAboveStrip", "Cobweb above — along edge", "above", "strip"),
   "garden-cabbage": gardenStyle("GardenCabbage", "Cabbage beds", "garden-cabbage-floor.webp", "garden-crop-cabbage-v2.webp", { cropSize: 0.19, spacingX: 0.27, spacingY: 0.19, missingChance: 0.015, cropBrightness: 1.24, cropSaturation: 0.14 }),
   "garden-carrot": gardenStyle("GardenCarrot", "Carrot beds", "garden-carrot-floor.webp", "garden-crop-carrot-v2.webp", { cropSize: 0.17, spacingX: 0.21, spacingY: 0.13, missingChance: 0.02, cropBrightness: 1.5, cropSaturation: 0.26 }),
   "garden-herbs": gardenStyle("GardenHerbs", "Herb beds", "garden-herbs-floor.webp", "garden-crop-herbs-v2.webp", { cropSize: 0.18, spacingX: 0.22, spacingY: 0.14, missingChance: 0.02, cropBrightness: 1.4, cropSaturation: 0.22 }),
@@ -72,6 +147,10 @@ const FLOOR_STYLES = Object.freeze({
 });
 const FLOOR_STYLE_CATEGORIES = Object.freeze([
   Object.freeze({ key: "Stone", fallback: "Stone", styles: ["uneven-limestone", "flagstone-grey", "brick-red"] }),
+  Object.freeze({ key: "Rubble", fallback: "Rubble", styles: [
+    "rubble-stone", "rubble-stone-boards", "rubble-boards", "rubble-brick-grey",
+    "rubble-brick-red", "rubble-brick-grey-boards", "rubble-brick-red-boards",
+  ] }),
   Object.freeze({ key: "Caves", fallback: "Caves", styles: ["cave-brown", "cave-grey-pebbles"] }),
   Object.freeze({ key: "Wood", fallback: "Wood", styles: ["wood-walnut", "wood-alder", "wood-outdoor"] }),
   Object.freeze({ key: "Stairs", fallback: "Stairs", styles: [
@@ -88,9 +167,13 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
   Object.freeze({ key: "Gardens", fallback: "Gardens", styles: ["garden-cabbage", "garden-carrot", "garden-herbs", "garden-rice"] }),
   Object.freeze({ key: "Paths", fallback: "Paths", styles: ["path-dirt", "path-cobblestone"] }),
   Object.freeze({ key: "Carpets", fallback: "Carpets", styles: ["carpet-red", "carpet-blue", "carpet-red-ornate", "carpet-blue-heraldic", "carpet-green-gold"] }),
+  Object.freeze({ key: "Cobwebs", fallback: "Cobwebs", styles: [
+    "cobweb-below", "cobweb-below-corner", "cobweb-below-strip",
+    "cobweb-above", "cobweb-above-corner", "cobweb-above-strip",
+  ] }),
 ]);
 
-function floorStyle(label, fallback, filename, edge = null, scale = 1) {
+function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay = false, rubble = null) {
   const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
   return Object.freeze({
     labelKey: `Settings.FloorTextures.Choices.${label}`,
@@ -98,6 +181,60 @@ function floorStyle(label, fallback, filename, edge = null, scale = 1) {
     get src() { return resolvePresetTexture(source); },
     edge,
     scale,
+    overlay,
+    rubble,
+  });
+}
+
+function cobwebStyle(label, fallback, layer, shape) {
+  const source = `modules/${MODULE_ID}/images/scene-floors/cobweb-${shape}-${layer}-v1.webp`;
+  return Object.freeze({
+    labelKey: `Settings.FloorTextures.Choices.${label}`,
+    fallback,
+    get previewSrc() { return resolvePresetTexture(source); },
+    get src() { return resolvePresetTexture(source); },
+    overlay: true,
+    cobweb: Object.freeze({
+      layer,
+      shape,
+      get src() { return resolvePresetTexture(source); },
+    }),
+  });
+}
+
+function rubbleAsset(filename, widthCells, heightCells, weight = 1) {
+  const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
+  return Object.freeze({
+    get src() { return resolvePresetTexture(source); },
+    widthCells: Number(widthCells),
+    heightCells: Number(heightCells),
+    weight: Number(weight),
+  });
+}
+
+
+
+function rubbleStyle(label, fallback, filename, options = {}) {
+  const previewSource = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
+  const assetGroups = Array.isArray(options.groups) && options.groups.length ? options.groups : ["stone"];
+  const assets = Object.freeze(assetGroups.flatMap((group) => RUBBLE_ASSET_POOLS[group] ?? []));
+  return Object.freeze({
+    labelKey: `Settings.FloorTextures.Choices.${label}`,
+    fallback,
+    get previewSrc() { return resolvePresetTexture(previewSource); },
+    // Keep src for old picker/compatibility paths; map rendering uses only external cutout assets.
+    get src() { return resolvePresetTexture(previewSource); },
+    edge: Object.freeze({ kind: "rubble", jitter: 0 }),
+    scale: 1,
+    overlay: true,
+    rubble: Object.freeze({
+      assets,
+      spacingCells: Number(options.spacingCells ?? 0.34),
+      chance: Number(options.chance ?? 0.52),
+      scaleMin: Number(options.scaleMin ?? 0.82),
+      scaleMax: Number(options.scaleMax ?? 1.08),
+      maxPieces: Number(options.maxPieces ?? 12000),
+    }),
   });
 }
 
@@ -272,7 +409,6 @@ Hooks.once("init", () => {
     type: Boolean,
     onChange: () => {
       refreshControls();
-      scheduleRedraw();
     },
   });
 });
@@ -298,6 +434,10 @@ function styleLabel(style) {
     return `${t(style.materialLabelKey, style.materialFallback)} — ${localize(style.directionKey, style.directionFallback)}`;
   }
   return t(style.labelKey, style.fallback);
+}
+
+function styleIsOverlay(styleKey = selectedStyle) {
+  return Boolean(FLOOR_STYLES[styleKey]?.overlay);
 }
 
 function rotateStylePreview(image, style) {
@@ -615,7 +755,7 @@ async function addFloor(source, points, { replaceAt = null } = {}) {
   if (polygonSelfIntersects(polygon)) {
     return ui.notifications.warn(localize("SelfIntersection", "The floor boundary crosses itself."));
   }
-  if (replaceAt) {
+  if (replaceAt && !styleIsOverlay()) {
     const existing = data.floors
       .filter((floor) => floor.source !== "base" && pointInPolygon(replaceAt, floor.points))
       .filter((floor) => Number(floor.level ?? 0) === currentLevel)
@@ -631,7 +771,9 @@ async function addFloor(source, points, { replaceAt = null } = {}) {
       return;
     }
   }
-  const duplicate = data.floors.find((floor) => Number(floor.level ?? 0) === selectedLevel && polygonsEquivalent(floor.points, polygon));
+  const duplicate = data.floors.find((floor) => Number(floor.level ?? 0) === selectedLevel
+    && (!styleIsOverlay() || styleIsOverlay(floor.style))
+    && polygonsEquivalent(floor.points, polygon));
   if (duplicate) {
     duplicate.style = selectedStyle;
     duplicate.level = selectedLevel;
@@ -643,6 +785,9 @@ async function addFloor(source, points, { replaceAt = null } = {}) {
 }
 
 async function setBaseFloor() {
+  if (styleIsOverlay()) {
+    return ui.notifications.warn(localize("OverlayFloorOnly", "Overlay floors can only be placed over an existing floor."));
+  }
   const rect = canvas?.dimensions?.sceneRect;
   if (!rect) return ui.notifications.warn(localize("NoScene", "The scene is not ready."));
   const points = [
@@ -761,10 +906,11 @@ async function onPointerDown(event) {
   if (activeTool === "erase") return removeFloorAt(rawPoint);
   if (activeTool === "level") return changeFloorLevelAt(rawPoint);
   if (activeTool === "fill") {
-    if (await replaceFloorStyleAt(rawPoint)) return;
-    const polygon = findWallFace(rawPoint);
+    const overlay = styleIsOverlay();
+    if (!overlay && await replaceFloorStyleAt(rawPoint)) return;
+    const polygon = findWallFace(rawPoint) ?? (overlay ? findExistingFloorFace(rawPoint) : null);
     if (!polygon) return ui.notifications.warn(localize("OpenRoom", "No closed room was found here."));
-    return addFloor("walls", polygon, { replaceAt: rawPoint });
+    return addFloor("walls", polygon, { replaceAt: overlay ? null : rawPoint });
   }
 
   const hit = findManualEdge(rawPoint);
@@ -817,6 +963,12 @@ function findManualEdge(point) {
   return best;
 }
 
+function findExistingFloorFace(point) {
+  return getSceneData().floors
+    .filter((floor) => floor.source !== "base" && Number(floor.level ?? 0) === currentLevel && pointInPolygon(point, floor.points))
+    .sort((left, right) => Math.abs(polygonArea(left.points)) - Math.abs(polygonArea(right.points)))[0]?.points ?? null;
+}
+
 document.addEventListener("keydown", async (event) => {
   if (!activeTool || currentControlName() !== CONTROL_NAME) return;
   if (event.key === "Escape") {
@@ -855,6 +1007,30 @@ function getFloorContainer(create = true) {
     parent.sortDirty = true;
   }
   else container.zIndex = -10000;
+  return container;
+}
+
+function getCobwebAboveContainer(create = true) {
+  const parent = canvas?.primary ?? canvas?.stage;
+  if (!parent) return null;
+  let container = parent.children?.find((child) => child.name === COBWEB_ABOVE_CONTAINER);
+  if (!container && create) {
+    container = new PIXI.Container();
+    container.name = COBWEB_ABOVE_CONTAINER;
+    container.eventMode = "none";
+    container.sortableChildren = true;
+    parent.sortableChildren = true;
+    parent.addChild(container);
+  }
+  if (parent === canvas?.primary) {
+    const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
+    // Above ordinary asset tiles, but below border (+1) and wall (+3) textures.
+    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
+    container.sortLayer = Number(sortLayers.TILES ?? 500) + 0.5;
+    container.sort = 0;
+    container.zIndex = 0;
+    parent.sortDirty = true;
+  } else container.zIndex = 9999;
   return container;
 }
 
@@ -963,10 +1139,16 @@ function drawClosedStroke(graphics, points, color, width, alpha = 1, join = "rou
 
 function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
   const container = getFloorContainer(!forestOnly);
+  const cobwebAboveContainer = getCobwebAboveContainer(!forestOnly);
   const forestContainer = getForestContainer();
   const targetedForestIds = forestOnly ? new Set(forestFloorIds) : null;
-  if (!forestOnly) clearContainer(container);
-  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) {
+  if (!forestOnly) {
+    clearContainer(container);
+    clearContainer(cobwebAboveContainer);
+  }
+  // The setting controls the GM drawing tools only. Persisted floor data must
+  // remain visible when a scene is opened from a compendium or in another world.
+  if (!canvas?.ready) {
     clearContainer(forestContainer);
     forestRenderSignatures.clear();
     return;
@@ -1003,9 +1185,22 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     const floorLayer = new PIXI.Container();
     floorLayer.eventMode = "none";
     floorLayer.zIndex = Number(floor.level ?? 0);
-    container.addChild(floorLayer);
+    const floorParent = style.cobweb?.layer === "above" ? cobwebAboveContainer : container;
+    floorParent?.addChild(floorLayer);
     const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
-    const renderPoints = style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, boundarySeed, style.edge) : points;
+    const renderPoints = style.rubble
+      ? points
+      : style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, boundarySeed, style.edge) : points;
+    if (style.cobweb) {
+      const cobweb = createCobwebFill(renderPoints, style.cobweb);
+      if (cobweb) floorLayer.addChild(cobweb);
+      continue;
+    }
+    if (style.rubble) {
+      const rubble = createRubbleFill(renderPoints, style.rubble, `${floor.id}:${floor.style}`);
+      if (rubble) floorLayer.addChild(rubble);
+      continue;
+    }
     if (style.garden) {
       const garden = createGardenFill(renderPoints, style, `${floor.id}:${floor.style}`);
       if (garden) floorLayer.addChild(garden);
@@ -1054,7 +1249,7 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
 }
 
 function isNaturalPathEdge(edge) {
-  return edge?.kind === "dirt" || edge?.kind === "stone";
+  return edge?.kind === "dirt" || edge?.kind === "stone" || edge?.kind === "rubble";
 }
 
 function forestMaxWallClearance(forest) {
@@ -1255,6 +1450,255 @@ function createGardenFill(points, style, seed) {
   return container;
 }
 
+function createCobwebFill(points, cobweb) {
+  if (!cobweb || points.length < 3) return null;
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const frame = orientedPolygonFrame(points);
+  const shape = cobweb.shape ?? "patch";
+  const texture = PIXI.Texture.from(cobweb.src);
+  let sprite;
+  try { sprite = new PIXI.Sprite({ texture }); }
+  catch { sprite = new PIXI.Sprite(texture); }
+  sprite.anchor?.set?.(0.5);
+
+  if (shape === "corner") {
+    const corner = nearestCobwebCorner(points, frame.center, wallSegments(), grid);
+    if (corner) {
+      const extent = frameExtentAtAngle(points, corner.rotation);
+      const offset = rotateVector({ x: extent.width / 2, y: extent.height / 2 }, corner.rotation);
+      sprite.position.set(corner.point.x + offset.x, corner.point.y + offset.y);
+      sprite.width = extent.width;
+      sprite.height = extent.height;
+      sprite.rotation = corner.rotation;
+    } else {
+      sprite.position.set(frame.center.x, frame.center.y);
+      sprite.width = frame.width;
+      sprite.height = frame.height;
+      sprite.rotation = frame.angle;
+    }
+  } else if (shape === "strip") {
+    const wall = nearestWallToPoint(frame.center, wallSegments());
+    let rotation = wall?.angle ?? (frame.width >= frame.height ? frame.angle : frame.angle + Math.PI / 2);
+    const extent = frameExtentAtAngle(points, rotation);
+    const width = Math.max(1, extent.width);
+    const height = Math.max(1, extent.height);
+    let position = frame.center;
+    if (wall && wall.distance <= grid * 0.9) {
+      let normal = { x: -Math.sin(rotation), y: Math.cos(rotation) };
+      if ((frame.center.x - wall.projected.x) * normal.x + (frame.center.y - wall.projected.y) * normal.y < 0) {
+        normal = { x: -normal.x, y: -normal.y };
+        rotation += Math.PI;
+      }
+      position = { x: wall.projected.x + normal.x * height / 2, y: wall.projected.y + normal.y * height / 2 };
+    }
+    sprite.position.set(position.x, position.y);
+    sprite.width = width;
+    sprite.height = height;
+    sprite.rotation = rotation;
+  } else {
+    sprite.position.set(frame.center.x, frame.center.y);
+    sprite.width = frame.width;
+    sprite.height = frame.height;
+    sprite.rotation = frame.angle;
+  }
+
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  sprite.mask = mask;
+  sprite.eventMode = "none";
+  sprite.interactive = false;
+  mask.eventMode = "none";
+  mask.interactive = false;
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  container.addChild(sprite, mask);
+  return container;
+}
+
+function nearestCobwebCorner(points, center, walls, grid) {
+  const groups = new Map();
+  const precision = Math.max(2, grid * 0.04);
+  const add = (point, other) => {
+    const key = `${Math.round(point.x / precision)},${Math.round(point.y / precision)}`;
+    const group = groups.get(key) ?? { point: { ...point }, directions: [] };
+    const length = distance(point, other) || 1;
+    group.directions.push({ x: (other.x - point.x) / length, y: (other.y - point.y) / length });
+    groups.set(key, group);
+  };
+  for (const wall of walls) {
+    add(wall.a, wall.b);
+    add(wall.b, wall.a);
+  }
+
+  let best = null;
+  for (const group of groups.values()) {
+    if (group.directions.length < 2) continue;
+    if (!pointInPolygon(group.point, points) && distanceToPolygon(group.point, points) > grid * 0.3) continue;
+    const centerDistance = distance(group.point, center);
+    for (let left = 0; left < group.directions.length; left += 1) {
+      for (let right = left + 1; right < group.directions.length; right += 1) {
+        const a = group.directions[left];
+        const b = group.directions[right];
+        const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y));
+        const angle = Math.acos(dot);
+        if (angle < Math.PI * 0.28 || angle > Math.PI * 0.72) continue;
+        const cross = a.x * b.y - a.y * b.x;
+        const xAxis = cross >= 0 ? a : b;
+        const score = centerDistance + Math.abs(angle - Math.PI / 2) * grid * 0.2;
+        if (!best || score < best.score) {
+          best = { point: group.point, rotation: Math.atan2(xAxis.y, xAxis.x), score };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function nearestWallToPoint(point, walls) {
+  let best = null;
+  for (const wall of walls) {
+    const dx = wall.b.x - wall.a.x;
+    const dy = wall.b.y - wall.a.y;
+    const length2 = dx * dx + dy * dy;
+    if (length2 <= EPSILON) continue;
+    const ratio = Math.max(0, Math.min(1, ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / length2));
+    const projected = { x: wall.a.x + dx * ratio, y: wall.a.y + dy * ratio };
+    const candidate = { wall, projected, distance: distance(point, projected), angle: Math.atan2(dy, dx) };
+    if (!best || candidate.distance < best.distance) best = candidate;
+  }
+  return best;
+}
+
+function frameExtentAtAngle(points, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const local = points.map((point) => ({ x: point.x * cos + point.y * sin, y: -point.x * sin + point.y * cos }));
+  const xs = local.map((point) => point.x);
+  const ys = local.map((point) => point.y);
+  return { width: Math.max(1, Math.max(...xs) - Math.min(...xs)), height: Math.max(1, Math.max(...ys) - Math.min(...ys)) };
+}
+
+function rotateVector(vector, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return { x: vector.x * cos - vector.y * sin, y: vector.x * sin + vector.y * cos };
+}
+
+function createRubbleFill(points, rubble, seed) {
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+
+  const assets = Array.isArray(rubble?.assets) ? rubble.assets : [];
+  if (!assets.length) return container;
+  const bounds = polygonBounds(points);
+  if (!bounds.width || !bounds.height) return container;
+
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const spacing = grid * Math.max(0.18, Number(rubble.spacingCells ?? 0.34));
+  const chance = Math.max(0, Math.min(1, Number(rubble.chance ?? 0.52)));
+  const scaleMin = Math.max(0.1, Number(rubble.scaleMin ?? 0.82));
+  const scaleMax = Math.max(scaleMin, Number(rubble.scaleMax ?? 1.08));
+  const maxPieces = Math.max(1, Number(rubble.maxPieces ?? 12000));
+  const startX = Math.floor(bounds.x / spacing) - 1;
+  const endX = Math.ceil((bounds.x + bounds.width) / spacing) + 1;
+  const startY = Math.floor(bounds.y / spacing) - 1;
+  const endY = Math.ceil((bounds.y + bounds.height) / spacing) + 1;
+
+  const placements = [];
+  for (let gy = startY; gy <= endY && placements.length < maxPieces; gy += 1) {
+    for (let gx = startX; gx <= endX && placements.length < maxPieces; gx += 1) {
+      const random = seededRandom(`${seed}:rubble:${gx}:${gy}`);
+      if (random() > chance) continue;
+      const asset = weightedRubbleAsset(assets, random());
+      if (!asset) continue;
+      const scale = lerp(scaleMin, scaleMax, random());
+      const width = grid * Math.max(0.02, Number(asset.widthCells ?? 0.3)) * scale;
+      const height = grid * Math.max(0.02, Number(asset.heightCells ?? 0.3)) * scale;
+      const rotation = random() * Math.PI * 2;
+
+      // Try several deterministic positions inside this lattice cell. A placement is accepted
+      // only when its complete rotated rectangular footprint is inside the floor polygon.
+      let point = null;
+      for (let attempt = 0; attempt < 16; attempt += 1) {
+        const candidate = {
+          x: (gx + 0.06 + random() * 0.88) * spacing,
+          y: (gy + 0.06 + random() * 0.88) * spacing,
+        };
+        if (rotatedRectInsidePolygon(candidate, width, height, rotation, points)) {
+          point = candidate;
+          break;
+        }
+      }
+      if (!point) continue;
+      placements.push({ ...point, asset, width, height, rotation });
+    }
+  }
+
+  // Stable y ordering keeps overlaps readable but does not create spatial clusters.
+  placements.sort((a, b) => a.y - b.y);
+  placements.forEach((placement, index) => {
+    const texture = PIXI.Texture.from(placement.asset.src);
+    let sprite;
+    try { sprite = new PIXI.Sprite({ texture }); }
+    catch { sprite = new PIXI.Sprite(texture); }
+    sprite.anchor?.set?.(0.5);
+    sprite.position.set(placement.x, placement.y);
+    sprite.width = placement.width;
+    sprite.height = placement.height;
+    sprite.rotation = placement.rotation;
+    sprite.zIndex = index;
+    sprite.eventMode = "none";
+    sprite.interactive = false;
+    container.addChild(sprite);
+  });
+  return container;
+}
+
+function weightedRubbleAsset(assets, roll) {
+  const total = assets.reduce((sum, asset) => sum + Math.max(0, Number(asset.weight ?? 1)), 0);
+  if (total <= 0) return assets[0] ?? null;
+  let cursor = roll * total;
+  for (const asset of assets) {
+    cursor -= Math.max(0, Number(asset.weight ?? 1));
+    if (cursor <= 0) return asset;
+  }
+  return assets.at(-1) ?? null;
+}
+
+function rotatedRectInsidePolygon(center, width, height, rotation, polygon) {
+  if (!pointInPolygon(center, polygon)) return false;
+  const halfW = width / 2;
+  const halfH = height / 2;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const local = [
+    { x: -halfW, y: -halfH },
+    { x: halfW, y: -halfH },
+    { x: halfW, y: halfH },
+    { x: -halfW, y: halfH },
+  ];
+  const corners = local.map((point) => ({
+    x: center.x + point.x * cos - point.y * sin,
+    y: center.y + point.x * sin + point.y * cos,
+  }));
+  if (corners.some((corner) => !pointInPolygon(corner, polygon))) return false;
+
+  // Corner tests alone are insufficient for concave polygons: a rectangle edge can cross
+  // a notch while all corners are technically inside. Reject every polygon-edge crossing.
+  for (let r = 0; r < corners.length; r += 1) {
+    const from = corners[r];
+    const to = corners[(r + 1) % corners.length];
+    for (let p = 0; p < polygon.length; p += 1) {
+      const edgeFrom = polygon[p];
+      const edgeTo = polygon[(p + 1) % polygon.length];
+      if (segmentIntersection(from, to, edgeFrom, edgeTo)) return false;
+    }
+  }
+  return true;
+}
+
 function weightedForestAsset(assets, roll) {
   const choices = Array.isArray(assets) ? assets : [];
   const total = choices.reduce((sum, asset) => sum + Math.max(0, Number(asset.weight ?? 1)), 0);
@@ -1332,7 +1776,7 @@ function stableNoise(seed) {
 function createNaturalBoundary(points, seed, edge) {
   if (!(Number(edge.jitter) > 0)) return points;
   const result = [];
-  const spacing = edge.kind === "dirt" ? 11 : 13;
+  const spacing = edge.kind === "dirt" ? 11 : edge.kind === "rubble" ? 9 : 13;
   points.forEach((from, edgeIndex) => {
     const to = points[(edgeIndex + 1) % points.length];
     const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
@@ -1602,7 +2046,7 @@ function blockingSegmentFromWallState(state) {
 
 function affectedVisibleForestIds(states) {
   const affected = new Set();
-  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) return affected;
+  if (!canvas?.ready) return affected;
   const segments = states.map(blockingSegmentFromWallState).filter(Boolean);
   if (!segments.length) return affected;
   for (const floor of getSceneData().floors) {
@@ -1635,6 +2079,7 @@ Hooks.on("canvasTearDown", () => {
   redrawNeedsFullPass = false;
   pendingForestFloorIds.clear();
   clearContainer(getFloorContainer(false));
+  clearContainer(getCobwebAboveContainer(false));
   clearContainer(getForestContainer(false));
   clearContainer(getEditorContainer(false));
   forestRenderSignatures.clear();

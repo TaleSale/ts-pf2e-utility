@@ -1,9 +1,8 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260816-swamp-floor1";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260823-statues-size-v2";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
-const SETTING_BUILD_DEFAULTS = "wallTextureBuildDefaults";
 const I18N_ROOT = "Settings.WallTextures";
 const DOOR_I18N_ROOT = "Settings.DoorTexturePresets";
 const FLAG_ROOT = "wallTexture";
@@ -21,6 +20,11 @@ const DOOR_SWING_INDICATOR_ALPHA = 0.2;
 const DOOR_SWING_INDICATOR_OUTLINE_ALPHA = 0.75;
 const DOOR_SWING_INDICATOR_LENGTH_RATIO = 0.4;
 const TEXTURE_ASSET_BASE = `modules/${MODULE_ID}/images/scene-walls`;
+const WALL_CONTROL_NAME = "walls";
+const WALL_TEXTURE_TOOL = "tsu-wall-texture";
+const BULK_PICKER_CLASS = "tsu-wall-texture-bulk-picker";
+const BULK_SELECTION_DRAG_CLASS = "tsu-wall-texture-selection-drag";
+const BULK_SELECTION_CONTAINER = "tsu-wall-texture-selection";
 const SOURCE_TEXTURE_SIZE = 200;
 const SOURCE_WALL_WIDTH = 60;
 const WALL_WIDTH_GRID_RATIO = 0.2;
@@ -71,7 +75,7 @@ const WALL_TEXTURE_STYLES = Object.freeze({
   "wood-nut": createWallTextureStyle("WoodNut", "Wood - Walnut", "wood-nut.png", 78, 122),
   "wood-alder": createWallTextureStyle("WoodAlder", "Wood - Alder", "wood-alder.png", 78, 122),
   "border-wood-stone": createWallTextureStyle("BorderWoodStone", "Border - Wood and stone", "border-wood-stone-v2.webp", 80, 120, I18N_ROOT, { borderOnly: true, widthRatio: 0.12 }),
-  "border-green-fog": createWallTextureStyle("BorderGreenFog", "Border - Green fog", "border-green-fog.webp", 71, 129, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, smooth: true }),
+  "border-green-fog": createWallTextureStyle("BorderGreenFog", "Border - Green fog", "border-green-fog-v7.webp", 30, 170, I18N_ROOT, { borderOnly: true, widthRatio: 0.96, smooth: true }),
   "border-curtain-red": createWallTextureStyle("BorderCurtainRed", "Curtain - dark red", "border-curtain-red.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
   "border-curtain-blue": createWallTextureStyle("BorderCurtainBlue", "Curtain - muted blue", "border-curtain-blue.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
   "border-curtain-gold": createWallTextureStyle("BorderCurtainGold", "Curtain - ochre", "border-curtain-gold.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
@@ -108,9 +112,10 @@ function createWallTextureStyle(label, fallback, filename, ribbonTop, ribbonBott
 
 let redrawTimeout = null;
 let doorSwingIndicatorRedrawTimeout = null;
-let currentBuildTextureDefaults = null;
-const propagatingWallUpdates = new Set();
-const PROPAGATION_OPTION = "tsuWallTexturePropagation";
+let bulkToolActive = false;
+let bulkStageBound = null;
+let bulkSelectionDrag = null;
+const bulkSelectedWallIds = new Set();
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, SETTING_ENABLE, {
@@ -120,7 +125,9 @@ Hooks.once("init", () => {
     config: true,
     default: false,
     type: Boolean,
-    onChange: () => scheduleWallTextureRedraw(),
+    onChange: () => {
+      ui.controls?.render?.({ reset: true });
+    },
   });
 
   game.settings.register(MODULE_ID, SETTING_DOOR_PRESETS, {
@@ -131,24 +138,45 @@ Hooks.once("init", () => {
     default: true,
     type: Boolean,
   });
-
-  game.settings.register(MODULE_ID, SETTING_BUILD_DEFAULTS, {
-    scope: "client",
-    config: false,
-    default: {
-      enabled: true,
-      mode: "wall",
-      style: DEFAULT_STYLE,
-      flipX: false,
-      flipY: false,
-    },
-    type: Object,
-  });
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, () => {
   scheduleWallTextureRedraw();
   ui.controls?.render?.({ reset: true });
+  renderBulkWallPicker(ui.controls?.element);
+});
+
+function bulkToolEnabled() {
+  return Boolean(game.user?.isGM && game.settings.get(MODULE_ID, SETTING_ENABLE));
+}
+
+Hooks.on("getSceneControlButtons", (controls) => {
+  if (!bulkToolEnabled()) return;
+  const walls = controls.walls
+    ?? Object.values(controls).find((group) => group?.layer === WALL_CONTROL_NAME || group?.layerName === WALL_CONTROL_NAME);
+  if (!walls?.tools) return;
+  walls.tools[WALL_TEXTURE_TOOL] = {
+    name: WALL_TEXTURE_TOOL,
+    order: 99,
+    title: t("Settings.WallTextures.BulkTool", "Массовая текстура стен"),
+    icon: "fa-solid fa-paint-roller",
+    visible: true,
+    onChange: (_event, active) => {
+      if (active === false) deactivateBulkWallTool();
+      else activateBulkWallTool();
+    },
+  };
+});
+
+Hooks.on("renderSceneControls", (_app, element) => {
+  queueMicrotask(() => {
+    const active = bulkToolEnabled()
+      && isBulkWallControlActive()
+      && isBulkWallToolSelected();
+    if (active) activateBulkWallTool();
+    else deactivateBulkWallTool();
+    renderBulkWallPicker(element);
+  });
 });
 
 function getElement(root) {
@@ -158,80 +186,489 @@ function getElement(root) {
   return null;
 }
 
+function scheduleApplicationAutoHeight(app) {
+  if (typeof app?.setPosition !== "function") return;
+  requestAnimationFrame(() => {
+    const element = getElement(app?.element);
+    if (!element?.isConnected) return;
+    try {
+      app.setPosition({ height: "auto" });
+    } catch (_error) {
+      // Foundry WallPalette can detach its position element during a render hook.
+    }
+  });
+}
+
+function bulkToolSelected() {
+  return bulkToolActive
+    && isBulkWallControlActive()
+    && isBulkWallToolSelected();
+}
+
+function isBulkWallToolSelected() {
+  return ui.controls?.tool?.name === WALL_TEXTURE_TOOL
+    || document.querySelector(`#scene-controls [data-tool="${WALL_TEXTURE_TOOL}"]`)?.classList.contains("active");
+}
+
+function isBulkWallControlActive() {
+  const control = ui.controls?.control;
+  return control === WALL_CONTROL_NAME
+    || control?.name === WALL_CONTROL_NAME
+    || control?.layer === WALL_CONTROL_NAME
+    || control?.layerName === WALL_CONTROL_NAME;
+}
+
+function activateBulkWallTool() {
+  if (!bulkToolEnabled()) return;
+  bulkToolActive = true;
+  bindBulkStage();
+  syncBulkWallSelection();
+  renderBulkWallPicker(ui.controls?.element);
+}
+
+function deactivateBulkWallTool() {
+  bulkToolActive = false;
+  bulkSelectionDrag = null;
+  clearBulkSelectionDrag();
+  unbindBulkStage();
+  drawBulkWallSelection();
+  document.querySelector(`.${BULK_PICKER_CLASS}`)?.remove();
+}
+
+function bulkControlRoot(element) {
+  return getElement(element) ?? document.querySelector("#scene-controls");
+}
+
+function bulkStyleEntries(mode) {
+  const borderMode = mode === "border";
+  return Object.entries(WALL_TEXTURE_STYLES)
+    .filter(([, style]) => Boolean(style.borderOnly) === borderMode);
+}
+
+function bulkStyleLabel(style) {
+  return t(style.labelKey, style.fallback);
+}
+
+function renderBulkWallPicker(element) {
+  document.querySelector(`.${BULK_PICKER_CLASS}`)?.remove();
+  if (!bulkToolSelected()) return;
+  const root = bulkControlRoot(element);
+  if (!root) return;
+
+  const picker = document.createElement("section");
+  picker.className = BULK_PICKER_CLASS;
+  const header = document.createElement("header");
+  const title = document.createElement("strong");
+  title.textContent = t("Settings.WallTextures.BulkTitle", "Текстура выбранных стен");
+  const count = document.createElement("span");
+  count.dataset.wallSelectionCount = "true";
+  header.append(title, count);
+  picker.append(header);
+
+  const hint = document.createElement("p");
+  hint.textContent = t("Settings.WallTextures.BulkHint", "Выделите стены кликом, Ctrl/Cmd или рамкой, затем выберите текстуру.");
+  picker.append(hint);
+
+  for (const [mode, labelKey, fallback] of [
+    ["wall", "BulkWallMode", "Текстуры стен"],
+    ["border", "BulkBorderMode", "Текстуры бордюров"],
+  ]) {
+    const details = document.createElement("details");
+    details.className = "tsu-wall-bulk-group";
+    details.open = mode === "wall";
+    const summary = document.createElement("summary");
+    summary.textContent = t(`Settings.WallTextures.${labelKey}`, fallback);
+    const grid = document.createElement("div");
+    grid.className = "tsu-wall-bulk-grid";
+    for (const [styleKey, style] of bulkStyleEntries(mode)) {
+      const choice = document.createElement("button");
+      choice.type = "button";
+      choice.className = "tsu-wall-bulk-choice";
+      choice.dataset.style = styleKey;
+      choice.dataset.mode = mode;
+      choice.title = bulkStyleLabel(style);
+      const preview = document.createElement("img");
+      preview.src = style.assets.straightLong;
+      preview.alt = "";
+      const caption = document.createElement("span");
+      caption.textContent = bulkStyleLabel(style);
+      choice.append(preview, caption);
+      choice.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void applyBulkWallTexture(mode, styleKey);
+      });
+      grid.append(choice);
+    }
+    details.append(summary, grid);
+    picker.append(details);
+  }
+
+  const footer = document.createElement("footer");
+  const disable = document.createElement("button");
+  disable.type = "button";
+  disable.className = "tsu-wall-bulk-disable";
+  disable.title = t("Settings.WallTextures.BulkDisable", "Убрать текстуру с выбранных стен");
+  disable.innerHTML = `<i class="fa-solid fa-eye-slash"></i><span>${t("Settings.WallTextures.BulkDisableShort", "Без текстуры")}</span>`;
+  disable.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void applyBulkWallTexture(null, null, false);
+  });
+  footer.append(disable);
+  picker.append(footer);
+  document.body.append(picker);
+  updateBulkWallPickerSummary();
+  requestAnimationFrame(positionBulkWallPicker);
+}
+
+function updateBulkWallPickerSummary() {
+  const count = document.querySelector(`.${BULK_PICKER_CLASS} [data-wall-selection-count]`);
+  if (!count) return;
+  count.textContent = t("Settings.WallTextures.BulkSelected", "Выбрано стен: {count}").replace("{count}", String(selectedBulkWallDocuments().length));
+}
+
+function positionBulkWallPicker() {
+  const picker = document.querySelector(`.${BULK_PICKER_CLASS}`);
+  if (!(picker instanceof HTMLElement) || !bulkToolSelected()) return;
+  const anchor = document.querySelector(`#scene-controls [data-tool="${WALL_TEXTURE_TOOL}"]`)
+    ?? Array.from(document.querySelectorAll("#scene-controls-tools .tool")).at(-1);
+  if (!(anchor instanceof HTMLElement)) return;
+  const rect = anchor.getBoundingClientRect();
+  const gap = 8;
+  const maxLeft = Math.max(gap, window.innerWidth - picker.offsetWidth - gap);
+  const maxTop = Math.max(gap, window.innerHeight - picker.offsetHeight - gap);
+  picker.style.left = `${Math.min(Math.max(gap, rect.left), maxLeft)}px`;
+  picker.style.top = `${Math.min(Math.max(gap, rect.bottom + gap), maxTop)}px`;
+}
+
+window.addEventListener("resize", () => requestAnimationFrame(positionBulkWallPicker));
+
+function bulkCanvasElement() {
+  return document.getElementById("board")
+    ?? canvas?.app?.canvas
+    ?? canvas?.app?.renderer?.canvas
+    ?? canvas?.app?.view;
+}
+
+function bindBulkStage() {
+  const element = bulkCanvasElement();
+  if (!(element instanceof HTMLElement) || bulkStageBound === element) return;
+  unbindBulkStage();
+  bulkStageBound = element;
+  document.addEventListener("pointerdown", onBulkPointerDown, true);
+  document.addEventListener("pointermove", onBulkPointerMove, true);
+  document.addEventListener("pointerup", onBulkPointerUp, true);
+  document.addEventListener("pointercancel", onBulkPointerUp, true);
+}
+
+function unbindBulkStage() {
+  if (!bulkStageBound) return;
+  document.removeEventListener("pointerdown", onBulkPointerDown, true);
+  document.removeEventListener("pointermove", onBulkPointerMove, true);
+  document.removeEventListener("pointerup", onBulkPointerUp, true);
+  document.removeEventListener("pointercancel", onBulkPointerUp, true);
+  bulkStageBound = null;
+}
+
+function bulkEventOnCanvas(event) {
+  const element = bulkStageBound ?? bulkCanvasElement();
+  return Boolean(element && (event.target === element || element.contains?.(event.target)));
+}
+
+function bulkEventPoint(event) {
+  if (Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY)) {
+    const element = bulkStageBound ?? bulkCanvasElement();
+    const rectangle = element?.getBoundingClientRect?.();
+    const screen = canvas?.app?.renderer?.screen;
+    if (rectangle?.width && rectangle?.height && screen && canvas?.stage?.worldTransform) {
+      const global = {
+        x: (event.clientX - rectangle.left) * Number(screen.width) / rectangle.width,
+        y: (event.clientY - rectangle.top) * Number(screen.height) / rectangle.height,
+      };
+      const local = canvas.stage.worldTransform.applyInverse(global);
+      return { x: Number(local.x), y: Number(local.y) };
+    }
+  }
+  const global = event?.global ?? event?.data?.global;
+  if (!global || !canvas?.stage?.worldTransform) return null;
+  const local = canvas.stage.worldTransform.applyInverse(global);
+  return { x: Number(local.x), y: Number(local.y) };
+}
+
+function bulkWallPlaceables() {
+  return (canvas?.walls?.placeables ?? []).filter((wall) => wall?.document);
+}
+
+function bulkWallDocument(placeable) {
+  return placeable?.document ?? placeable;
+}
+
+function selectedBulkWallDocuments() {
+  const stored = [...bulkSelectedWallIds]
+    .map((id) => canvas?.scene?.walls?.get?.(id))
+    .filter(Boolean);
+  if (stored.length) return stored;
+  const controlled = Array.from(canvas?.walls?.controlled ?? [])
+    .map(bulkWallDocument)
+    .filter((wall) => wall?.id);
+  if (controlled.length) return controlled;
+  return [];
+}
+
+function syncBulkWallSelection() {
+  if (!bulkSelectedWallIds.size) {
+    for (const placeable of canvas?.walls?.controlled ?? []) {
+      const wall = bulkWallDocument(placeable);
+      if (wall?.id) bulkSelectedWallIds.add(wall.id);
+    }
+  } else {
+    for (const id of bulkSelectedWallIds) {
+      if (!canvas?.scene?.walls?.get?.(id)) bulkSelectedWallIds.delete(id);
+    }
+  }
+  drawBulkWallSelection();
+  updateBulkWallPickerSummary();
+}
+
+function releaseBulkWalls() {
+  if (canvas?.walls?.releaseAll) canvas.walls.releaseAll();
+  else for (const wall of canvas?.walls?.controlled ?? []) wall.release?.();
+  bulkSelectedWallIds.clear();
+  drawBulkWallSelection();
+  updateBulkWallPickerSummary();
+}
+
+function bulkWallDistance(point, wall) {
+  const coords = getWallCoords(bulkWallDocument(wall));
+  if (!coords) return Infinity;
+  const dx = coords.x2 - coords.x1;
+  const dy = coords.y2 - coords.y1;
+  const lengthSquared = dx * dx + dy * dy;
+  const ratio = lengthSquared ? Math.clamp(((point.x - coords.x1) * dx + (point.y - coords.y1) * dy) / lengthSquared, 0, 1) : 0;
+  return Math.hypot(point.x - (coords.x1 + ratio * dx), point.y - (coords.y1 + ratio * dy));
+}
+
+function bulkPointInRectangle(point, rectangle) {
+  return point.x >= rectangle.left && point.x <= rectangle.right
+    && point.y >= rectangle.top && point.y <= rectangle.bottom;
+}
+
+function bulkOrientation(a, b, c) {
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+function bulkOnSegment(a, b, c) {
+  return Math.min(a.x, c.x) <= b.x && b.x <= Math.max(a.x, c.x)
+    && Math.min(a.y, c.y) <= b.y && b.y <= Math.max(a.y, c.y);
+}
+
+function bulkSegmentsIntersect(a, b, c, d) {
+  const first = bulkOrientation(a, b, c);
+  const second = bulkOrientation(a, b, d);
+  const third = bulkOrientation(c, d, a);
+  const fourth = bulkOrientation(c, d, b);
+  const epsilon = 0.001;
+  if (Math.abs(first) < epsilon && bulkOnSegment(a, c, b)) return true;
+  if (Math.abs(second) < epsilon && bulkOnSegment(a, d, b)) return true;
+  if (Math.abs(third) < epsilon && bulkOnSegment(c, a, d)) return true;
+  if (Math.abs(fourth) < epsilon && bulkOnSegment(c, b, d)) return true;
+  return ((first > 0) !== (second > 0)) && ((third > 0) !== (fourth > 0));
+}
+
+function bulkWallIntersectsRectangle(wall, rectangle) {
+  const coords = getWallCoords(bulkWallDocument(wall));
+  if (!coords) return false;
+  const start = { x: coords.x1, y: coords.y1 };
+  const end = { x: coords.x2, y: coords.y2 };
+  if (bulkPointInRectangle(start, rectangle) || bulkPointInRectangle(end, rectangle)) return true;
+  const corners = [
+    { x: rectangle.left, y: rectangle.top },
+    { x: rectangle.right, y: rectangle.top },
+    { x: rectangle.right, y: rectangle.bottom },
+    { x: rectangle.left, y: rectangle.bottom },
+  ];
+  return corners.some((corner, index) => bulkSegmentsIntersect(start, end, corner, corners[(index + 1) % corners.length]));
+}
+
+function onBulkPointerDown(event) {
+  if (!bulkToolSelected() || event.button !== 0 || !bulkEventOnCanvas(event)) return;
+  const point = bulkEventPoint(event);
+  if (!point) return;
+  event.preventDefault();
+  event.stopPropagation();
+  bulkSelectionDrag = {
+    start: point,
+    current: point,
+    startClient: { x: event.clientX, y: event.clientY },
+    currentClient: { x: event.clientX, y: event.clientY },
+    additive: Boolean(event.ctrlKey || event.metaKey),
+  };
+  drawBulkSelectionDrag();
+}
+
+function onBulkPointerMove(event) {
+  if (!bulkToolSelected() || !bulkSelectionDrag) return;
+  const point = bulkEventPoint(event);
+  if (!point) return;
+  bulkSelectionDrag.current = point;
+  bulkSelectionDrag.currentClient = { x: event.clientX, y: event.clientY };
+  drawBulkSelectionDrag();
+}
+
+function onBulkPointerUp(event) {
+  if (!bulkToolSelected() || !bulkSelectionDrag) return;
+  const drag = bulkSelectionDrag;
+  drag.current = bulkEventPoint(event) ?? drag.current;
+  drag.currentClient = { x: event.clientX, y: event.clientY };
+  bulkSelectionDrag = null;
+  clearBulkSelectionDrag();
+  event.preventDefault();
+  event.stopPropagation();
+  const distance = Math.hypot(drag.startClient.x - drag.currentClient.x, drag.startClient.y - drag.currentClient.y);
+  if (distance < 5) selectBulkWallAt(drag.current, drag.additive);
+  else selectBulkWallsInRectangle(drag.start, drag.current, drag.additive);
+}
+
+function selectBulkWallAt(point, additive) {
+  const threshold = Math.max(8, Number(canvas?.dimensions?.size ?? 100) * 0.08);
+  const hit = bulkWallPlaceables()
+    .map((wall) => ({ wall, distance: bulkWallDistance(point, wall) }))
+    .filter((entry) => entry.distance <= threshold)
+    .sort((left, right) => left.distance - right.distance)[0]?.wall;
+  if (!hit) {
+    if (!additive) releaseBulkWalls();
+    return;
+  }
+  const wall = bulkWallDocument(hit);
+  if (!wall?.id) return;
+  if (additive && bulkSelectedWallIds.has(wall.id)) {
+    bulkSelectedWallIds.delete(wall.id);
+    hit.release?.();
+  } else {
+    if (!additive) releaseBulkWalls();
+    bulkSelectedWallIds.add(wall.id);
+    hit.control?.({ releaseOthers: false });
+  }
+  syncBulkWallSelection();
+}
+
+function selectBulkWallsInRectangle(start, end, additive) {
+  const rectangle = {
+    left: Math.min(start.x, end.x),
+    right: Math.max(start.x, end.x),
+    top: Math.min(start.y, end.y),
+    bottom: Math.max(start.y, end.y),
+  };
+  const hits = bulkWallPlaceables().filter((wall) => bulkWallIntersectsRectangle(wall, rectangle));
+  if (!additive) releaseBulkWalls();
+  for (const wall of hits) {
+    const document = bulkWallDocument(wall);
+    if (!document?.id) continue;
+    if (additive && bulkSelectedWallIds.has(document.id)) {
+      bulkSelectedWallIds.delete(document.id);
+      wall.release?.();
+    } else {
+      bulkSelectedWallIds.add(document.id);
+      wall.control?.({ releaseOthers: false });
+    }
+  }
+  syncBulkWallSelection();
+}
+
+function drawBulkSelectionDrag() {
+  if (!bulkSelectionDrag) return;
+  let marquee = document.querySelector(`.${BULK_SELECTION_DRAG_CLASS}`);
+  if (!marquee) {
+    marquee = document.createElement("div");
+    marquee.className = BULK_SELECTION_DRAG_CLASS;
+    document.body.append(marquee);
+  }
+  const { startClient, currentClient } = bulkSelectionDrag;
+  marquee.style.left = `${Math.min(startClient.x, currentClient.x)}px`;
+  marquee.style.top = `${Math.min(startClient.y, currentClient.y)}px`;
+  marquee.style.width = `${Math.abs(currentClient.x - startClient.x)}px`;
+  marquee.style.height = `${Math.abs(currentClient.y - startClient.y)}px`;
+}
+
+function clearBulkSelectionDrag() {
+  document.querySelector(`.${BULK_SELECTION_DRAG_CLASS}`)?.remove();
+}
+
+function drawBulkWallSelection() {
+  const parent = canvas?.interface ?? canvas?.controls ?? canvas?.stage;
+  if (!parent) return;
+  const existing = parent.children?.find((child) => child.name === BULK_SELECTION_CONTAINER);
+  if (!bulkToolSelected()) {
+    (existing?.removeChildren?.() ?? []).forEach((child) => child.destroy?.({ children: true }));
+    return;
+  }
+  let container = existing;
+  if (!container) {
+    container = new PIXI.Container();
+    container.name = BULK_SELECTION_CONTAINER;
+    container.eventMode = "none";
+    container.zIndex = 10000;
+    parent.addChild(container);
+  }
+  container.removeChildren().forEach((child) => child.destroy?.({ children: true }));
+  for (const wall of selectedBulkWallDocuments()) {
+    const coords = getWallCoords(wall);
+    if (!coords) continue;
+    const graphics = new PIXI.Graphics();
+    if (typeof graphics.moveTo === "function" && typeof graphics.stroke === "function") {
+      graphics.moveTo(coords.x1, coords.y1).lineTo(coords.x2, coords.y2).stroke({ color: 0xd8a7ff, width: 5, alpha: 0.95 });
+    } else {
+      graphics.lineStyle(5, 0xd8a7ff, 0.95).moveTo(coords.x1, coords.y1).lineTo(coords.x2, coords.y2);
+    }
+    container.addChild(graphics);
+  }
+}
+
+async function applyBulkWallTexture(mode, style, enabled = true) {
+  const selected = selectedBulkWallDocuments();
+  if (!selected.length) {
+    ui.notifications?.warn?.(t("Settings.WallTextures.BulkNoSelection", "Сначала выделите хотя бы одну стену."));
+    return;
+  }
+  const compatible = enabled ? selected.filter((wall) => !isWindowWall(wall)) : selected;
+  const skippedWindows = selected.length - compatible.length;
+  if (!compatible.length) {
+    ui.notifications?.warn?.(t("Settings.WallTextures.BulkNoCompatible", "Выбранные стены являются окнами и не поддерживают эту текстуру."));
+    return;
+  }
+  const updates = compatible.map((wall) => {
+    const current = getFlagData(wall);
+    const next = { ...current, enabled };
+    if (enabled) {
+      next.mode = mode;
+      next.style = style;
+    }
+    if (current.originalRestrictions !== undefined) next["-=originalRestrictions"] = null;
+    return {
+      _id: wall.id,
+      [`flags.${MODULE_ID}.${FLAG_ROOT}`]: next,
+    };
+  });
+  try {
+    await canvas.scene.updateEmbeddedDocuments("Wall", updates);
+    syncBulkWallSelection();
+    const suffix = skippedWindows
+      ? ` ${t("Settings.WallTextures.BulkSkippedWindows", "Пропущено окон: {count}.").replace("{count}", String(skippedWindows))}`
+      : "";
+    ui.notifications?.info?.(`${t("Settings.WallTextures.BulkApplied", "Текстура применена к стенам: {count}.").replace("{count}", String(compatible.length))}${suffix}`);
+  } catch (error) {
+    console.error(`${MODULE_ID} | Failed to apply wall texture to selected walls`, error);
+    ui.notifications?.error?.(t("Settings.WallTextures.BulkFailed", "Не удалось применить текстуру к выбранным стенам."));
+  }
+}
+
 function getFlagData(wall) {
   return wall?.getFlag?.(MODULE_ID, FLAG_ROOT) ?? wall?.flags?.[MODULE_ID]?.[FLAG_ROOT] ?? {};
 }
 
 function isEnabled(value) {
   return value === true || value === "true" || value === "on" || value === 1 || value === "1";
-}
-
-function normalizeBuildTextureDefaults(value = {}) {
-  const mode = value.mode === "border" ? "border" : "wall";
-  return {
-    enabled: isEnabled(value.enabled),
-    mode,
-    style: normalizeStyleKey(value.style || getDefaultStyle(null, mode), null, mode),
-    flipX: isEnabled(value.flipX),
-    flipY: isEnabled(value.flipY),
-  };
-}
-
-function getCurrentBuildTextureDefaults() {
-  if (currentBuildTextureDefaults) return foundry.utils.deepClone(currentBuildTextureDefaults);
-
-  let saved = null;
-  try {
-    saved = game.settings.get(MODULE_ID, SETTING_BUILD_DEFAULTS);
-  } catch (_error) {
-    // The setting is unavailable only during the earliest init phase.
-  }
-  currentBuildTextureDefaults = normalizeBuildTextureDefaults(saved ?? {
-    enabled: true,
-    mode: "wall",
-    style: DEFAULT_STYLE,
-  });
-  return foundry.utils.deepClone(currentBuildTextureDefaults);
-}
-
-function rememberBuildTextureDefaults(wall) {
-  if (isWindowWall(wall)) return;
-  currentBuildTextureDefaults = normalizeBuildTextureDefaults(getPropagatedTextureFlags(wall));
-  void game.settings.set(MODULE_ID, SETTING_BUILD_DEFAULTS, currentBuildTextureDefaults).catch((error) => {
-    console.warn(`${MODULE_ID} | Failed to remember the wall construction texture`, error);
-  });
-}
-
-function getMatchingEndpointPairs(sourceWall, targetWall) {
-  const source = getWallCoords(sourceWall);
-  const target = getWallCoords(targetWall);
-  if (!source || !target) return [];
-
-  const sourceEndpoints = [
-    { endpoint: "start", x: source.x1, y: source.y1 },
-    { endpoint: "end", x: source.x2, y: source.y2 },
-  ];
-  const targetEndpoints = [
-    { endpoint: "start", x: target.x1, y: target.y1 },
-    { endpoint: "end", x: target.x2, y: target.y2 },
-  ];
-
-  const matches = [];
-  for (const sourceEndpoint of sourceEndpoints) {
-    for (const targetEndpoint of targetEndpoints) {
-      if (pointsMatch(sourceEndpoint.x, sourceEndpoint.y, targetEndpoint.x, targetEndpoint.y)) {
-        matches.push({ sourceEndpoint: sourceEndpoint.endpoint, targetEndpoint: targetEndpoint.endpoint });
-      }
-    }
-  }
-  return matches;
-}
-
-function wallsConnectForTexture(sourceWall, targetWall) {
-  return getMatchingEndpointPairs(sourceWall, targetWall).some(({ sourceEndpoint, targetEndpoint }) => (
-    !isWallEndpointClosed(sourceWall, sourceEndpoint)
-    && !isWallEndpointClosed(targetWall, targetEndpoint)
-  ));
 }
 
 function isWindowWall(wall) {
@@ -261,8 +698,8 @@ function getDefaultStyle(wall, mode = getTextureMode(wall)) {
 }
 
 function getTextureMode(wall) {
-  if (isWindowWall(wall)) return "window";
   const flags = getFlagData(wall);
+  if (isWindowWall(wall)) return "window";
   if (flags.mode === "wall" || flags.mode === "border") return flags.mode;
   const legacyStyle = WALL_TEXTURE_STYLES[WALL_TEXTURE_STYLE_ALIASES[flags.style] ?? flags.style];
   return legacyStyle?.borderOnly ? "border" : "wall";
@@ -513,8 +950,6 @@ function createWallTextureFieldset(wall) {
   const flags = getFlagData(wall);
   const enabled = isEnabled(flags.enabled);
   const windowWall = isWindowWall(wall);
-  const closedLeft = isEnabled(flags.closedLeft);
-  const closedRight = isEnabled(flags.closedRight);
   const flipped = isEnabled(flags.flipX);
   const flippedVertical = isEnabled(flags.flipY);
 
@@ -526,7 +961,7 @@ function createWallTextureFieldset(wall) {
     ? t("Settings.WindowTextures.Fieldset", "Window texture")
     : t(`${I18N_ROOT}.ModeFieldset`, "Wall and border textures");
 
-  const createEdgeGroup = (flag, labelKey, fallback, checked) => {
+  const createToggleGroup = (flag, labelKey, fallback, checked) => {
     const group = document.createElement("div");
     group.className = "form-group tsu-wall-texture-edge";
     const label = document.createElement("label");
@@ -542,10 +977,8 @@ function createWallTextureFieldset(wall) {
     return group;
   };
 
-  const closedRightGroup = createEdgeGroup("closedRight", "ClosedRightLabel", "Closed right edge", closedRight);
-  const closedLeftGroup = createEdgeGroup("closedLeft", "ClosedLeftLabel", "Closed left edge", closedLeft);
-  const flipGroup = createEdgeGroup("flipX", "FlipHorizontalLabel", "Flip horizontally", flipped);
-  const flipVerticalGroup = createEdgeGroup("flipY", "FlipVerticalLabel", "Flip vertically", flippedVertical);
+  const flipGroup = createToggleGroup("flipX", "FlipHorizontalLabel", "Flip horizontally", flipped);
+  const flipVerticalGroup = createToggleGroup("flipY", "FlipVerticalLabel", "Flip vertically", flippedVertical);
 
   const hint = document.createElement("p");
   hint.className = "hint";
@@ -613,14 +1046,12 @@ function createWallTextureFieldset(wall) {
 
     const updateVisibility = () => {
       styleGroup.hidden = !enabledInput.checked;
-      closedRightGroup.hidden = !enabledInput.checked;
-      closedLeftGroup.hidden = !enabledInput.checked;
       flipGroup.hidden = !enabledInput.checked;
       flipVerticalGroup.hidden = !enabledInput.checked;
     };
     enabledInput.addEventListener("change", updateVisibility);
     updateVisibility();
-    fieldset.append(legend, enabledGroup, styleInput, styleGroup, flipGroup, flipVerticalGroup, closedRightGroup, closedLeftGroup, hint);
+    fieldset.append(legend, enabledGroup, styleInput, styleGroup, flipGroup, flipVerticalGroup, hint);
     return fieldset;
   }
 
@@ -659,8 +1090,6 @@ function createWallTextureFieldset(wall) {
       control.styleGroup.hidden = !control.checkbox.checked;
     }
     const textureEnabled = enabledInput.value === "true";
-    closedRightGroup.hidden = !textureEnabled;
-    closedLeftGroup.hidden = !textureEnabled;
     flipGroup.hidden = !textureEnabled;
     flipVerticalGroup.hidden = !textureEnabled;
   };
@@ -709,8 +1138,6 @@ function createWallTextureFieldset(wall) {
     ...borderControls,
     flipGroup,
     flipVerticalGroup,
-    closedRightGroup,
-    closedLeftGroup,
     hint,
   );
   return fieldset;
@@ -731,7 +1158,7 @@ Hooks.on("renderWallConfig", (app, element) => {
     root.querySelector("form")?.append(fieldset);
   }
 
-  app.setPosition?.({ height: "auto" });
+  scheduleApplicationAutoHeight(app);
 });
 
 function getFilePickerClass() {
@@ -858,142 +1285,12 @@ Hooks.on("renderWallConfig", async (app, element) => {
   loading.textContent = t(`${DOOR_I18N_ROOT}.Loading`, "Loading Foundry presets...");
   placeholder.append(loadingLabel, loading);
   textureControl.closest(".form-group")?.after(placeholder);
-  app.setPosition?.({ height: "auto" });
+  scheduleApplicationAutoHeight(app);
 
   const group = await createDoorTexturePresetGroup(textureControl);
   if (!textureControl.isConnected || !placeholder.isConnected) return;
   placeholder.replaceWith(group);
-  app.setPosition?.({ height: "auto" });
-});
-
-function findConnectedWallTextureFlags(sourceWall) {
-  const coords = getWallCoords(sourceWall);
-  if (!coords) return null;
-  const sourceIsWindow = isWindowWall(sourceWall);
-  const walls = canvas?.scene?.walls ?? [];
-  for (const wall of walls) {
-    if (!supportsWallTexture(wall)) continue;
-    if (isWindowWall(wall) !== sourceIsWindow) continue;
-    const flags = getFlagData(wall);
-    if (!isEnabled(flags.enabled)) continue;
-
-    if (wallsConnectForTexture({ c: [coords.x1, coords.y1, coords.x2, coords.y2] }, wall)) {
-      return foundry.utils.deepClone(flags);
-    }
-  }
-
-  return null;
-}
-
-function getConnectedTextureWalls(sourceWall) {
-  if (!getWallCoords(sourceWall)) return [];
-
-  const mode = getTextureMode(sourceWall);
-  const walls = [...(canvas?.scene?.walls ?? [])]
-    .filter((wall) => supportsWallTexture(wall) && getTextureMode(wall) === mode);
-  const wallsByEndpoint = buildWallEndpointMap(walls);
-  const connected = [];
-  const visited = new Set([sourceWall.id]);
-  const queue = [sourceWall];
-
-  while (queue.length) {
-    const wall = queue.shift();
-    const coords = getWallCoords(wall);
-    if (!coords) continue;
-    const endpoints = [
-      { endpoint: "start", x: coords.x1, y: coords.y1 },
-      { endpoint: "end", x: coords.x2, y: coords.y2 },
-    ];
-
-    for (const point of endpoints) {
-      if (isWallEndpointClosed(wall, point.endpoint)) continue;
-      for (const entry of wallsByEndpoint.get(pointKey(point.x, point.y)) ?? []) {
-        if (visited.has(entry.wall.id) || isWallEndpointClosed(entry.wall, entry.endpoint)) continue;
-        visited.add(entry.wall.id);
-        connected.push(entry.wall);
-        queue.push(entry.wall);
-      }
-    }
-  }
-
-  return connected;
-}
-
-function hasTextureFlags(wall) {
-  const flags = getFlagData(wall);
-  return Object.keys(flags).length > 0;
-}
-
-function getPropagatedTextureFlags(wall) {
-  const flags = getFlagData(wall);
-  const mode = getTextureMode(wall);
-  return {
-    enabled: isEnabled(flags.enabled),
-    mode,
-    style: normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall, mode), wall, mode),
-    flipX: isEnabled(flags.flipX),
-    flipY: isEnabled(flags.flipY),
-  };
-}
-
-async function copyTextureToConnectedWalls(sourceWall) {
-  const flags = getPropagatedTextureFlags(sourceWall);
-  if (!hasTextureFlags(sourceWall)) return;
-
-  const updates = [];
-  for (const wall of getConnectedTextureWalls(sourceWall)) {
-    const targetFlags = getFlagData(wall);
-    const nextFlags = { ...targetFlags, ...flags };
-    if (JSON.stringify(targetFlags) === JSON.stringify(nextFlags)) continue;
-    updates.push({
-      _id: wall.id,
-      flags: {
-        [MODULE_ID]: {
-          [FLAG_ROOT]: foundry.utils.deepClone(nextFlags),
-        },
-      },
-    });
-  }
-
-  if (!updates.length) return;
-  updates.forEach((update) => propagatingWallUpdates.add(update._id));
-  try {
-    await canvas.scene.updateEmbeddedDocuments("Wall", updates, { [PROPAGATION_OPTION]: true });
-  } finally {
-    updates.forEach((update) => propagatingWallUpdates.delete(update._id));
-  }
-}
-
-Hooks.on("preCreateWall", (wall, data) => {
-  if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return;
-  if (!supportsWallTexture(data)) return;
-
-  const existingFlags = foundry.utils.getProperty(data, `flags.${MODULE_ID}.${FLAG_ROOT}`)
-    ?? wall.getFlag?.(MODULE_ID, FLAG_ROOT);
-  if (existingFlags && Object.keys(existingFlags).length > 0) return;
-
-  const coords = getWallCoords(data);
-  if (!coords) return;
-
-  const textureFlags = findConnectedWallTextureFlags(data) ?? getCurrentBuildTextureDefaults();
-  if (!textureFlags || !isEnabled(textureFlags.enabled)) return;
-  const mode = textureFlags.mode === "border" || WALL_TEXTURE_STYLES[textureFlags.style]?.borderOnly
-    ? "border"
-    : "wall";
-
-  wall.updateSource({
-    flags: {
-      [MODULE_ID]: {
-        [FLAG_ROOT]: {
-          enabled: true,
-          mode,
-          style: normalizeStyleKey(textureFlags.style || getDefaultStyle(data, mode), data, mode),
-          flipX: isEnabled(textureFlags.flipX),
-          flipY: isEnabled(textureFlags.flipY),
-        },
-      },
-    },
-  });
+  scheduleApplicationAutoHeight(app);
 });
 
 function getTextureContainer(border = false) {
@@ -1386,27 +1683,27 @@ function getOtherEndpoint(wall, endpointKey) {
   return null;
 }
 
-function isWallEndpointClosed(wall, endpoint) {
-  const flags = getFlagData(wall);
-  return isEnabled(endpoint === "start" ? flags.closedLeft : flags.closedRight);
-}
-
-function getNextChainWall(endpointMap, endpointKey, currentWall, currentEndpoint, visitedWalls) {
-  if (isWallEndpointClosed(currentWall, currentEndpoint)) return null;
+function getNextChainWall(endpointMap, endpointKey, visitedWalls, chainKey) {
   const entries = endpointMap.get(endpointKey) ?? [];
-  return entries.find((entry) => (
-    !visitedWalls.has(entry.wall.id) && !isWallEndpointClosed(entry.wall, entry.endpoint)
-  ))?.wall ?? null;
+  // A chain may pass only through an unambiguous 2-segment endpoint. At T/cross
+  // junctions, or where a wall and a border share an endpoint, split the meshes so
+  // one segment cannot inherit UV phase/geometry from an arbitrary neighbor.
+  if (entries.length !== 2) return null;
+  const candidate = entries.find((entry) => !visitedWalls.has(entry.wall.id));
+  if (!candidate || getWallTextureChainKey(candidate.wall) !== chainKey) return null;
+  return candidate.wall;
 }
 
 function getWallTextureStyleKey(wall) {
   const flags = getFlagData(wall);
-  return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall), wall);
+  const mode = getTextureMode(wall);
+  return normalizeStyleKey(typeof flags.style === "string" && flags.style ? flags.style : getDefaultStyle(wall, mode), wall, mode);
 }
 
 function getWallTextureChainKey(wall) {
   const flags = getFlagData(wall);
-  return `${getWallTextureStyleKey(wall)}:${isEnabled(flags.flipX) ? "flip-x" : "normal-x"}:${isEnabled(flags.flipY) ? "flip-y" : "normal-y"}`;
+  const mode = getTextureMode(wall);
+  return `${mode}:${getWallTextureStyleKey(wall)}:${isEnabled(flags.flipX) ? "flip-x" : "normal-x"}:${isEnabled(flags.flipY) ? "flip-y" : "normal-y"}`;
 }
 
 function buildWallTextureChains(walls, endpointMap) {
@@ -1425,13 +1722,11 @@ function buildWallTextureChains(walls, endpointMap) {
     visitedWalls.add(wall.id);
 
     const extend = (atStart) => {
-      let currentWall = wall;
-      let currentEndpoint = atStart ? "start" : "end";
       while (true) {
         const currentPoint = atStart ? chainPoints[0] : chainPoints[chainPoints.length - 1];
         const currentKey = pointKey(currentPoint.x, currentPoint.y);
-        const nextWall = getNextChainWall(endpointMap, currentKey, currentWall, currentEndpoint, visitedWalls);
-        if (!nextWall || getWallTextureChainKey(nextWall) !== chainKey) return;
+        const nextWall = getNextChainWall(endpointMap, currentKey, visitedWalls, chainKey);
+        if (!nextWall) return;
 
         const other = getOtherEndpoint(nextWall, currentKey);
         if (!other) return;
@@ -1439,8 +1734,6 @@ function buildWallTextureChains(walls, endpointMap) {
         visitedWalls.add(nextWall.id);
         if (atStart) chainPoints.unshift(other.point);
         else chainPoints.push(other.point);
-        currentWall = nextWall;
-        currentEndpoint = other.endpoint;
       }
     };
 
@@ -1694,7 +1987,9 @@ function createEndpointSprite(key, entries) {
 
 function redrawWallTextures() {
   redrawTimeout = null;
-  if (!canvas?.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE)) {
+  // The setting gates configuration and bulk-editing controls, not rendering
+  // of wall flags already stored on this scene.
+  if (!canvas?.ready) {
     clearWallTextureContainer();
     return;
   }
@@ -1731,21 +2026,23 @@ function scheduleWallTextureRedraw() {
 
 Hooks.on("canvasReady", scheduleWallTextureRedraw);
 Hooks.on("canvasTearDown", () => {
+  deactivateBulkWallTool();
+  bulkSelectedWallIds.clear();
   clearDoorSwingIndicatorContainer();
   clearWallTextureContainer();
 });
 Hooks.on("createWall", scheduleWallTextureRedraw);
-Hooks.on("updateWall", (wall, change, options, userId) => {
-  if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${FLAG_ROOT}`)) {
-    if (!options?.[PROPAGATION_OPTION] && !propagatingWallUpdates.has(wall.id)) {
-      if (!userId || userId === game.user?.id) rememberBuildTextureDefaults(wall);
-      void copyTextureToConnectedWalls(wall).finally(scheduleWallTextureRedraw);
-      return;
-    }
-  }
+Hooks.on("updateWall", () => {
   scheduleWallTextureRedraw();
+  syncBulkWallSelection();
 });
-Hooks.on("deleteWall", scheduleWallTextureRedraw);
+Hooks.on("deleteWall", (wall) => {
+  bulkSelectedWallIds.delete(wall?.id);
+  scheduleWallTextureRedraw();
+  syncBulkWallSelection();
+});
+Hooks.on("controlWall", syncBulkWallSelection);
+Hooks.on("releaseWall", syncBulkWallSelection);
 Hooks.on("updateScene", (_scene, change) => {
   if (change.walls || change.grid || change.dimensions) scheduleWallTextureRedraw();
 });

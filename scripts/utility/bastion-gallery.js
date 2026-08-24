@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20260816-swamp-floor1";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260816-swamp-floor1";
+import { ASSETS } from "./scene-assets.js?v=20260823-statues-size-v2";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260823-statues-size-v2";
 
 const GALLERY_FLAG = "bastionGallery";
 

@@ -36,6 +36,7 @@ const PACK_CONFIGS = Object.freeze([
       "pack-src/utility/Quick_Effects_UtQuickFx00001.json",
       "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
       "pack-src/utility/Damage_UtDamage0000001.json",
+      "pack-src/utility/Open_Bastardhall_Sheet_UtBastSheet00001.json",
     ]),
   },
   {
