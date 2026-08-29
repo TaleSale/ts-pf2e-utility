@@ -1,15 +1,15 @@
-2026/08/17-20:35:10.852 a5e8 Recovering log #130
-2026/08/17-20:35:10.863 a5e8 Delete type=0 #130
-2026/08/17-20:35:10.863 a5e8 Delete type=3 #128
-2026/08/17-20:35:10.869 9d4c Level-0 table #135: started
-2026/08/17-20:35:10.872 9d4c Level-0 table #135: 873 bytes OK
-2026/08/17-20:35:10.878 9d4c Delete type=0 #133
-2026/08/17-20:35:10.878 9d4c Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
-2026/08/17-20:35:10.878 9d4c Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at '!macros!UtBastSheet00001' @ 13 : 1
-2026/08/17-20:35:10.878 9d4c Compacting 1@1 + 1@2 files
-2026/08/17-20:35:10.881 9d4c Generated table #136@1: 5 keys, 1434 bytes
-2026/08/17-20:35:10.881 9d4c Compacted 1@1 + 1@2 files => 1434 bytes
-2026/08/17-20:35:10.886 9d4c compacted to: files[ 0 0 2 0 0 0 0 ]
-2026/08/17-20:35:10.886 9d4c Delete type=2 #119
-2026/08/17-20:35:10.886 9d4c Delete type=2 #135
-2026/08/17-20:35:10.886 9d4c Manual compaction at level-1 from '!macros!UtBastSheet00001' @ 13 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/08/25-12:21:00.801 8d00 Recovering log #176
+2026/08/25-12:21:00.812 8d00 Delete type=0 #176
+2026/08/25-12:21:00.812 8d00 Delete type=3 #174
+2026/08/25-12:21:00.818 ab50 Level-0 table #182: started
+2026/08/25-12:21:00.825 ab50 Level-0 table #182: 728 bytes OK
+2026/08/25-12:21:00.830 ab50 Delete type=0 #180
+2026/08/25-12:21:00.830 ab50 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/08/25-12:21:00.830 ab50 Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at '!macros!UtAfflict00001' @ 22 : 1
+2026/08/25-12:21:00.830 ab50 Compacting 1@1 + 1@2 files
+2026/08/25-12:21:00.833 ab50 Generated table #183@1: 6 keys, 1571 bytes
+2026/08/25-12:21:00.833 ab50 Compacted 1@1 + 1@2 files => 1571 bytes
+2026/08/25-12:21:00.839 ab50 compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/08/25-12:21:00.839 ab50 Delete type=2 #178
+2026/08/25-12:21:00.839 ab50 Delete type=2 #182
+2026/08/25-12:21:00.839 ab50 Manual compaction at level-1 from '!macros!UtAfflict00001' @ 22 : 1 .. '~' @ 0 : 0; will stop at (end)

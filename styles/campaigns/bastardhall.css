@@ -1079,8 +1079,11 @@ form.tsu-bastardhall-window > .window-header .header-control {
 .bh-sidequest-notes-heading h3 { border: 0; color: var(--bh-teal-dark); font-size: 15px; margin: 0; }
 .bh-sidequest-notes-heading span { background: var(--bh-teal); border-radius: 10px; color: #fff; font-size: 10px; min-width: 20px; padding: 2px 6px; text-align: center; }
 .bh-sidequest-notes { display: grid; gap: 7px; }
-.bh-sidequest-notes article { background: rgba(23, 63, 62, .07); border: 1px solid rgba(23, 63, 62, .18); padding: 7px 9px; }
-.bh-sidequest-notes article > header { align-items: baseline; display: flex; gap: 8px; justify-content: space-between; }
+.bh-sidequest-notes article { background: rgba(23, 63, 62, .07); border: 1px solid rgba(23, 63, 62, .18); padding: 7px 9px; position: relative; }
+.bh-sidequest-notes article:has(.bh-sidequest-note-delete) { padding-bottom: 34px; }
+.bh-sidequest-notes article > header { align-items: flex-start; display: flex; gap: 8px; justify-content: space-between; }
+.bh-sidequest-note-meta { display: inline-flex; flex: 0 0 auto; }
+.bh-sidequest-note-delete { bottom: 7px; color: #7b2e35; height: 22px; min-height: 22px; position: absolute; right: 9px; width: 22px !important; }
 .bh-sidequest-notes time { color: #69716d; font-size: 9px; }
 .bh-sidequest-notes p { line-height: 1.4; margin: 5px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .bh-sidequest-empty-detail { align-items: center; color: #6f756f; display: flex; flex-direction: column; font-size: 42px; justify-content: center; min-height: 300px; opacity: .7; }

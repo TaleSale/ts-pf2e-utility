@@ -1030,6 +1030,9 @@ async function createCreatureAttackItem(item, config) {
 
 async function refreshCreatureAttack(item, previousConfig = null, occurrenceIndex = null, { allowCreate = false } = {}) {
   if (!isSupportedActionPlusItem(item) || !item.actor) return;
+  // Document hooks also fire on observers. Only the selected updater may
+  // create or alter attacks on the actor (including token ActorDeltas).
+  if (game.user !== item.actor.primaryUpdater) return;
   if (areCreatureCorrectionsLocked(item.actor) && isCreatureCorrectionManagedItem(item)) return;
   if (!isActionPlusFeatureEnabled(item, FEATURE_ID)) return;
 

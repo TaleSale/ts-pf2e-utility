@@ -1070,6 +1070,7 @@ export function initializeModuleRuntime() {
     installModuleApi();
     registerSocket();
     void ensureModuleCompendiumFolderStructure();
+    for (const config of MODULE_COMPENDIUM_CONFIGS) void syncModuleMacroCompendiumMetadata(config);
     Hooks.on("updateScene", handleSceneUpdate);
     for (const definition of getRegisteredGames()) {
       seenOpenSignals.set(definition.id, getGameState(definition.id)?.openSignal ?? null);

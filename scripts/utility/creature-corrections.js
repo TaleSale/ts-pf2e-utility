@@ -108,6 +108,14 @@ const DC_SLUGS = {
 };
 const STAT_TABLES = buildStatTables();
 
+// Corrections produce several embedded-document updates. Hooks run on every
+// connected client, but only the active GM may perform that synchronization;
+// otherwise each player tries the same writes and receives permission errors.
+function isPrimaryGM() {
+  const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+  return Boolean(game.user?.isGM && (!activeGM || activeGM.id === game.user.id));
+}
+
 function getHtmlElement(html) {
   if (html instanceof HTMLElement) return html;
   if (html?.[0] instanceof HTMLElement) return html[0];
@@ -1401,6 +1409,7 @@ async function applyFeatureCorrections(actor, activeFeatures, allFeatures = acti
 }
 
 async function applyCreatureCorrectionToActor(actor) {
+  if (!isPrimaryGM()) return;
   if (!actor || actor.type !== "npc") return;
   if (areCreatureCorrectionsLocked(actor)) return;
   const correctionItems = getCorrectionActions(actor);
@@ -1417,6 +1426,7 @@ async function applyCreatureCorrectionToActor(actor) {
 }
 
 function scheduleActorCorrectionApply(actor) {
+  if (!isPrimaryGM()) return;
   if (!actor || actor.type !== "npc") return;
   if (areCreatureCorrectionsLocked(actor)) return;
 

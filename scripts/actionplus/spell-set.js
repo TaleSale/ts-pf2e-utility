@@ -322,7 +322,7 @@ async function rebuildActorSpellSets(actor) {
 }
 
 async function syncActor(actor) {
-  if (!actor) return;
+  if (!actor || game.user !== actor.primaryUpdater) return;
 
   const actorKey = actor.uuid ?? actor.id;
   const running = syncingActors.get(actorKey);

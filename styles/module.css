@@ -4772,6 +4772,35 @@
 .tsu-dos-effect-fields select { width: 100%; min-width: 0; height: 24px; padding: 1px 18px 1px 4px; font-size: 11px; }
 @media (max-width: 560px) { .tsu-dos-grid { grid-template-columns: 1fr; } }
 
+.tsu-affliction-editor { display: grid; gap: 7px; }
+.tsu-affliction-editor .notes { margin: 0; opacity: .8; }
+.tsu-affliction-import { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; }
+.tsu-affliction-import img { width: 32px; height: 32px; border: 0; object-fit: contain; }
+.tsu-affliction-import button { width: auto; white-space: nowrap; }
+.tsu-affliction-item-drop,.tsu-affliction-effect-drop { min-height: 34px; padding: 8px; border: 1px dashed var(--color-border-light-primary); border-radius: 4px; text-align: center; font-size: 11px; }
+.tsu-affliction-item-drop.is-dragover,.tsu-affliction-effect-drop.is-dragover { border-style: solid; background: rgba(100, 150, 70, .2); }
+.tsu-affliction-errors { padding: 6px 8px; border: 1px solid var(--color-level-error, #b3261e); border-radius: 4px; background: color-mix(in srgb, var(--color-level-error, #b3261e) 12%, transparent); }
+.tsu-affliction-errors ul { margin: 3px 0 0; padding-left: 18px; }
+.tsu-affliction-ready { margin: 0; padding: 5px 7px; color: var(--color-level-success, #3b7d23); }
+.tsu-affliction-duration { display: grid; grid-template-columns: minmax(55px, .7fr) minmax(90px, 1fr); gap: 4px; width: 100%; }
+.tsu-affliction-reset { flex: 0 0 28px; width: 28px; min-width: 28px; padding: 0; }
+.tsu-affliction-stages > header,.tsu-affliction-stage-body section > header { display: flex; align-items: center; gap: 6px; }
+.tsu-affliction-stages > header strong,.tsu-affliction-stage-body section > header strong { flex: 1; }
+.tsu-affliction-stages > header button,.tsu-affliction-stage-body section > header button,.tsu-affliction-stage footer button { width: auto; min-width: 28px; }
+.tsu-affliction-stage { margin-top: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; }
+.tsu-affliction-stage > summary { padding: 7px; cursor: pointer; font-weight: 700; }
+.tsu-affliction-stage-body { display: grid; gap: 7px; padding: 0 7px 7px; }
+.tsu-affliction-stage-body > label { display: grid; gap: 3px; }
+.tsu-affliction-stage textarea { width: 100%; resize: vertical; }
+.tsu-affliction-rows { display: grid; gap: 4px; margin-top: 4px; }
+.tsu-affliction-damage,.tsu-affliction-condition { display: grid; grid-template-columns: minmax(75px, .8fr) minmax(110px, 1fr) 26px; gap: 4px; align-items: center; }
+.tsu-affliction-condition { grid-template-columns: minmax(120px, 1fr) 48px 26px; }
+.tsu-affliction-damage button,.tsu-affliction-condition button,.tsu-affliction-effects button { width: 26px; min-width: 26px; height: 26px; padding: 0; }
+.tsu-affliction-effects > div { display: grid; grid-template-columns: 24px minmax(0, 1fr) 26px; gap: 5px; align-items: center; margin: 3px 0; }
+.tsu-affliction-effects img { width: 24px; height: 24px; border: 0; }
+.tsu-affliction-save-card { display: grid; gap: 6px; }
+@media (max-width: 560px) { .tsu-affliction-import { grid-template-columns: 30px 1fr; } .tsu-affliction-import button { grid-column: 1 / -1; } }
+
 .ts-spell-set-editor { container-type:inline-size; min-width:0; overflow:hidden; }
 .ts-spell-set-config-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 12px; margin:8px 0; min-width:0; overflow:hidden; }
 .ts-spell-set-config-grid label,.ts-spell-set-row label { display:flex; align-items:center; gap:4px; min-width:0; overflow:hidden; white-space:nowrap; }

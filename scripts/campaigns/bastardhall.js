@@ -2,7 +2,7 @@ import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20260823-statues-size-v2";
+} from "../utility/texture-presets.js?v=20260829-warehouse-balance-v42";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";
@@ -3275,7 +3275,7 @@ async function addSideQuestNote(questId, text, userId = game.user?.id) {
     id: randomId(),
     text: noteText,
     authorId: user.id,
-    authorName: user.name,
+    authorName: normalizeText(user.character?.name, 120) || normalizeText(user.name, 120) || "Неизвестный игрок",
     createdAt: Date.now(),
   });
   await saveData(data);
@@ -3286,6 +3286,38 @@ function emitSideQuestNote(questId, text) {
     type: "bastardhall-sidequest-note",
     questId,
     text: normalizeText(text, 4000),
+    senderId: game.user?.id,
+  });
+}
+
+function sideQuestNoteAuthorName(note) {
+  const user = game.users?.get(note?.authorId);
+  return normalizeText(user?.character?.name, 120)
+    || normalizeText(user?.name, 120)
+    || normalizeText(note?.authorName, 120)
+    || "Неизвестный игрок";
+}
+
+async function deleteSideQuestNote(questId, noteId, userId = game.user?.id) {
+  if (!isPrimaryGM()) return false;
+  const user = game.users?.get(userId);
+  if (!user) return false;
+  const data = getData();
+  const quest = data.sideQuests.find((entry) => entry.id === normalizeText(questId, 120));
+  if (!quest || (quest.hidden && !user.isGM)) return false;
+  const noteIndex = quest.notes.findIndex((note) => note.id === normalizeText(noteId, 120));
+  if (noteIndex < 0) return false;
+  if (!user.isGM && quest.notes[noteIndex].authorId !== user.id) return false;
+  quest.notes.splice(noteIndex, 1);
+  await saveData(data);
+  return true;
+}
+
+function emitSideQuestNoteDelete(questId, noteId) {
+  game.socket?.emit?.(SOCKET_CHANNEL, {
+    type: "bastardhall-sidequest-note-delete",
+    questId: normalizeText(questId, 120),
+    noteId: normalizeText(noteId, 120),
     senderId: game.user?.id,
   });
 }
@@ -3851,6 +3883,9 @@ export class BastardhallSheet extends FormApplication {
     if (selectedSideQuest) {
       selectedSideQuest.notes = selectedSideQuest.notes.map((note) => ({
         ...note,
+        questId: selectedSideQuest.id,
+        authorName: sideQuestNoteAuthorName(note),
+        canDelete: isGM || note.authorId === game.user?.id,
         createdLabel: formatSideQuestDate(note.createdAt),
       }));
     }
@@ -4639,11 +4674,49 @@ export class BastardhallSheet extends FormApplication {
         if (isPrimaryGM()) await addSideQuestNote(questId, text);
         else {
           emitSideQuestNote(questId, text);
-          ui.notifications?.info?.("Заметка отправлена мастеру.");
         }
       } finally {
         noteButton.disabled = false;
       }
+    });
+
+    root.querySelectorAll("[data-action='delete-side-quest-note']").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const deleteButton = event.currentTarget;
+        const questId = deleteButton.dataset.questId;
+        const noteId = deleteButton.dataset.noteId;
+        if (!questId || !noteId) {
+          ui.notifications?.error?.("Не удалось определить удаляемую заметку.");
+          return;
+        }
+        const confirmed = await Dialog.confirm({
+          title: "Удалить заметку?",
+          content: "<p>Удалить эту заметку?</p>",
+          yes: () => true,
+          no: () => false,
+          defaultYes: false,
+        });
+        if (!confirmed) return;
+        deleteButton.disabled = true;
+        try {
+          if (isPrimaryGM()) {
+            const deleted = await deleteSideQuestNote(questId, noteId);
+            if (!deleted) ui.notifications?.error?.("Заметка не удалена: недостаточно прав или запись уже отсутствует.");
+          }
+          else {
+            const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+            if (!activeGM) {
+              ui.notifications?.warn?.("Для удаления заметки мастер должен быть в сети.");
+              return;
+            }
+            emitSideQuestNoteDelete(questId, noteId);
+          }
+        } finally {
+          if (deleteButton.isConnected) deleteButton.disabled = false;
+        }
+      });
     });
 
     root.querySelectorAll("[data-action='open-inventory-item']").forEach((button) => {
@@ -5079,6 +5152,10 @@ Hooks.once("ready", async () => {
       }
       if (message?.type === "bastardhall-sidequest-note" && message.questId && message.text) {
         await addSideQuestNote(message.questId, message.text, message.senderId);
+        return;
+      }
+      if (message?.type === "bastardhall-sidequest-note-delete" && message.questId && message.noteId) {
+        await deleteSideQuestNote(message.questId, message.noteId, message.senderId);
         return;
       }
       if (message?.type === "bastardhall-sidequest-create" && message.title) {

@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260823-statues-size-v2";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260823-statues-size-v2";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260829-light-floor-fix-v43";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260829-light-floor-fix-v43";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -17,19 +17,82 @@ const MOVEMENT_STEP_RATIO = 0.1;
 const SIZE_STEP_CELLS = 0.1;
 const MIN_SIZE_CELLS = 0.2;
 const MAX_SIZE_CELLS = 6;
-export const ASSET_GEOMETRY_VERSION = 5;
-const ABOVE_WALL_COLUMN_KEYS = new Set(["columnStoneTopdown", "columnWoodTopdown"]);
+export const ASSET_GEOMETRY_VERSION = 19;
+export const MIRROR_CONFIG_VERSION = 6;
+function mirrorConfig(glass, shape = "rect", depth = 1) {
+  return Object.freeze({
+    version: MIRROR_CONFIG_VERSION,
+    face: "positiveY",
+    depth,
+    glass: Object.freeze({ ...glass, shape }),
+  });
+}
+const FLOOR_MIRROR_CONFIG = mirrorConfig({ x: 0.17, y: 0.42, width: 0.66, height: 0.30 }, "rect", 2);
+const SQUARE_MIRROR_CONFIG = mirrorConfig({ x: 0.18, y: 0.48, width: 0.64, height: 0.18 }, "rect", 2);
+const RECTANGULAR_MIRROR_CONFIG = mirrorConfig({ x: 0.145, y: 0.47, width: 0.71, height: 0.20 }, "rect", 4);
+const ROUND_MIRROR_CONFIG = mirrorConfig({ x: 0.19, y: 0.45, width: 0.62, height: 0.23 }, "ellipse", 2);
+const OVAL_MIRROR_CONFIG = mirrorConfig({ x: 0.14, y: 0.47, width: 0.72, height: 0.20 }, "ellipse", 4);
+const TOPDOWN_COLUMN_KEYS = new Set(["columnStoneTopdown", "columnWoodTopdown"]);
 const LEGACY_ASSET_REDIRECTS = Object.freeze({
+  "scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
+  "scene-assets/music-stand-sheet-music-topdown-v1.webp": "scene-assets/music-stand-sheet-music-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/music-stand-sheet-music-topdown-v1.webp": "scene-assets/music-stand-sheet-music-topdown-v2.webp",
+  "scene-assets/mirror-wall-square-topdown-v1.webp": "scene-assets/mirror-wall-square-topdown-v3.webp",
+  "scene-assets/mirror-wall-rectangular-2-topdown-v1.webp": "scene-assets/mirror-wall-rectangular-2-topdown-v3.webp",
+  "scene-assets/mirror-wall-round-topdown-v1.webp": "scene-assets/mirror-wall-round-topdown-v3.webp",
+  "scene-assets/mirror-wall-oval-2-topdown-v1.webp": "scene-assets/mirror-wall-oval-2-topdown-v3.webp",
+  "scene-assets/mirror-wall-square-topdown-v2.webp": "scene-assets/mirror-wall-square-topdown-v3.webp",
+  "scene-assets/mirror-wall-rectangular-2-topdown-v2.webp": "scene-assets/mirror-wall-rectangular-2-topdown-v3.webp",
+  "scene-assets/mirror-wall-round-topdown-v2.webp": "scene-assets/mirror-wall-round-topdown-v3.webp",
+  "scene-assets/mirror-wall-oval-2-topdown-v2.webp": "scene-assets/mirror-wall-oval-2-topdown-v3.webp",
+  "scene-assets/sink-wood.webp": "scene-assets/sink-wood-topdown-v3.webp",
+  "scene-assets/sink-stone.webp": "scene-assets/sink-stone-topdown-v3.webp",
+  "scene-assets/sink-wood-topdown-v2.webp": "scene-assets/sink-wood-topdown-v3.webp",
+  "scene-assets/sink-stone-topdown-v2.webp": "scene-assets/sink-stone-topdown-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/sink-wood-topdown-v2-bastion-v2.webp": "scene-assets/sink-wood-topdown-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/sink-stone-topdown-v2-bastion-v2.webp": "scene-assets/sink-stone-topdown-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/sink-wood-bastion-v2.webp": "scene-assets/sink-wood-topdown-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/sink-stone-bastion-v2.webp": "scene-assets/sink-stone-topdown-v3.webp",
+  "scene-assets/noble-table-walnut-rectangular-topdown-v1.webp": "scene-assets/noble-table-walnut-rectangular-topdown-v3.webp",
+  "scene-assets/noble-table-walnut-rectangular-topdown-v2.webp": "scene-assets/noble-table-walnut-rectangular-topdown-v3.webp",
+  "scene-assets/noble-table-burgundy-velvet-cloth-topdown-v1.webp": "scene-assets/noble-table-burgundy-velvet-cloth-topdown-v3.webp",
+  "scene-assets/noble-table-burgundy-velvet-cloth-topdown-v2.webp": "scene-assets/noble-table-burgundy-velvet-cloth-topdown-v3.webp",
   "scene-assets/bench.webp": "scene-assets/bench-topdown-v2.webp",
-  "scene-assets/bookshelf.webp": "scene-assets/bookshelf-wall-topdown-v4.webp",
-  "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
-  "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
-  "scene-assets/bookshelf-narrow-wall-topdown-v3.webp": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
-  "scene-assets/cabinet.webp": "scene-assets/cabinet-wall-topdown-v3.webp",
-  "scene-assets/cabinet-topdown-v2.webp": "scene-assets/cabinet-wall-topdown-v3.webp",
-  "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
-  "scene-assets/cabinet-narrow-wall-topdown-v2.webp": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
-  "scene-assets/cabinet-narrow-topdown-v3.png": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
+  "scene-assets/bookshelf.webp": "scene-assets/bookshelf-wall-topdown-v5.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v1.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v2.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v3.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/bookshelf-corner-wall-topdown-v1.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/bookshelf-corner-wall-topdown-v2.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/bookshelf-corner-wall-topdown-v3.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-wall-topdown-v4.webp": "scene-assets/bookshelf-wall-topdown-v5.webp",
+  "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v2.webp": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v3.webp": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
+  "scene-assets/bookshelf-narrow-wall-topdown-v4.webp": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
+  "scene-assets/cabinet.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v1.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v2.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v3.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/cabinet-corner-wall-topdown-v1.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/cabinet-corner-wall-topdown-v2.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "presets/bastion-blasphemy/scene-assets/cabinet-corner-wall-topdown-v3.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-topdown-v2.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
+  "scene-assets/cabinet-wall-topdown-v3.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
+  "scene-assets/cabinet-narrow.webp": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+  "scene-assets/cabinet-narrow-wall-topdown-v2.webp": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+  "scene-assets/cabinet-narrow-topdown-v3.png": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+  "scene-assets/cabinet-narrow-wall-topdown-v4.webp": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+  "scene-assets/cabinet-narrow-wall-topdown-v5.webp": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+  "scene-assets/floor-lever-compact-topdown-v1.webp": "scene-assets/floor-lever-compact-front-v2.webp",
+  "scene-assets/floor-lever-heavy-topdown-v1.webp": "scene-assets/floor-lever-heavy-front-v2.webp",
+  "scene-assets/grandfather-clock-oak-topdown-v1.webp": "scene-assets/grandfather-clock-oak-topdown-v4.webp",
+  "scene-assets/grandfather-clock-mechanical-topdown-v1.webp": "scene-assets/grandfather-clock-mahogany-topdown-v4.webp",
+  "scene-assets/grandfather-clock-oak-topdown-v2.webp": "scene-assets/grandfather-clock-oak-topdown-v4.webp",
+  "scene-assets/grandfather-clock-mahogany-topdown-v2.webp": "scene-assets/grandfather-clock-mahogany-topdown-v4.webp",
+  "scene-assets/grandfather-clock-oak-topdown-v3.webp": "scene-assets/grandfather-clock-oak-topdown-v4.webp",
+  "scene-assets/grandfather-clock-mahogany-topdown-v3.webp": "scene-assets/grandfather-clock-mahogany-topdown-v4.webp",
   "scene-assets/column-stone-topdown-v1.png": "scene-assets/column-stone-topdown-v3.webp",
   "scene-assets/column-stone-topdown-v2.webp": "scene-assets/column-stone-topdown-v3.webp",
   "scene-assets/column-wood-topdown-v1.png": "scene-assets/column-wood-topdown-v3.webp",
@@ -42,13 +105,20 @@ const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-assets/fireplace-stone-v3.webp": "scene-assets/fireplace-stone-wall-topdown-v4.webp",
   "scene-assets/forest-deciduous-simple.webp": "scene-assets/forest-deciduous-irregular-a.webp",
   "scene-assets/forest-pine-simple.webp": "scene-assets/forest-pine-irregular-a.webp",
+  "scene-assets/grand-piano.webp": "scene-assets/grand-piano-topdown-v2.webp",
   "scene-assets/harp.webp": "scene-assets/harp-topdown-v2.webp",
+  "scene-assets/lectern.webp": "scene-assets/lectern-topdown-v3.webp",
+  "scene-assets/lectern-topdown-v2.webp": "scene-assets/lectern-topdown-v3.webp",
   "scene-assets/painting-landscape.webp": "scene-assets/painting-landscape-topdown-v2.webp",
   "scene-assets/painting-portrait.webp": "scene-assets/painting-portrait-topdown-v2.webp",
   "scene-assets/painting-still-life.webp": "scene-assets/painting-still-life-topdown-v2.webp",
   "scene-assets/potted-flowers.webp": "scene-assets/potted-flowers-v2.webp",
   "scene-assets/potted-herbs.webp": "scene-assets/potted-herbs-v2.webp",
   "scene-assets/potted-tree.webp": "scene-assets/potted-tree-v2.webp",
+  "scene-assets/pew.webp": "scene-assets/pew-topdown-v2.webp",
+  "scene-assets/throne.webp": "scene-assets/throne-topdown-v1.webp",
+  "presets/bastion-blasphemy/scene-assets/throne-bastion-v2.webp": "scene-assets/throne-topdown-v1.webp",
+  "scene-assets/piano.webp": "scene-assets/piano-topdown-v2.webp",
   "scene-assets/round-table.webp": "scene-assets/round-table-four-legs.webp",
   "scene-assets/stonehenge-trilithon.webp": "scene-assets/stonehenge-trilithon-circle-v2.webp",
   "scene-assets/statue.webp": "scene-assets/statue-knight-topdown-v3.webp",
@@ -58,13 +128,36 @@ const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-assets/statue-child-topdown-v1.webp": "scene-assets/statue-child-topdown-v2.webp",
   "scene-assets/stool.webp": "scene-assets/stool-v2.webp",
   "scene-assets/tableware-feast.webp": "scene-assets/tableware-feast-v2.webp",
-  "scene-assets/toilet-board-alder.webp": "scene-assets/toilet-board-alder-double-v3.webp",
+  "scene-assets/wall-gear-large-topdown-v1.webp": "scene-assets/wall-gear-large-front-v2.webp",
+  "scene-assets/wall-gear-small-topdown-v1.webp": "scene-assets/wall-gear-small-front-v2.webp",
+  "scene-assets/wall-gears-cluster-topdown-v1.webp": "scene-assets/wall-gears-cluster-front-v2.webp",
+  "scene-assets/wall-lever-brass-topdown-v1.webp": "scene-assets/wall-lever-brass-front-v2.webp",
+  "scene-assets/wall-lever-iron-topdown-v1.webp": "scene-assets/wall-lever-iron-front-v2.webp",
+  "scene-assets/wall-lever-iron-topdown-v3.webp": "scene-assets/wall-lever-iron-topdown-v4.webp",
+  "scene-assets/wall-lever-brass-topdown-v3.webp": "scene-assets/wall-lever-brass-topdown-v4.webp",
+  "scene-assets/wall-gear-small-topdown-v3.webp": "scene-assets/wall-gear-small-topdown-v4.webp",
+  "scene-assets/weapon-rack-swords-topdown-v1.webp": "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-swords-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-spears-topdown-v1.webp": "scene-assets/weapon-rack-spears-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-spears-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-spears-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-axes-topdown-v1.webp": "scene-assets/weapon-rack-axes-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-axes-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-axes-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-bows-topdown-v1.webp": "scene-assets/weapon-rack-bows-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-bows-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-bows-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-bow-open-standing-topdown-v4.webp": "scene-assets/weapon-rack-bow-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-crossbows-open-standing-topdown-v4.webp": "scene-assets/weapon-rack-crossbows-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-mixed-topdown-v1.webp": "scene-assets/weapon-rack-mixed-straight-standing-topdown-v5.webp",
+  "scene-assets/weapon-rack-mixed-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-mixed-straight-standing-topdown-v5.webp",
+  "scene-assets/toilet-board-alder.webp": "scene-assets/toilet-board-alder-double-v4.webp",
+  "scene-assets/toilet-board-alder-double-v3.webp": "scene-assets/toilet-board-alder-double-v4.webp",
   "scene-assets/toilet-board-alder-square-v2.webp": "scene-assets/toilet-board-alder-square-v4.webp",
   "scene-assets/toilet-board-alder-square-v3.webp": "scene-assets/toilet-board-alder-square-v4.webp",
-  "scene-assets/toilet-board-oak.webp": "scene-assets/toilet-board-oak-double-v3.webp",
+  "scene-assets/toilet-board-oak.webp": "scene-assets/toilet-board-oak-double-v4.webp",
+  "scene-assets/toilet-board-oak-double-v3.webp": "scene-assets/toilet-board-oak-double-v4.webp",
   "scene-assets/toilet-board-oak-square-v2.webp": "scene-assets/toilet-board-oak-square-v4.webp",
   "scene-assets/toilet-board-oak-square-v3.webp": "scene-assets/toilet-board-oak-square-v4.webp",
-  "scene-assets/toilet-board-walnut.webp": "scene-assets/toilet-board-walnut-double-v3.webp",
+  "scene-assets/toilet-board-walnut.webp": "scene-assets/toilet-board-walnut-double-v4.webp",
+  "scene-assets/toilet-board-walnut-double-v3.webp": "scene-assets/toilet-board-walnut-double-v4.webp",
   "scene-assets/toilet-board-walnut-square-v2.webp": "scene-assets/toilet-board-walnut-square-v4.webp",
   "scene-assets/toilet-board-walnut-square-v3.webp": "scene-assets/toilet-board-walnut-square-v4.webp",
   "scene-floors/forest-deciduous-floor.webp": "scene-assets/forest-deciduous-irregular-a.webp",
@@ -76,6 +169,25 @@ const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-floors/garden-rice-water-soft-v3.webp": "scene-floors/garden-rice-water-v5.png",
   "scene-floors/garden-soil-natural-v4.webp": "scene-floors/garden-soil-soft-v3.webp",
   "scene-floors/garden-soil-ridges-v2.webp": "scene-floors/garden-soil-soft-v3.webp",
+  "scene-floors/grass-meadow-floor.png": "scene-floors/grass-meadow-floor-v4.webp",
+  "scene-floors/grass-meadow-floor-v2.png": "scene-floors/grass-meadow-floor-v4.webp",
+  "scene-floors/grass-meadow-floor-v3.webp": "scene-floors/grass-meadow-floor-v4.webp",
+  "scene-floors/path-cobblestone-floor.png": "scene-floors/path-cobblestone-floor-v3.webp",
+  "scene-floors/path-cobblestone-floor-v2.png": "scene-floors/path-cobblestone-floor-v3.webp",
+  "scene-floors/path-dirt-floor.png": "scene-floors/path-dirt-floor-v3.webp",
+  "scene-floors/path-dirt-floor-v2.png": "scene-floors/path-dirt-floor-v3.webp",
+  "scene-floors/sea-deep-floor.webp": "scene-floors/sea-deep-floor-v4.webp",
+  "scene-floors/sea-deep-floor-v2.webp": "scene-floors/sea-deep-floor-v4.webp",
+  "scene-floors/sea-deep-floor-v3.webp": "scene-floors/sea-deep-floor-v4.webp",
+  "scene-floors/sea-shallow-floor.webp": "scene-floors/sea-shallow-floor-v4.webp",
+  "scene-floors/sea-shallow-floor-v2.webp": "scene-floors/sea-shallow-floor-v4.webp",
+  "scene-floors/sea-shallow-floor-v3.webp": "scene-floors/sea-shallow-floor-v4.webp",
+  "scene-floors/sea-stormy-floor.webp": "scene-floors/sea-stormy-floor-v4.webp",
+  "scene-floors/sea-stormy-floor-v2.webp": "scene-floors/sea-stormy-floor-v4.webp",
+  "scene-floors/sea-stormy-floor-v3.webp": "scene-floors/sea-stormy-floor-v4.webp",
+  "scene-assets/lake.webp": "scene-assets/lake-v2.webp",
+  "scene-assets/pond.webp": "scene-assets/pond-v2.webp",
+  "scene-assets/water-puddle.webp": "scene-assets/water-puddle-v2.webp",
 });
 
 export const LIGHT_PRESETS = Object.freeze({
@@ -83,10 +195,17 @@ export const LIGHT_PRESETS = Object.freeze({
   brazier: Object.freeze({ bright: 20, dim: 40, color: "#ff8a32", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 4, intensity: 6 } }),
   candle: Object.freeze({ bright: 0, dim: 10, color: "#ffd08a", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 2, intensity: 2 } }),
   lantern: Object.freeze({ bright: 20, dim: 40, color: "#ffc56d", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
+  chandelier: Object.freeze({ bright: 30, dim: 60, color: "#ffc56d", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
 });
 
 export const ASSETS = Object.freeze({
   table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1.549),
+  nobleTableWalnut: asset("Furniture", "Polished walnut table", "noble-table-walnut-rectangular-topdown-v3.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableWalnut"),
+  nobleTableMahoganyOval: asset("Furniture", "Carved oval mahogany table", "noble-table-mahogany-oval-topdown-v1.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableMahoganyOval"),
+  nobleTableBurgundyCloth: asset("Furniture", "Noble table — burgundy velvet", "noble-table-burgundy-velvet-cloth-topdown-v3.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableBurgundyCloth"),
+  nobleTableBlueCloth: asset("Furniture", "Noble table — blue damask", "noble-table-blue-damask-cloth-topdown-v1.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableBlueCloth"),
+  nobleTableMarquetryRound: asset("Furniture", "Round marquetry table", "noble-table-marquetry-round-topdown-v1.webp", 1.4, "object", 1, null, 0, "Choices.NobleTableMarquetryRound"),
+  nobleTableGrandBanquet: asset("Furniture", "Grand carved banquet table", "noble-table-grand-banquet-topdown-v1.webp", 2.4, "object", 1024 / 414, null, 0, "Choices.NobleTableGrandBanquet"),
   chair: asset("Furniture", "Chair", "chair.webp", 0.5, "object", 437 / 512),
   sofaGreen: asset("Furniture", "SofaGreen", "sofa-green-topdown-v1.webp", 2, "object", 2),
   sofaBurgundy: asset("Furniture", "SofaBurgundy", "sofa-burgundy-topdown-v1.webp", 2, "object", 2),
@@ -100,21 +219,48 @@ export const ASSETS = Object.freeze({
   bedMessyBrown: asset("Furniture", "Unmade bed — brown", "bed-messy-brown.webp", 1.8, "object", 0.545, null, 0, "Choices.BedMessyBrown"),
   doubleBedRed: asset("Furniture", "DoubleBedRed", "double-bed-red.webp", 2, "object", 0.709),
   doubleBedLinen: asset("Furniture", "DoubleBedLinen", "double-bed-linen.webp", 2, "object", 0.774),
-  cabinet: asset("Furniture", "Cabinet", "cabinet-wall-topdown-v3.webp", 1.25, "object", 1.25 / 0.3),
-  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow-wall-topdown-v4.webp", 0.6, "object", 2, null, 0, "CabinetSide"),
-  tree: asset("Nature", "Tree", "tree.webp", 2, "overhead", 1142 / 1140),
+  cabinet: asset("Furniture", "Cabinet", "cabinet-wall-topdown-v4.webp", 1.25, "object", 1.25 / 0.3),
+  cabinetCorner: asset("Furniture", "Corner cabinet", "cabinet-corner-wall-topdown-v11.webp", 0.3, "object", 1, null, 0, "Choices.CabinetCorner"),
+  cabinetNarrow: asset("Furniture", "CabinetNarrow", "cabinet-narrow-wall-topdown-v6.webp", 0.6, "object", 2, null, 0, "CabinetSide"),
+  tree: asset("Nature", "Tree", "tree.webp", 2, "object", 1142 / 1140),
   ruins: asset("Ruins", "Ruins", "ruins.webp", 1.8, "object", 1100 / 1127),
   corpse: asset("Remains", "Corpse", "corpse.webp", 1.5, "object", 863 / 1024),
+  graveBuried: asset("Remains", "Buried grave", "grave-buried-topdown-v1.webp", 2, "ground", 887 / 1774, null, 0, "Choices.GraveBuried"),
+  graveOpen: asset("Remains", "Open grave", "grave-open-topdown-v1.webp", 2, "ground", 887 / 1774, null, 0, "Choices.GraveOpen"),
+  graveMarkerRounded: asset("Remains", "Rounded grave marker", "grave-marker-rounded-topdown-v1.webp", 0.9, "object", 1.5, null, 0, "Choices.GraveMarkerRounded"),
+  graveMarkerPointed: asset("Remains", "Pointed grave marker", "grave-marker-pointed-topdown-v1.webp", 0.9, "object", 1.5, null, 0, "Choices.GraveMarkerPointed"),
   blood: asset("Traces", "Blood", "blood.webp", 1, "ground", 1024 / 775),
   torch: asset("Lighting", "Torch", "torch.webp", 0.3, "object", 512 / 462, "torch"),
   wallTorchIron: asset("Lighting", "WallTorchIron", "wall-torch-iron.webp", 0.65, "object", 0.475, "torch"),
   wallTorchBracket: asset("Lighting", "WallTorchBracket", "wall-torch-bracket.webp", 0.65, "object", 0.696, "torch"),
   brazier: asset("Lighting", "Brazier", "brazier.webp", 0.7, "object", 998 / 1017, "brazier"),
+  chandelierRound: asset("Lighting", "ChandelierRound", "chandelier-round-topdown-v1.webp", 2, "overhead", 1, "chandelier", 0, null, null, 15),
   roundTable: asset("Furniture", "RoundTable", "round-table-four-legs.webp", 1, "object", 1),
   stool: asset("Furniture", "Stool", "stool-v2.webp", 0.4, "object", 0.988),
   chest: asset("Furniture", "Chest", "chest.webp", 0.8, "object", 1024 / 728),
-  bookshelf: asset("Furniture", "Bookshelf", "bookshelf-wall-topdown-v4.webp", 1.2, "object", 4),
-  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow-wall-topdown-v4.webp", 0.6, "object", 2, null, 0, "BookshelfSide"),
+  bookshelf: asset("Furniture", "Bookshelf", "bookshelf-wall-topdown-v5.webp", 1.2, "object", 4),
+  bookshelfCorner: asset("Furniture", "Corner bookshelf", "bookshelf-corner-wall-topdown-v11.webp", 0.3, "object", 1, null, 0, "Choices.BookshelfCorner"),
+  bookshelfNarrow: asset("Furniture", "BookshelfNarrow", "bookshelf-narrow-wall-topdown-v5.webp", 0.6, "object", 2, null, 0, "BookshelfSide"),
+  weaponRackSwords: asset("Armory", "WeaponRackSwords", "weapon-rack-swords-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackSpears: asset("Armory", "WeaponRackSpears", "weapon-rack-spears-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackAxes: asset("Armory", "WeaponRackAxes", "weapon-rack-axes-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackBows: asset("Armory", "WeaponRackBows", "weapon-rack-bows-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackBow: asset("Armory", "WeaponRackBow", "weapon-rack-bow-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackCrossbows: asset("Armory", "WeaponRackCrossbows", "weapon-rack-crossbows-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackMixed: asset("Armory", "WeaponRackMixed", "weapon-rack-mixed-straight-standing-topdown-v5.webp", 1.5, "object", 3),
+  weaponRackMixedWall: asset("Armory", "Wall-mounted mixed weapon rack", "weapon-rack-mixed-wall-topdown-v1.webp", 1.5, "object", 3, null, 0, "Choices.WeaponRackMixedWall"),
+  wallLeverIron: asset("Mechanisms", "WallLeverIron", "wall-lever-iron-front-v2.webp", 0.75, "object", 2 / 3),
+  wallLeverBrass: asset("Mechanisms", "WallLeverBrass", "wall-lever-brass-front-v2.webp", 0.75, "object", 2 / 3),
+  floorLeverCompact: asset("Mechanisms", "FloorLeverCompact", "floor-lever-compact-front-v2.webp", 0.75, "object", 1),
+  floorLeverHeavy: asset("Mechanisms", "FloorLeverHeavy", "floor-lever-heavy-front-v2.webp", 1, "object", 1),
+  wallGearSmall: asset("Mechanisms", "WallGearSmall", "wall-gear-small-front-v2.webp", 0.6, "object", 1),
+  wallGearLarge: asset("Mechanisms", "WallGearLarge", "wall-gear-large-front-v2.webp", 1, "object", 1),
+  wallGearsCluster: asset("Mechanisms", "WallGearsCluster", "wall-gears-cluster-front-v2.webp", 1.2, "object", 1),
+  grandfatherClockOak: asset("Mechanisms", "Oak grandfather clock", "grandfather-clock-oak-topdown-v4.webp", 0.6, "object", 2, null, 0, "Choices.GrandfatherClockOak"),
+  grandfatherClockMechanical: asset("Mechanisms", "Mahogany grandfather clock", "grandfather-clock-mahogany-topdown-v4.webp", 0.6, "object", 2, null, 0, "Choices.GrandfatherClockMechanical"),
+  wallLeverIronTopdown: asset("Mechanisms", "Wall lever — iron (top-down)", "wall-lever-iron-topdown-v4.webp", 0.75, "object", 2 / 3, null, 0, "Choices.WallLeverIronTopdown"),
+  wallLeverBrassTopdown: asset("Mechanisms", "Wall lever — brass (top-down)", "wall-lever-brass-topdown-v4.webp", 0.75, "object", 2 / 3, null, 0, "Choices.WallLeverBrassTopdown"),
+  wallGearSmallTopdown: asset("Mechanisms", "Wall gear — small (top-down)", "wall-gear-small-topdown-v4.webp", 0.6, "object", 1, null, 0, "Choices.WallGearSmallTopdown"),
   barrel: asset("Household", "Barrel", "barrel.webp", 0.6, "object", 644 / 768),
   barrelSide: asset("Household", "BarrelSide", "barrel-side.webp", 0.9, "object", 1.61),
   barrelsSideCluster: asset("Household", "BarrelsSideCluster", "barrels-side-cluster.webp", 1.4, "object", 0.615),
@@ -123,20 +269,20 @@ export const ASSETS = Object.freeze({
   tub: asset("Household", "Tub", "tub.webp", 1.1, "object", 1024 / 666),
   bathtubWood: asset("Household", "BathtubWood", "bathtub-wood.webp", 1.5, "object", 0.488),
   bathtubCopper: asset("Household", "BathtubCopper", "bathtub-copper.webp", 1.5, "object", 0.676),
-  sinkWood: asset("Household", "SinkWood", "sink-wood.webp", 0.8, "object", 0.691),
-  sinkStone: asset("Household", "SinkStone", "sink-stone.webp", 0.8, "object", 0.704),
+  sinkWood: asset("Household", "SinkWood", "sink-wood-topdown-v3.webp", 0.8, "object", 0.691),
+  sinkStone: asset("Household", "SinkStone", "sink-stone-topdown-v3.webp", 0.8, "object", 0.704),
   toiletBoardOak: asset("Household", "ToiletBoardOak", "toilet-board-oak-square-v4.webp", 1, "object", 1),
   toiletBoardAlder: asset("Household", "ToiletBoardAlder", "toilet-board-alder-square-v4.webp", 1, "object", 1),
   toiletBoardWalnut: asset("Household", "ToiletBoardWalnut", "toilet-board-walnut-square-v4.webp", 1, "object", 1),
-  toiletBoardOakDouble: asset("Household", "ToiletBoardOakDouble", "toilet-board-oak-double-v3.webp", 2, "object", 0.5),
-  toiletBoardAlderDouble: asset("Household", "ToiletBoardAlderDouble", "toilet-board-alder-double-v3.webp", 2, "object", 0.5),
-  toiletBoardWalnutDouble: asset("Household", "ToiletBoardWalnutDouble", "toilet-board-walnut-double-v3.webp", 2, "object", 0.5),
+  toiletBoardOakDouble: asset("Household", "ToiletBoardOakDouble", "toilet-board-oak-double-v4.webp", 2, "object", 2),
+  toiletBoardAlderDouble: asset("Household", "ToiletBoardAlderDouble", "toilet-board-alder-double-v4.webp", 2, "object", 2),
+  toiletBoardWalnutDouble: asset("Household", "ToiletBoardWalnutDouble", "toilet-board-walnut-double-v4.webp", 2, "object", 2),
   cauldron: asset("Household", "Cauldron", "cauldron.webp", 0.7, "object", 741 / 768),
   candle: asset("Lighting", "Candle", "candle.webp", 0.2, "object", 512 / 445, "candle"),
   lantern: asset("Lighting", "Lantern", "lantern.webp", 0.3, "object", 315 / 512, "lantern"),
-  pineTree: asset("Nature", "PineTree", "pine-tree.webp", 2, "overhead", 817 / 1232),
-  deadTree: asset("Nature", "DeadTree", "dead-tree.webp", 2, "overhead", 1157 / 1226),
-  bush: asset("Nature", "Bush", "bush.webp", 1, "overhead", 1024 / 1003),
+  pineTree: asset("Nature", "PineTree", "pine-tree.webp", 2, "object", 817 / 1232),
+  deadTree: asset("Nature", "DeadTree", "dead-tree.webp", 2, "object", 1157 / 1226),
+  bush: asset("Nature", "Bush", "bush.webp", 1, "object", 1024 / 1003),
   stump: asset("Nature", "Stump", "stump.webp", 0.8, "object", 768 / 738),
   rocks: asset("Nature", "Rocks", "rocks.webp", 1.1, "object", 1024 / 915),
   logs: asset("Nature", "Logs", "logs.webp", 1.4, "object", 1015 / 863),
@@ -154,18 +300,18 @@ export const ASSETS = Object.freeze({
   stagecoach: asset("Vehicles", "Stagecoach", "carriage-stagecoach-topdown-v1.webp", 3.2, "object", 2 / 3),
   well: asset("Outdoors", "Well", "well.webp", 1.5, "object", 952 / 1144),
   beehive: asset("Outdoors", "Beehive", "beehive-skep-topdown-v1.webp", 1, "object", 1),
-  pond: asset("Water", "Pond", "pond.webp", 3, "ground", 1110 / 954),
-  lake: asset("Water", "Lake", "lake.webp", 5, "ground", 1536 / 817),
+  pond: asset("Water", "Pond", "pond-v2.webp", 3, "ground", 1110 / 954),
+  lake: asset("Water", "Lake", "lake-v2.webp", 5, "ground", 1536 / 817),
   brokenBoards: asset("Ruins", "BrokenBoards", "broken-boards.webp", 1.4, "object", 1024 / 822),
   fallenColumn: asset("Ruins", "FallenColumn", "fallen-column.webp", 1.8, "object", 1024 / 965),
   skeleton: asset("Remains", "Skeleton", "skeleton.webp", 1.5, "object", 775 / 1024),
   coffinWood: asset("Remains", "CoffinWood", "coffin-wood-topdown-v1.webp", 1, "object", 1),
   coffinStone: asset("Remains", "CoffinStone", "coffin-stone-topdown-v1.webp", 1, "object", 1),
   redRug: asset("Decor", "RedRug", "rug-red.webp", 1.8, "ground", 491 / 1024),
-  booksScrolls: asset("TabletopSets", "BooksScrolls", "books-scrolls.webp", 0.8, "overhead", 768 / 576),
+  booksScrolls: asset("TabletopSets", "BooksScrolls", "books-scrolls.webp", 0.8, "object", 768 / 576),
   goldPile: asset("Decor", "GoldPile", "gold-pile.webp", 0.8, "object", 953 / 917, null, 0, "GoldPile"),
   mud: asset("Traces", "Mud", "mud.webp", 1.5, "ground", 1024 / 799),
-  waterPuddle: asset("Traces", "WaterPuddle", "water-puddle.webp", 1.2, "ground", 1020 / 772),
+  waterPuddle: asset("Traces", "WaterPuddle", "water-puddle-v2.webp", 1.2, "ground", 1020 / 772),
   ash: asset("Traces", "Ash", "ash.webp", 1.3, "ground", 1024 / 930),
   footprints: asset("Traces", "Footprints", "footprints.webp", 1.5, "ground", 657 / 1024),
   longTable: asset("Furniture", "LongTable", "long-table.webp", 2, "object", 3.556),
@@ -173,18 +319,18 @@ export const ASSETS = Object.freeze({
   barCounterStraight: asset("Furniture", "BarCounterStraight", "bar-counter-straight.webp", 2.4, "object", 3.683),
   barCounterCorner: asset("Furniture", "BarCounterCorner", "bar-counter-corner.webp", 2.2, "object", 1.13),
   bench: asset("Furniture", "Bench", "bench-topdown-v2.webp", 1.5, "object", 3.094),
-  pew: asset("TempleStage", "Pew", "pew.webp", 2, "object", 1024 / 453),
+  pew: asset("TempleStage", "Pew", "pew-topdown-v2.webp", 2, "object", 1024 / 453),
   desk: asset("Furniture", "Desk", "desk.webp", 1.3, "object", 1.73),
-  throne: asset("TempleStage", "Throne", "throne.webp", 1, "object", 615 / 1024),
+  throne: asset("TempleStage", "Throne", "throne-topdown-v1.webp", 1, "object", 1),
   altar: asset("TempleStage", "Altar", "altar.webp", 1.5, "object", 1024 / 598),
-  lectern: asset("TempleStage", "Lectern", "lectern.webp", 0.8, "object", 574 / 768),
-  statue: asset("TempleStage", "StatueKnight", "statue-knight-topdown-v3.webp", 0.65, "overhead", 1),
-  statueMan: asset("TempleStage", "StatueMan", "statue-man-topdown-v2.webp", 0.65, "overhead", 1),
-  statueWoman: asset("TempleStage", "StatueWoman", "statue-woman-topdown-v2.webp", 0.65, "overhead", 1),
-  statueChild: asset("TempleStage", "StatueChild", "statue-child-topdown-v2.webp", 0.48, "overhead", 1),
-  standingColumn: asset("TempleStage", "StandingColumn", "standing-column.webp", 1, "overhead", 655 / 817),
-  columnStoneTopdown: asset("TempleStage", "Stone column — ½ cell", "column-stone-topdown-v3.webp", 1, "overhead", 1, null, 0, "Choices.ColumnStoneTopdown"),
-  columnWoodTopdown: asset("TempleStage", "Wooden column — ½ cell", "column-wood-topdown-v3.webp", 1, "overhead", 1, null, 0, "Choices.ColumnWoodTopdown"),
+  lectern: asset("TempleStage", "Lectern", "lectern-topdown-v3.webp", 0.8, "object", 574 / 768),
+  statue: asset("TempleStage", "StatueKnight", "statue-knight-topdown-v3.webp", 0.65, "object", 1),
+  statueMan: asset("TempleStage", "StatueMan", "statue-man-topdown-v2.webp", 0.65, "object", 1),
+  statueWoman: asset("TempleStage", "StatueWoman", "statue-woman-topdown-v2.webp", 0.65, "object", 1),
+  statueChild: asset("TempleStage", "StatueChild", "statue-child-topdown-v2.webp", 0.48, "object", 1),
+  standingColumn: asset("TempleStage", "StandingColumn", "standing-column.webp", 1, "object", 655 / 817),
+  columnStoneTopdown: asset("TempleStage", "Stone column — ½ cell", "column-stone-topdown-v3.webp", 1, "object", 1, null, 0, "Choices.ColumnStoneTopdown"),
+  columnWoodTopdown: asset("TempleStage", "Wooden column — ½ cell", "column-wood-topdown-v3.webp", 1, "object", 1, null, 0, "Choices.ColumnWoodTopdown"),
   ritualCircle: asset("TempleStage", "RitualCircle", "ritual-circle.webp", 1.8, "ground", 1024 / 1016),
   ladder: asset("Transitions", "Ladder", "ladder.webp", 1.5, "ground", 1024 / 271),
   ladderVertical: asset("Transitions", "LadderVertical", "ladder-vertical.webp", 1.5, "ground", 234 / 1024),
@@ -197,29 +343,35 @@ export const ASSETS = Object.freeze({
   pottedFlowers: asset("Household", "PottedFlowers", "potted-flowers-v2.webp", 0.6, "object", 0.95),
   pottedHerbs: asset("Household", "PottedHerbs", "potted-herbs-v2.webp", 0.6, "object", 0.979),
   pottedTree: asset("Household", "PottedTree", "potted-tree-v2.webp", 0.75, "object", 0.964),
-  tablewareEmpty: asset("TabletopSets", "TablewareEmpty", "tableware-empty.webp", 0.65, "overhead", 0.965),
-  tablewareStew: asset("TabletopSets", "TablewareStew", "tableware-stew.webp", 0.7, "overhead", 1.364),
-  tablewareRoast: asset("TabletopSets", "TablewareRoast", "tableware-roast.webp", 0.7, "overhead", 0.798),
-  tablewareFish: asset("TabletopSets", "TablewareFish", "tableware-fish.webp", 0.75, "overhead", 1.593),
-  tablewareCheeseFruit: asset("TabletopSets", "TablewareCheeseFruit", "tableware-cheese-fruit.webp", 0.7, "overhead", 0.956),
-  tablewareBreakfast: asset("TabletopSets", "TablewareBreakfast", "tableware-breakfast.webp", 0.7, "overhead", 1.188),
-  tablewareTea: asset("TabletopSets", "TablewareTea", "tableware-tea.webp", 0.7, "overhead", 0.945),
-  tablewareAle: asset("TabletopSets", "TablewareAle", "tableware-ale.webp", 0.7, "overhead", 0.991),
-  tablewareWine: asset("TabletopSets", "TablewareWine", "tableware-wine.webp", 0.7, "overhead", 0.95),
-  tablewareFeast: asset("TabletopSets", "TablewareFeast", "tableware-feast-v2.webp", 0.8, "overhead", 0.955),
-  tabletopAlchemy: asset("TabletopSets", "TabletopAlchemy", "tabletop-set-alchemy-v1.webp", 0.9, "overhead", 1),
-  tabletopArcane: asset("TabletopSets", "TabletopArcane", "tabletop-set-arcane-v1.webp", 0.9, "overhead", 1),
-  tabletopWriting: asset("TabletopSets", "TabletopWriting", "tabletop-set-writing-v1.webp", 0.9, "overhead", 1),
-  tabletopWoodworking: asset("TabletopSets", "TabletopWoodworking", "tabletop-set-woodworking-v1.webp", 0.9, "overhead", 1),
-  tabletopMetalworking: asset("TabletopSets", "TabletopMetalworking", "tabletop-set-metalworking-v1.webp", 0.9, "overhead", 1),
-  tabletopTorture: asset("TabletopSets", "TabletopTorture", "tabletop-set-torture-v1.webp", 0.9, "overhead", 1),
-  tabletopBooks: asset("TabletopSets", "TabletopBooks", "tabletop-set-books-v1.webp", 0.9, "overhead", 1),
-  tabletopJewelry: asset("TabletopSets", "TabletopJewelry", "tabletop-set-jewelry-v1.webp", 0.9, "overhead", 1),
-  tabletopCartography: asset("TabletopSets", "TabletopCartography", "tabletop-set-cartography-v1.webp", 0.9, "overhead", 1),
-  tabletopMedicine: asset("TabletopSets", "TabletopMedicine", "tabletop-set-medicine-v1.webp", 0.9, "overhead", 1),
+  tablewareEmpty: asset("TabletopSets", "TablewareEmpty", "tableware-empty.webp", 0.65, "object", 0.965),
+  tablewareStew: asset("TabletopSets", "TablewareStew", "tableware-stew.webp", 0.7, "object", 1.364),
+  tablewareRoast: asset("TabletopSets", "TablewareRoast", "tableware-roast.webp", 0.7, "object", 0.798),
+  tablewareFish: asset("TabletopSets", "TablewareFish", "tableware-fish.webp", 0.75, "object", 1.593),
+  tablewareCheeseFruit: asset("TabletopSets", "TablewareCheeseFruit", "tableware-cheese-fruit.webp", 0.7, "object", 0.956),
+  tablewareBreakfast: asset("TabletopSets", "TablewareBreakfast", "tableware-breakfast.webp", 0.7, "object", 1.188),
+  tablewareTea: asset("TabletopSets", "TablewareTea", "tableware-tea.webp", 0.7, "object", 0.945),
+  tablewareAle: asset("TabletopSets", "TablewareAle", "tableware-ale.webp", 0.7, "object", 0.991),
+  tablewareWine: asset("TabletopSets", "TablewareWine", "tableware-wine.webp", 0.7, "object", 0.95),
+  tablewareFeast: asset("TabletopSets", "TablewareFeast", "tableware-feast-v2.webp", 0.8, "object", 0.955),
+  tabletopAlchemy: asset("TabletopSets", "TabletopAlchemy", "tabletop-set-alchemy-v1.webp", 0.9, "object", 1),
+  tabletopArcane: asset("TabletopSets", "TabletopArcane", "tabletop-set-arcane-v1.webp", 0.9, "object", 1),
+  tabletopWriting: asset("TabletopSets", "TabletopWriting", "tabletop-set-writing-v1.webp", 0.9, "object", 1),
+  tabletopWoodworking: asset("TabletopSets", "TabletopWoodworking", "tabletop-set-woodworking-v1.webp", 0.9, "object", 1),
+  tabletopMetalworking: asset("TabletopSets", "TabletopMetalworking", "tabletop-set-metalworking-v1.webp", 0.9, "object", 1),
+  tabletopTorture: asset("TabletopSets", "TabletopTorture", "tabletop-set-torture-v1.webp", 0.9, "object", 1),
+  tabletopBooks: asset("TabletopSets", "TabletopBooks", "tabletop-set-books-v1.webp", 0.9, "object", 1),
+  tabletopJewelry: asset("TabletopSets", "TabletopJewelry", "tabletop-set-jewelry-v1.webp", 0.9, "object", 1),
+  tabletopCartography: asset("TabletopSets", "TabletopCartography", "tabletop-set-cartography-v1.webp", 0.9, "object", 1),
+  tabletopMedicine: asset("TabletopSets", "TabletopMedicine", "tabletop-set-medicine-v1.webp", 0.9, "object", 1),
+  tabletopDisguise: asset("TabletopSets", "TabletopDisguise", "tabletop-set-disguise-v1.webp", 0.9, "object", 1),
   paintingLandscape: asset("Decor", "PaintingLandscape", "painting-landscape-topdown-v2.webp", 0.9, "object", 4.613),
   paintingPortrait: asset("Decor", "PaintingPortrait", "painting-portrait-topdown-v2.webp", 0.7, "object", 4.016),
   paintingStillLife: asset("Decor", "PaintingStillLife", "painting-still-life-topdown-v2.webp", 0.7, "object", 2.893),
+  mirrorWallSquare: asset("Decor", "Square wall mirror (1 cell)", "mirror-wall-square-topdown-v3.webp", 1, "object", 4, null, 0, "MirrorChoices.MirrorWallSquare", SQUARE_MIRROR_CONFIG),
+  mirrorWallRectangular2: asset("Decor", "Rectangular wall mirror (2 cells)", "mirror-wall-rectangular-2-topdown-v3.webp", 2, "object", 8, null, 0, "MirrorChoices.MirrorWallRectangular2", RECTANGULAR_MIRROR_CONFIG),
+  mirrorWallRound: asset("Decor", "Round wall mirror (1 cell)", "mirror-wall-round-topdown-v3.webp", 1, "object", 4, null, 0, "MirrorChoices.MirrorWallRound", ROUND_MIRROR_CONFIG),
+  mirrorWallOval2: asset("Decor", "Oval wall mirror (2 cells)", "mirror-wall-oval-2-topdown-v3.webp", 2, "object", 8, null, 0, "MirrorChoices.MirrorWallOval2", OVAL_MIRROR_CONFIG),
+  mirrorWallWide: asset("Decor", "Floor mirror", "mirror-wall-wide-topdown-v1.webp", 1.5, "object", 4, null, 0, "MirrorChoices.MirrorFloor", FLOOR_MIRROR_CONFIG),
   hayPile: asset("Outdoors", "HayPile", "hay-pile.webp", 1.2, "object", 1.082),
   hayWindrow: asset("Outdoors", "HayWindrow", "hay-windrow.webp", 1.6, "object", 3.697),
   hayCluster: asset("Outdoors", "HayCluster", "hay-cluster.webp", 1.4, "object", 1.54),
@@ -239,16 +391,45 @@ export const ASSETS = Object.freeze({
   standingStoneBroad: asset("Ruins", "StandingStoneBroad", "standing-stone-broad.webp", 0.65, "object", 1.28, null, 0, "StandingStoneBroad"),
   standingStoneNarrow: asset("Ruins", "StandingStoneNarrow", "standing-stone-narrow.webp", 0.7, "object", 0.3, null, 0, "StandingStoneNarrow"),
   standingStoneCrooked: asset("Ruins", "StandingStoneCrooked", "standing-stone-crooked.webp", 0.7, "object", 0.494, null, 0, "StandingStoneCrooked"),
-  piano: asset("MusicalInstruments", "Piano", "piano.webp", 1, "object", 1.263),
-  grandPiano: asset("MusicalInstruments", "GrandPiano", "grand-piano.webp", 1, "object", 0.755),
+  piano: asset("MusicalInstruments", "Piano", "piano-topdown-v2.webp", 1, "object", 1.263),
+  grandPiano: asset("MusicalInstruments", "GrandPiano", "grand-piano-topdown-v2.webp", 1, "object", 0.755),
   drums: asset("MusicalInstruments", "Drums", "drums.webp", 1, "object", 0.941),
   harp: asset("MusicalInstruments", "Harp", "harp-topdown-v2.webp", 1, "object", 1.886),
+  musicStandEmpty: asset("MusicalInstruments", "MusicStandEmpty", "music-stand-empty-topdown-v2.webp", 0.9, "object", 964 / 1024),
+  musicStandSheetMusic: asset("MusicalInstruments", "MusicStandSheetMusic", "music-stand-sheet-music-topdown-v2.webp", 0.9, "object", 964 / 1024),
 });
 
-const CATEGORIES = Object.freeze(["Furniture", "Household", "TabletopSets", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Vehicles", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
-const LAYERS = Object.freeze({ ground: -100, object: 0, overhead: 100 });
+const CATEGORIES = Object.freeze(["Furniture", "Household", "Armory", "Mechanisms", "TabletopSets", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Vehicles", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
+// Layer sort remains the fallback for generic assets. Furniture that must stack predictably
+// gets a more specific default sort: chairs/generic objects = 1, tables = 2, tabletop
+// sets/candles/lanterns = 3. Manual tile sorting is preserved.
+const LAYERS = Object.freeze({ ground: -100, object: 1, overhead: 100 });
+const ASSET_SORT_VERSION = 1;
 
-function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null) {
+function getDefaultAssetSort(key, definition = ASSETS[key]) {
+  if (!definition) return 0;
+  if (definition.layer !== "object") return LAYERS[definition.layer] ?? 0;
+  if (definition.category === "TabletopSets" || key === "candle" || key === "lantern") return 3;
+  if (definition.category === "Furniture" && String(key).toLowerCase().includes("table")) return 2;
+  return 1;
+}
+
+function resolveStoredAssetSort(key, definition, currentSort, flag = {}) {
+  const desired = getDefaultAssetSort(key, definition);
+  const numericSort = Number(currentSort);
+  if (!Number.isFinite(numericSort)) return { sort: desired, manual: false };
+  if (flag.sortManual === true) return { sort: numericSort, manual: true };
+  if (flag.sortManual === false) return { sort: desired, manual: false };
+
+  // Legacy assets had no manual/default marker. A value different from the old layer
+  // default was necessarily user-supplied, so preserve it. Values equal to the old
+  // automatic default can safely migrate to the new per-asset default.
+  const legacyDefault = LAYERS[definition.layer] ?? 0;
+  if (numericSort !== legacyDefault) return { sort: numericSort, manual: true };
+  return { sort: desired, manual: false };
+}
+
+function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null, mirror = null, defaultElevation = null) {
   const source = `modules/${MODULE_ID}/images/scene-assets/${filename}`;
   return Object.freeze({
     category,
@@ -261,7 +442,14 @@ function asset(category, label, filename, size, layer, aspect, light = null, def
     layer,
     light,
     defaultRotation,
+    mirror,
+    defaultElevation,
   });
+}
+
+export function getAssetMirrorFlag(definition) {
+  if (!definition?.mirror) return null;
+  return foundry.utils.deepClone(definition.mirror);
 }
 
 let active = false;
@@ -403,16 +591,28 @@ async function synchronizeRevisedAssetDimensions() {
   const wallFurniture = new Set(["cabinet", "cabinetNarrow", "bookshelf", "bookshelfNarrow"]);
   const narrowFurniture = new Set(["cabinetNarrow", "bookshelfNarrow"]);
   const squareToilets = new Set(["toiletBoardOak", "toiletBoardAlder", "toiletBoardWalnut"]);
+  const doubleToilets = new Set(["toiletBoardOakDouble", "toiletBoardAlderDouble", "toiletBoardWalnutDouble"]);
   const resizedStatues = new Set(["statue", "statueMan", "statueWoman", "statueChild"]);
+  const resizedClocks = new Set(["grandfatherClockOak", "grandfatherClockMechanical"]);
+  const resizedChandeliers = new Set(["chandelierRound"]);
+  const resizedThrones = new Set(["throne"]);
+  const wallMirrors = new Set(["mirrorWallSquare", "mirrorWallRectangular2", "mirrorWallRound", "mirrorWallOval2"]);
+  const floorMechanisms = new Set([
+    "wallLeverIron", "wallLeverBrass", "floorLeverCompact", "floorLeverHeavy",
+    "wallGearSmall", "wallGearLarge", "wallGearsCluster",
+  ]);
   for (const scene of game.scenes ?? []) {
     const grid = Number(scene.grid?.size ?? 100);
     const updates = [];
     for (const tile of scene.tiles ?? []) {
       const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
       const key = flag?.key;
-      if (!key || Number(flag.geometryVersion ?? 0) >= ASSET_GEOMETRY_VERSION) continue;
+      if (!key) continue;
       const definition = ASSETS[key];
       if (!definition) continue;
+      const previousGeometryVersion = Number(flag.geometryVersion ?? 0);
+      const layerMismatch = flag.layer !== definition.layer;
+      if (previousGeometryVersion >= ASSET_GEOMETRY_VERSION && !layerMismatch) continue;
       let desiredWidth = Math.max(1, Math.round(Number(tile.width) || grid * definition.size));
       let desiredHeight = Math.max(1, Math.round(Number(tile.height) || desiredWidth / definition.aspect));
       if (wallFurniture.has(key)) {
@@ -421,26 +621,52 @@ async function synchronizeRevisedAssetDimensions() {
           desiredWidth = Math.max(1, Math.round(grid * 0.6 * scale));
         }
         desiredHeight = Math.max(1, Math.round(desiredWidth / definition.aspect));
-      } else if (ABOVE_WALL_COLUMN_KEYS.has(key) || squareToilets.has(key)) {
+      } else if (TOPDOWN_COLUMN_KEYS.has(key) || squareToilets.has(key)) {
         desiredWidth = grid;
         desiredHeight = grid;
-      } else if (resizedStatues.has(key)) {
+      } else if (doubleToilets.has(key)) {
+        const majorDimension = Math.max(desiredWidth, desiredHeight);
+        desiredWidth = majorDimension;
+        desiredHeight = Math.max(1, Math.round(majorDimension / definition.aspect));
+      } else if (resizedStatues.has(key) && previousGeometryVersion < 18) {
         const previousDefaultSize = 1;
         const majorDimension = Math.max(desiredWidth, desiredHeight);
         const scale = definition.size / previousDefaultSize;
         desiredWidth = Math.max(1, Math.round(majorDimension * scale));
         desiredHeight = desiredWidth;
-      } else continue;
+      } else if (resizedClocks.has(key) && previousGeometryVersion < 18) {
+        const previousDefaultSize = 1.5;
+        const previousMajorDimension = Math.max(desiredWidth, desiredHeight);
+        const preservedScale = previousMajorDimension / Math.max(1, grid * previousDefaultSize);
+        const newMajorDimension = Math.max(1, Math.round(grid * definition.size * preservedScale));
+        desiredWidth = newMajorDimension;
+        desiredHeight = Math.max(1, Math.round(newMajorDimension / definition.aspect));
+      } else if (resizedChandeliers.has(key) && previousGeometryVersion < 19) {
+        const previousDefaultSize = previousGeometryVersion >= 18 ? 1 : 3;
+        const previousMajorDimension = Math.max(desiredWidth, desiredHeight);
+        const preservedScale = previousMajorDimension / Math.max(1, grid * previousDefaultSize);
+        const newMajorDimension = Math.max(1, Math.round(grid * definition.size * preservedScale));
+        desiredWidth = newMajorDimension;
+        desiredHeight = Math.max(1, Math.round(newMajorDimension / definition.aspect));
+      } else if (resizedThrones.has(key)) {
+        const preservedScale = Math.max(desiredWidth, desiredHeight) / Math.max(1, grid);
+        desiredWidth = Math.max(1, Math.round(grid * definition.size * preservedScale));
+        desiredHeight = desiredWidth;
+      } else if (wallMirrors.has(key)) {
+        const preservedLength = Math.max(desiredWidth, desiredHeight);
+        desiredWidth = preservedLength;
+        desiredHeight = Math.max(1, Math.round(preservedLength / definition.aspect));
+      } else if (floorMechanisms.has(key)) {
+        // These assets show mechanisms lying flat on the map and belong on the object layer.
+      }
       const update = {
         _id: tile.id,
         width: desiredWidth,
         height: desiredHeight,
         [`flags.${MODULE_ID}.${FLAG_ROOT}.geometryVersion`]: ASSET_GEOMETRY_VERSION,
+        [`flags.${MODULE_ID}.${FLAG_ROOT}.layer`]: definition.layer,
+        ...(definition.mirror ? { [`flags.${MODULE_ID}.${FLAG_ROOT}.mirror`]: getAssetMirrorFlag(definition) } : {}),
       };
-      if (ABOVE_WALL_COLUMN_KEYS.has(key)) {
-        update.sort = LAYERS.overhead;
-        update[`flags.${MODULE_ID}.${FLAG_ROOT}.layer`] = "overhead";
-      }
       updates.push(update);
     }
     for (let offset = 0; offset < updates.length; offset += 100) {
@@ -449,30 +675,37 @@ async function synchronizeRevisedAssetDimensions() {
   }
 }
 
-function raiseColumnTileAboveWallTextures(tile) {
-  const document = tile?.document;
-  const key = document?.flags?.[MODULE_ID]?.[FLAG_ROOT]?.key;
-  if (!ABOVE_WALL_COLUMN_KEYS.has(key)) return;
-  const mesh = tile?.mesh;
-  const parent = mesh?.parent;
-  if (!mesh || !parent) return;
-  const sortLayers = canvas?.primary?.constructor?.SORT_LAYERS ?? {};
-  mesh.sortLayer = Number(sortLayers.TILES ?? 500) + 4;
-  mesh.sort = LAYERS.overhead;
-  parent.sortableChildren = true;
-  parent.sortDirty = true;
+async function synchronizeAssetDefaultSorts() {
+  if (!game.user?.isGM) return;
+  for (const scene of game.scenes ?? []) {
+    const updates = [];
+    for (const tile of scene.tiles ?? []) {
+      const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      const key = flag?.key;
+      const definition = key ? ASSETS[key] : null;
+      if (!definition) continue;
+      if (Number(flag.sortVersion ?? 0) >= ASSET_SORT_VERSION) continue;
+
+      const resolved = resolveStoredAssetSort(key, definition, tile.sort, flag);
+      const update = {
+        _id: tile.id,
+        [`flags.${MODULE_ID}.${FLAG_ROOT}.sortVersion`]: ASSET_SORT_VERSION,
+        [`flags.${MODULE_ID}.${FLAG_ROOT}.sortManual`]: resolved.manual,
+      };
+      if (Number(tile.sort) !== resolved.sort) update.sort = resolved.sort;
+      updates.push(update);
+    }
+    for (let offset = 0; offset < updates.length; offset += 100) {
+      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+    }
+  }
 }
 
 Hooks.once("ready", async () => {
   await migrateLegacySceneAssetPaths();
   await synchronizeSceneAssetPresetPaths();
   await synchronizeRevisedAssetDimensions();
-});
-
-Hooks.on("refreshTile", (tile) => raiseColumnTileAboveWallTextures(tile));
-
-Hooks.on("canvasReady", () => {
-  for (const tile of canvas?.tiles?.placeables ?? []) raiseColumnTileAboveWallTextures(tile);
+  await synchronizeAssetDefaultSorts();
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, (_preset, scene) => {
@@ -521,9 +754,23 @@ export function getAssetPlacementLevelData() {
   const nativeLevel = canvas?.level;
   return {
     level: nativeLevel ? getFloorNumberForNativeLevel(nativeLevel) : getCurrentFloorLevel(),
-    levels: nativeLevel?.id ? [nativeLevel.id] : [],
+    levels: assetVisibilityLevelIds(nativeLevel),
     elevation: Number(nativeLevel?.elevation?.base ?? 0),
   };
+}
+
+function assetVisibilityLevelIds(nativeLevel, scene = canvas?.scene) {
+  if (!nativeLevel?.id || !scene?.levels) return [];
+  const floorNumber = getFloorNumberForNativeLevel(nativeLevel);
+  return (scene.levels.sorted ?? [])
+    .filter((level) => level.id === nativeLevel.id || getFloorNumberForNativeLevel(level) > floorNumber)
+    .map((level) => level.id);
+}
+
+function sameLevelIds(left, right) {
+  const a = [...(left ?? [])].map(String).sort();
+  const b = [...(right ?? [])].map(String).sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 function htmlEscape(value) {
@@ -708,7 +955,6 @@ function renderPicker(element) {
       <select data-layer>
         <option value="ground">${localize("Layers.Ground", "Ground")}</option>
         <option value="object">${localize("Layers.Object", "Object")}</option>
-        <option value="overhead">${localize("Layers.Overhead", "Overhead")}</option>
       </select>
     </label>
     <button type="button" data-action="place" title="${localize("Place", "Place asset")}"><i class="fa-solid fa-stamp"></i></button>
@@ -1317,11 +1563,20 @@ async function placeAsset(point) {
     width: size.width,
     height: size.height,
     rotation,
-    elevation: placementLevel.elevation,
+    elevation: Number.isFinite(definition.defaultElevation) ? definition.defaultElevation : placementLevel.elevation,
     levels: placementLevel.levels,
-    sort: LAYERS[selectedLayer] ?? 0,
+    sort: getDefaultAssetSort(selectedKey, definition),
     restrictions: { light: false, weather: false },
-    flags: { [MODULE_ID]: { [FLAG_ROOT]: { key: selectedKey, layer: selectedLayer, level: placementLevel.level, lightId: null, geometryVersion: ASSET_GEOMETRY_VERSION } } },
+    flags: { [MODULE_ID]: { [FLAG_ROOT]: {
+      key: selectedKey,
+      layer: definition.layer,
+      level: placementLevel.level,
+      lightId: null,
+      geometryVersion: ASSET_GEOMETRY_VERSION,
+      sortVersion: ASSET_SORT_VERSION,
+      sortManual: false,
+      ...(definition.mirror ? { mirror: getAssetMirrorFlag(definition) } : {}),
+    } } },
   };
   const [tile] = await scene.createEmbeddedDocuments("Tile", [tileData]);
   if (tile && definition.light) await createLinkedLight(tile, definition.light);
@@ -1346,6 +1601,15 @@ async function placeSet(point) {
       batchId,
       geometryVersion: ASSET_GEOMETRY_VERSION,
     };
+    const key = flags[MODULE_ID][FLAG_ROOT].key;
+    const definition = ASSETS[key];
+    let resolvedSort = { sort: Number(item.sort ?? 0), manual: true };
+    if (definition) {
+      resolvedSort = resolveStoredAssetSort(key, definition, item.sort, flags[MODULE_ID][FLAG_ROOT]);
+      flags[MODULE_ID][FLAG_ROOT].layer = definition.layer;
+      flags[MODULE_ID][FLAG_ROOT].sortVersion = ASSET_SORT_VERSION;
+      flags[MODULE_ID][FLAG_ROOT].sortManual = resolvedSort.manual;
+    }
     return {
       name: item.name,
       texture: {
@@ -1360,7 +1624,7 @@ async function placeSet(point) {
       rotation: (rotation + (flipped ? -Number(item.rotation ?? 0) : Number(item.rotation ?? 0)) + 360) % 360,
       elevation: placementLevel.elevation,
       levels: placementLevel.levels,
-      sort: item.sort ?? 0,
+      sort: definition ? resolvedSort.sort : (item.sort ?? 0),
       alpha: item.alpha ?? 1,
       hidden: Boolean(item.hidden),
       restrictions: foundry.utils.deepClone(item.restrictions ?? { light: false, weather: false }),
@@ -1429,6 +1693,33 @@ async function deleteSet(id, name) {
   await setSets(getSets().filter((set) => set.id !== id));
 }
 
+function linkedLightLevelIds(tile) {
+  const scene = tile?.parent ?? canvas?.scene;
+  if (!scene?.levels) return [];
+  const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
+  const requestedFloor = Number(flag?.level);
+  const existingLevelId = tile.levels?.first?.() ?? [...(tile.levels ?? [])][0];
+  const nativeLevel = (scene.levels.sorted ?? []).find((level) =>
+    Number.isFinite(requestedFloor) && getFloorNumberForNativeLevel(level) === requestedFloor)
+    ?? scene.levels.get(existingLevelId);
+  return nativeLevel?.id ? [nativeLevel.id] : [];
+}
+
+async function synchronizeLinkedLightLevels(scene = canvas?.scene) {
+  if (!scene || !game.user?.isGM) return;
+  const updates = [];
+  for (const tile of scene.tiles ?? []) {
+    const lightId = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.lightId;
+    if (!lightId) continue;
+    const light = scene.lights?.get(lightId);
+    if (!light) continue;
+    const desiredLevels = linkedLightLevelIds(tile);
+    if (!desiredLevels.length || sameLevelIds(light.levels ?? [], desiredLevels)) continue;
+    updates.push({ _id: light.id, levels: desiredLevels });
+  }
+  if (updates.length) await scene.updateEmbeddedDocuments("AmbientLight", updates);
+}
+
 export async function createLinkedLight(tile, presetKey, override = null) {
   const preset = override ?? lightSettings ?? LIGHT_PRESETS[presetKey];
   if (!preset || !tile?.parent) return;
@@ -1438,7 +1729,7 @@ export async function createLinkedLight(tile, presetKey, override = null) {
     x: center.x,
     y: center.y,
     elevation: tile.elevation ?? 0,
-    levels: [...(tile.levels ?? [])],
+    levels: linkedLightLevelIds(tile),
     walls: true,
     vision: false,
     config: { ...preset, darkness: { min: 0, max: 1 } },
@@ -1472,7 +1763,7 @@ Hooks.on("updateTile", (tile, change) => {
     x: center.x,
     y: center.y,
     elevation: tile.elevation ?? 0,
-    levels: [...(tile.levels ?? [])],
+    levels: linkedLightLevelIds(tile),
     hidden: Boolean(tile.hidden),
   });
 });
@@ -1508,6 +1799,17 @@ Hooks.on("preUpdateTile", (tile, change) => {
   const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
   redirectLegacyPathProperty(change, "texture.src");
   resolvePresetPathProperty(change, "texture.src", tile.parent ?? globalThis.canvas?.scene);
+  if (flag && "sort" in change) {
+    const definition = ASSETS[flag.key];
+    const manualPath = `flags.${MODULE_ID}.${FLAG_ROOT}.sortManual`;
+    const versionPath = `flags.${MODULE_ID}.${FLAG_ROOT}.sortVersion`;
+    if (definition && !foundry.utils.hasProperty(change, manualPath)) {
+      foundry.utils.setProperty(change, manualPath, Number(change.sort) !== getDefaultAssetSort(flag.key, definition));
+    }
+    if (!foundry.utils.hasProperty(change, versionPath)) {
+      foundry.utils.setProperty(change, versionPath, ASSET_SORT_VERSION);
+    }
+  }
   if (!flag || game.keyboard?.isModifierActive?.("ALT")) return;
   if ("x" in change || "y" in change) {
     const snapped = snapPlacementPoint({ x: Number(change.x ?? tile.x), y: Number(change.y ?? tile.y) });
@@ -1548,17 +1850,40 @@ Hooks.on("deleteAmbientLight", (light) => {
 Hooks.on("canvasReady", () => {
   if (active) bindStage();
   void normalizeTrapdoorLayer();
-  void normalizeAssetLevels();
+  void queueNormalizeAssetLevels();
 });
 Hooks.on("canvasTearDown", () => { clearPreview(); selectedTileIds.clear(); drawSelection(); unbindStage(); });
+Hooks.on("createLevel", (level) => {
+  if (level?.parent === canvas?.scene) void queueNormalizeAssetLevels();
+});
+Hooks.on("updateLevel", (level, change) => {
+  if (level?.parent === canvas?.scene
+      && (foundry.utils.hasProperty(change, "visibility")
+        || foundry.utils.hasProperty(change, "elevation")
+        || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.floorLevelNumber`))) {
+    void queueNormalizeAssetLevels();
+  }
+});
+Hooks.on("deleteLevel", (level) => {
+  if (level?.parent === canvas?.scene) void queueNormalizeAssetLevels();
+});
 
 async function normalizeTrapdoorLayer() {
   const scene=canvas?.scene;if(!scene||!game.user?.isGM)return;
   const updates=[...scene.tiles].filter((tile)=>{
     const flag=tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
-    return flag?.key==="trapdoor"&&(flag.layer!=="ground"||Number(tile.sort)!==LAYERS.ground);
-  }).map((tile)=>({_id:tile.id,sort:LAYERS.ground,[`flags.${MODULE_ID}.${FLAG_ROOT}.layer`]:"ground"}));
+    return flag?.key==="trapdoor"&&flag.layer!=="ground";
+  }).map((tile)=>({_id:tile.id,[`flags.${MODULE_ID}.${FLAG_ROOT}.layer`]:"ground"}));
   if(updates.length)await scene.updateEmbeddedDocuments("Tile",updates);
+}
+
+let assetLevelNormalization = Promise.resolve();
+
+function queueNormalizeAssetLevels() {
+  assetLevelNormalization = assetLevelNormalization.catch(() => {}).then(() => normalizeAssetLevels()).catch((error) => {
+    console.error(`${MODULE_ID} | Failed to normalize scene asset levels`, error);
+  });
+  return assetLevelNormalization;
 }
 
 async function normalizeAssetLevels() {
@@ -1570,15 +1895,16 @@ async function normalizeAssetLevels() {
   for (const tile of scene.tiles) {
     const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
     if (!flag) continue;
-    const existingLevelId = tile.levels?.first?.() ?? [...(tile.levels ?? [])][0];
     const requestedIndex = Number(flag.level ?? 0);
-    const nativeLevel = scene.levels.get(existingLevelId)
-      ?? nativeLevels.find((level) => getFloorNumberForNativeLevel(level) === requestedIndex)
+    const existingLevelId = tile.levels?.first?.() ?? [...(tile.levels ?? [])][0];
+    const nativeLevel = nativeLevels.find((level) => getFloorNumberForNativeLevel(level) === requestedIndex)
+      ?? scene.levels.get(existingLevelId)
       ?? nativeLevels[0];
     const update = { _id: tile.id };
     let changed = false;
-    if (!tile.levels?.size) {
-      update.levels = [nativeLevel.id];
+    const desiredLevelIds = assetVisibilityLevelIds(nativeLevel, scene);
+    if (!sameLevelIds(tile.levels ?? [], desiredLevelIds)) {
+      update.levels = desiredLevelIds;
       changed = true;
     }
     const nativeFloorNumber = getFloorNumberForNativeLevel(nativeLevel);
@@ -1589,4 +1915,5 @@ async function normalizeAssetLevels() {
     if (changed) updates.push(update);
   }
   if (updates.length) await scene.updateEmbeddedDocuments("Tile", updates);
+  await synchronizeLinkedLightLevels(scene);
 }

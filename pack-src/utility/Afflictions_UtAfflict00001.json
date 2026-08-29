@@ -1,0 +1,15 @@
+{
+  "name": "Недуги",
+  "type": "script",
+  "author": "TSPF2EUTIL000001",
+  "img": "systems/pf2e/icons/default-icons/effect.svg",
+  "scope": "global",
+  "command": "if (!game.user?.isGM) { ui.notifications?.warn(game.i18n.localize('TS_PF2E_UTILITY.Notifications.OnlyGM')); return; }\nconst tool = await import(`/modules/ts-pf2e-utility/scripts/utility/afflictions.js?v=20260825-afflictions-v14`);\ntool.openAfflictionDialog();",
+  "folder": null,
+  "ownership": { "default": 0 },
+  "flags": {},
+  "_stats": { "coreVersion": "14.364", "systemId": "pf2e", "systemVersion": "7.11.3", "createdTime": 0, "modifiedTime": 0, "lastModifiedBy": "TSPF2EUTIL000001" },
+  "_id": "UtAfflict00001",
+  "sort": 80000,
+  "_key": "!macros!UtAfflict00001"
+}

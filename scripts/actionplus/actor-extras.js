@@ -686,7 +686,7 @@ function arraysEqual(left, right) {
 }
 
 async function syncActorExtras(actor) {
-  if (!actor || typeof actor.update !== "function") return;
+  if (!actor || typeof actor.update !== "function" || game.user !== actor.primaryUpdater) return;
   if (!["character", "npc"].includes(actor.type)) return;
 
   const previous = getActorStoredExtras(actor);

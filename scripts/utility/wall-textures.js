@@ -1,5 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260823-statues-size-v2";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260829-warehouse-balance-v42";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
@@ -632,7 +632,6 @@ async function applyBulkWallTexture(mode, style, enabled = true) {
     return;
   }
   const compatible = enabled ? selected.filter((wall) => !isWindowWall(wall)) : selected;
-  const skippedWindows = selected.length - compatible.length;
   if (!compatible.length) {
     ui.notifications?.warn?.(t("Settings.WallTextures.BulkNoCompatible", "Выбранные стены являются окнами и не поддерживают эту текстуру."));
     return;
@@ -653,10 +652,6 @@ async function applyBulkWallTexture(mode, style, enabled = true) {
   try {
     await canvas.scene.updateEmbeddedDocuments("Wall", updates);
     syncBulkWallSelection();
-    const suffix = skippedWindows
-      ? ` ${t("Settings.WallTextures.BulkSkippedWindows", "Пропущено окон: {count}.").replace("{count}", String(skippedWindows))}`
-      : "";
-    ui.notifications?.info?.(`${t("Settings.WallTextures.BulkApplied", "Текстура применена к стенам: {count}.").replace("{count}", String(compatible.length))}${suffix}`);
   } catch (error) {
     console.error(`${MODULE_ID} | Failed to apply wall texture to selected walls`, error);
     ui.notifications?.error?.(t("Settings.WallTextures.BulkFailed", "Не удалось применить текстуру к выбранным стенам."));

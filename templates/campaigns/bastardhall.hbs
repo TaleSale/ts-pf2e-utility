@@ -533,8 +533,14 @@
             <div class="bh-sidequest-notes">
               {{#each selectedSideQuest.notes}}
                 <article>
-                  <header><strong>{{authorName}}</strong>{{#if createdLabel}}<time>{{createdLabel}}</time>{{/if}}</header>
+                  <header>
+                    <strong>{{authorName}}</strong>
+                    <span class="bh-sidequest-note-meta">
+                      {{#if createdLabel}}<time>{{createdLabel}}</time>{{/if}}
+                    </span>
+                  </header>
                   <p>{{text}}</p>
+                  {{#if canDelete}}<button type="button" class="bh-sidequest-icon-button bh-sidequest-note-delete" data-action="delete-side-quest-note" data-quest-id="{{questId}}" data-note-id="{{id}}" title="Удалить заметку" aria-label="Удалить заметку"><i class="fa-solid fa-trash"></i></button>{{/if}}
                 </article>
               {{else}}
                 <p class="bh-empty">Заметок пока нет. Игроки и мастер могут добавить первую.</p>

@@ -4,7 +4,7 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260823-statues-size-v2";
+} from "./texture-presets.js?v=20260829-light-floor-fix-v43";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -14,9 +14,22 @@ const COBWEB_ABOVE_CONTAINER = "tsu-cobweb-floor-above";
 const FOREST_CONTAINER = "tsu-forest-textures";
 const EDIT_CONTAINER = "tsu-floor-edit";
 const DEFAULT_STYLE = "uneven-limestone";
+const HIGH_RES_GRASS_SCALE = 0.4;
+const HIGH_RES_FLOOR_SCALE = 0.25;
+const DEEP_SEA_FLOOR_SCALE = 0.45;
+const STORMY_SEA_FLOOR_SCALE = 0.55;
+const DIFFICULT_TERRAIN_COST = 2;
+const GREATER_DIFFICULT_TERRAIN_COST = 3;
 const EPSILON = 0.01;
 const FLOOR_EDGE_WIDTH = 15;
 const LEVEL_NUMBER_FLAG = "floorLevelNumber";
+const RUBBLE_REGION_FLAG = "rubbleDifficultTerrain";
+const RUBBLE_REGION_VERSION = 1;
+const FLOOR_SURFACE_REGION_FLAG = "floorSurface";
+const FLOOR_SURFACE_REGION_VERSION = 2;
+const regionSyncs = new Map();
+const localFloorMutationDepth = new Map();
+const floorDataSnapshots = new Map();
 // Rubble pools must be initialized before FLOOR_STYLES calls rubbleStyle().
 // Keeping the images external; this is only the registry of their paths and geometry.
 const RUBBLE_ASSET_POOLS = Object.freeze({
@@ -78,6 +91,16 @@ const RUBBLE_ASSET_POOLS = Object.freeze({
   ]),
 });
 
+const WAREHOUSE_ASSET_POOLS = Object.freeze({
+  crates: Object.freeze([warehouseAsset("warehouse-crate-topdown-v1.webp", 0.54, 0.54, 1, "crates")]),
+  barrels: Object.freeze([warehouseAsset("warehouse-barrel-topdown-v1.webp", 0.54, 0.54, 1, "barrels")]),
+  sacks: Object.freeze([
+    warehouseAsset("warehouse-sack-a-topdown-v2.webp", 0.5, 0.68, 1, "sacks"),
+    warehouseAsset("warehouse-sack-b-topdown-v2.webp", 0.52, 0.68, 1, "sacks"),
+    warehouseAsset("warehouse-sack-c-topdown-v2.webp", 0.48, 0.7, 1, "sacks"),
+  ]),
+});
+
 const FLOOR_STYLES = Object.freeze({
   [DEFAULT_STYLE]: Object.freeze({
     labelKey: "Settings.FloorTextures.Choices.UnevenLimestone",
@@ -90,12 +113,13 @@ const FLOOR_STYLES = Object.freeze({
   "brick-red": floorStyle("BrickRed", "Red brick", "brick-red-floor.png"),
   "wood-walnut": floorStyle("WoodWalnut", "Walnut boards", "wood-walnut-floor.png"),
   "wood-alder": floorStyle("WoodAlder", "Alder boards", "wood-alder-floor.png"),
+  "wood-continuous": floorStyle("WoodContinuous", "Continuous wood grain", "wood-continuous-floor-v1.webp"),
   "wood-outdoor": floorStyle("WoodOutdoor", "Outdoor boards", "wood-outdoor-brown-v3.png", null, 1.25),
-  "grass-meadow": floorStyle("GrassMeadow", "Meadow grass", "grass-meadow-floor.png"),
+  "grass-meadow": floorStyle("GrassMeadow", "Meadow grass", "grass-meadow-floor-v4.webp", null, HIGH_RES_GRASS_SCALE, false, null, grassMeadowScatter()),
   "flowering-shrubs-dense": floorStyle("FloweringShrubsDense", "Dense flowering shrubs", "flowering-shrubs-dense-floor-v1.webp", shrubEdge()),
-  "swamp": floorStyle("Swamp", "Swamp", "swamp-floor-v1.png"),
-  "path-dirt": floorStyle("PathDirt", "Dirt path", "path-dirt-floor.png", { kind: "cut", jitter: 4 }),
-  "path-cobblestone": floorStyle("PathCobblestone", "Cobblestone path", "path-cobblestone-floor.png", { kind: "stone", jitter: 7, feather: 4 }),
+  "swamp": floorStyle("Swamp", "Swamp", "swamp-floor-v1.png", null, 1, false, null, null, GREATER_DIFFICULT_TERRAIN_COST),
+  "path-dirt": floorStyle("PathDirt", "Dirt path", "path-dirt-floor-v3.webp", { kind: "dirt", jitter: 8, feather: 8 }, HIGH_RES_FLOOR_SCALE),
+  "path-cobblestone": floorStyle("PathCobblestone", "Cobblestone path", "path-cobblestone-floor-v3.webp", { kind: "stone", jitter: 8, feather: 6 }, HIGH_RES_FLOOR_SCALE),
   "rubble-stone": rubbleStyle("RubbleStone", "Stone only", "rubble-stone-floor-v9.webp", { groups: ["stone"], spacingCells: 0.29, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
   "rubble-stone-boards": rubbleStyle("RubbleStoneBoards", "Stone and boards", "rubble-stone-boards-floor-v9.webp", { groups: ["stone", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
   "rubble-boards": rubbleStyle("RubbleBoards", "Boards only", "rubble-boards-floor-v9.webp", { groups: ["boards"], spacingCells: 0.31, chance: 0.74, scaleMin: 0.72, scaleMax: 0.94 }),
@@ -103,6 +127,13 @@ const FLOOR_STYLES = Object.freeze({
   "rubble-brick-red": rubbleStyle("RubbleBrickRed", "Red bricks", "rubble-brick-red-floor-v9.webp", { groups: ["brickRed"], spacingCells: 0.29, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
   "rubble-brick-grey-boards": rubbleStyle("RubbleBrickGreyBoards", "Grey bricks and boards", "rubble-brick-grey-boards-floor-v9.webp", { groups: ["brickGrey", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
   "rubble-brick-red-boards": rubbleStyle("RubbleBrickRedBoards", "Red bricks and boards", "rubble-brick-red-boards-floor-v9.webp", { groups: ["brickRed", "boards"], spacingCells: 0.30, chance: 0.76, scaleMin: 0.74, scaleMax: 0.98 }),
+  "warehouse-crates": warehouseStyle("WarehouseCrates", "Crates only", ["crates"]),
+  "warehouse-barrels": warehouseStyle("WarehouseBarrels", "Barrels only", ["barrels"]),
+  "warehouse-sacks": warehouseStyle("WarehouseSacks", "Sacks only", ["sacks"]),
+  "warehouse-crates-barrels": warehouseStyle("WarehouseCratesBarrels", "Crates and barrels", ["crates", "barrels"]),
+  "warehouse-crates-sacks": warehouseStyle("WarehouseCratesSacks", "Crates and sacks", ["crates", "sacks"]),
+  "warehouse-sacks-barrels": warehouseStyle("WarehouseSacksBarrels", "Sacks and barrels", ["sacks", "barrels"]),
+  "warehouse-crates-barrels-sacks": warehouseStyle("WarehouseCratesBarrelsSacks", "Crates, barrels, and sacks", ["crates", "barrels", "sacks"]),
   "carpet-red": floorStyle("CarpetRed", "Red carpet", "carpet-red-floor.png", carpetEdge("red")),
   "carpet-blue": floorStyle("CarpetBlue", "Blue carpet", "carpet-blue-floor.png", carpetEdge("blue")),
   "carpet-red-ornate": floorStyle("CarpetRedOrnate", "Ornate red carpet", "carpet-red-ornate-floor.webp", carpetEdge("red"), 0.5),
@@ -132,9 +163,9 @@ const FLOOR_STYLES = Object.freeze({
     forestAsset("forest-deciduous-irregular-a.webp", 0.23, 1.2, 1.5, 1, 0x81906f),
     forestAsset("forest-deciduous-irregular-b.webp", 0.19, 1.2, 1.5, 1, 0x748365),
   ]),
-  "sea-shallow": floorStyle("SeaShallow", "Shallow sea", "sea-shallow-floor.webp"),
-  "sea-deep": floorStyle("SeaDeep", "Deep sea", "sea-deep-floor.webp"),
-  "sea-stormy": floorStyle("SeaStormy", "Stormy sea", "sea-stormy-floor.webp"),
+  "sea-shallow": floorStyle("SeaShallow", "Shallow sea", "sea-shallow-floor-v4.webp", null, HIGH_RES_FLOOR_SCALE, false, null, seaNaturalScatter(0.40)),
+  "sea-deep": floorStyle("SeaDeep", "Deep sea", "sea-deep-floor-v5.webp", null, DEEP_SEA_FLOOR_SCALE),
+  "sea-stormy": floorStyle("SeaStormy", "Stormy sea", "sea-stormy-floor-v5.webp", null, STORMY_SEA_FLOOR_SCALE),
   "roof-thatch": floorStyle("RoofThatch", "Thatched roof", "roof-thatch-floor.webp", roofEdge("thatch", 0x8d5c22, 0x2b190c, 0xc9933f), 1.28),
   "roof-shingles": floorStyle("RoofShingles", "Shingle roof", "roof-shingles-floor.webp", roofEdge("shingles", 0x4a392d, 0x17120f, 0x806954), 1.28),
   "roof-tiles": floorStyle("RoofTiles", "Tile roof", "roof-tiles-floor.webp", roofEdge("tiles", 0x743e2d, 0x21120f, 0xa96a4f), 1.28),
@@ -151,8 +182,13 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
     "rubble-stone", "rubble-stone-boards", "rubble-boards", "rubble-brick-grey",
     "rubble-brick-red", "rubble-brick-grey-boards", "rubble-brick-red-boards",
   ] }),
+  Object.freeze({ key: "Warehouse", fallback: "Warehouse", styles: [
+    "warehouse-crates", "warehouse-barrels", "warehouse-sacks",
+    "warehouse-crates-barrels", "warehouse-crates-sacks", "warehouse-sacks-barrels",
+    "warehouse-crates-barrels-sacks",
+  ] }),
   Object.freeze({ key: "Caves", fallback: "Caves", styles: ["cave-brown", "cave-grey-pebbles"] }),
-  Object.freeze({ key: "Wood", fallback: "Wood", styles: ["wood-walnut", "wood-alder", "wood-outdoor"] }),
+  Object.freeze({ key: "Wood", fallback: "Wood", styles: ["wood-walnut", "wood-alder", "wood-continuous", "wood-outdoor"] }),
   Object.freeze({ key: "Stairs", fallback: "Stairs", styles: [
     ...stairStyleKeys("stairs-uneven-limestone"),
     ...stairStyleKeys("stairs-flagstone-grey"),
@@ -173,9 +209,9 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
   ] }),
 ]);
 
-function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay = false, rubble = null) {
+function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay = false, rubble = null, scatter = null, movementCost = null) {
   const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
-  return Object.freeze({
+  const style = {
     labelKey: `Settings.FloorTextures.Choices.${label}`,
     fallback,
     get src() { return resolvePresetTexture(source); },
@@ -183,6 +219,55 @@ function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay =
     scale,
     overlay,
     rubble,
+    scatter,
+  };
+  if (movementCost !== null) {
+    style.difficultTerrain = Number(movementCost) >= DIFFICULT_TERRAIN_COST;
+    style.movementCost = Number(movementCost);
+  }
+  return Object.freeze(style);
+}
+
+function scatterAsset(filename, weight, minSize, maxSize, alpha = 1, maxPerFill = null, limitKey = null) {
+  const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
+  const asset = {
+    get src() { return resolvePresetTexture(source); },
+    weight: Number(weight),
+    minSize: Number(minSize),
+    maxSize: Number(maxSize),
+    alpha: Number(alpha),
+  };
+  if (Number.isFinite(Number(maxPerFill)) && Number(maxPerFill) > 0) asset.maxPerFill = Math.floor(Number(maxPerFill));
+  if (limitKey) asset.limitKey = String(limitKey);
+  return Object.freeze(asset);
+}
+
+function scatterAssetSeries(prefix, count, weight, minSize, maxSize, alpha = 1, version = 1, maxPerFill = null, limitKey = null) {
+  return Array.from({ length: count }, (_, index) => (
+    scatterAsset(`${prefix}-${String(index + 1).padStart(2, "0")}-v${version}.webp`, weight, minSize, maxSize, alpha, maxPerFill, limitKey)
+  ));
+}
+
+function grassMeadowScatter() {
+  return Object.freeze({
+    assets: Object.freeze([
+      ...scatterAssetSeries("grass-flower-single", 12, 1, 0.14, 0.32, 1, 3),
+      ...scatterAssetSeries("grass-flower-cluster", 6, 0.42, 0.34, 0.52, 1, 1),
+    ]),
+    spacingCells: 0.9,
+    chance: 0.12,
+    aspectJitter: 0.12,
+    maxPieces: 400,
+  });
+}
+
+function seaNaturalScatter(chance) {
+  return Object.freeze({
+    assets: Object.freeze(scatterAssetSeries("sea-scatter-fish-shadow", 8, 0.25, 0.80, 1.45, 0.22, 1, 4, "fish-shadow")),
+    spacingCells: 3.2,
+    chance: Number(chance),
+    aspectJitter: 0.10,
+    maxPieces: 8,
   });
 }
 
@@ -212,6 +297,47 @@ function rubbleAsset(filename, widthCells, heightCells, weight = 1) {
   });
 }
 
+function warehouseAsset(filename, widthCells, heightCells, weight = 1, groupKey = "") {
+  const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
+  return Object.freeze({
+    get src() { return resolvePresetTexture(source); },
+    key: filename,
+    groupKey,
+    widthCells: Number(widthCells),
+    heightCells: Number(heightCells),
+    weight: Number(weight),
+  });
+}
+
+function warehouseStyle(label, fallback, groups) {
+  const assets = Object.freeze(groups.flatMap((group) => WAREHOUSE_ASSET_POOLS[group] ?? []));
+  const previewAsset = assets[0];
+  return Object.freeze({
+    labelKey: `Settings.FloorTextures.Choices.${label}`,
+    fallback,
+    get previewSrc() { return previewAsset?.src; },
+    get src() { return previewAsset?.src; },
+    scale: 1,
+    overlay: true,
+    difficultTerrain: true,
+    movementCost: DIFFICULT_TERRAIN_COST,
+    warehouse: true,
+    rubble: Object.freeze({
+      assets,
+      groupOrder: Object.freeze([...groups]),
+      orderedPacking: true,
+      positionJitter: 0.1,
+      rotationSteps: 4,
+      spacingCells: 0.58,
+      chance: 1,
+      scaleMin: 0.9,
+      scaleMax: 1.02,
+      minimumGapCells: 0.005,
+      maxPieces: 5000,
+    }),
+  });
+}
+
 
 
 function rubbleStyle(label, fallback, filename, options = {}) {
@@ -227,6 +353,8 @@ function rubbleStyle(label, fallback, filename, options = {}) {
     edge: Object.freeze({ kind: "rubble", jitter: 0 }),
     scale: 1,
     overlay: true,
+    difficultTerrain: true,
+    movementCost: DIFFICULT_TERRAIN_COST,
     rubble: Object.freeze({
       assets,
       spacingCells: Number(options.spacingCells ?? 0.34),
@@ -272,11 +400,13 @@ function gardenStyle(label, fallback, previewFilename, cropFilename, options = {
   });
 }
 
-function forestStyle(label, fallback, assets) {
+function forestStyle(label, fallback, assets, movementCost = DIFFICULT_TERRAIN_COST) {
   return Object.freeze({
     labelKey: `Settings.FloorTextures.Choices.${label}`,
     fallback,
     get previewSrc() { return assets[0]?.src; },
+    difficultTerrain: Number(movementCost) >= DIFFICULT_TERRAIN_COST,
+    movementCost: Number(movementCost),
     forest: Object.freeze({
       assets: Object.freeze(assets),
       maxTrees: 8000,
@@ -667,10 +797,14 @@ document.addEventListener("pointerdown", (event) => {
   if (picker && !picker.contains(event.target)) picker.classList.remove("open");
 });
 
-function getSceneData() {
-  const raw = canvas?.scene?.getFlag?.(MODULE_ID, FLAG_ROOT);
+function getSceneDataForScene(scene) {
+  const raw = scene?.getFlag?.(MODULE_ID, FLAG_ROOT);
   const floors = Array.isArray(raw?.floors) ? foundry.utils.deepClone(raw.floors) : [];
   return { version: 1, floors };
+}
+
+function getSceneData() {
+  return getSceneDataForScene(canvas?.scene);
 }
 
 export function getCurrentFloorLevel() {
@@ -682,8 +816,8 @@ export function getFloorNumberForNativeLevel(level) {
   return Number.isFinite(stored) ? stored : Number(level?.index ?? 0);
 }
 
-function findNativeLevel(floorNumber) {
-  const levels = canvas?.scene?.levels?.sorted ?? [];
+function findNativeLevel(floorNumber, scene = canvas?.scene) {
+  const levels = scene?.levels?.sorted ?? [];
   return levels.find((level) => Number(level.flags?.[MODULE_ID]?.[LEVEL_NUMBER_FLAG]) === Number(floorNumber))
     ?? levels.find((level) => level.flags?.[MODULE_ID]?.[LEVEL_NUMBER_FLAG] == null && Number(level.index) === Number(floorNumber));
 }
@@ -698,14 +832,13 @@ async function persistNativeLevelNumbers(scene) {
   if (updates.length) await scene.updateEmbeddedDocuments("Level", updates);
 }
 
-async function ensureNativeLevel(floorNumber) {
-  const scene = canvas?.scene;
-  if (!scene || !game.user?.isGM) return findNativeLevel(floorNumber);
+async function ensureNativeLevel(floorNumber, scene = canvas?.scene) {
+  if (!scene || !game.user?.isGM) return findNativeLevel(floorNumber, scene);
   await persistNativeLevelNumbers(scene);
-  const existing = findNativeLevel(floorNumber);
+  const existing = findNativeLevel(floorNumber, scene);
   if (existing) return existing;
   const levels = scene.levels?.sorted ?? [];
-  const reference = findNativeLevel(0) ?? levels[0];
+  const reference = findNativeLevel(0, scene) ?? levels[0];
   const referenceNumber = getFloorNumberForNativeLevel(reference);
   const referenceBottom = Number.isFinite(Number(reference?.elevation?.bottom)) ? Number(reference.elevation.bottom) : 0;
   const rawHeight = Number(reference?.elevation?.top) - Number(reference?.elevation?.bottom);
@@ -717,13 +850,619 @@ async function ensureNativeLevel(floorNumber) {
     sort: Number(floorNumber) * (CONST.SORT_INTEGER_DENSITY ?? 100000),
     flags: { [MODULE_ID]: { [LEVEL_NUMBER_FLAG]: Number(floorNumber) } },
   }]);
-  if (created) ui.notifications.info(localize("NativeLevelCreated", `Created Foundry map level ${floorNumber}.`).replace("{level}", String(floorNumber)));
+  if (created && scene === canvas?.scene) {
+    ui.notifications.info(localize("NativeLevelCreated", `Created Foundry map level ${floorNumber}.`).replace("{level}", String(floorNumber)));
+  }
   return created ?? null;
 }
 
 async function setSceneData(data) {
   if (!canvas?.scene || !game.user?.isGM) return;
-  await canvas.scene.setFlag(MODULE_ID, FLAG_ROOT, data);
+  const scene = canvas.scene;
+  const previousData = getSceneDataForScene(scene);
+  const syncScope = buildFloorSyncScope(previousData, data);
+  const sceneKey = beginLocalFloorMutation(scene);
+  try {
+    await scene.setFlag(MODULE_ID, FLAG_ROOT, data);
+    floorDataSnapshots.set(sceneKey, foundry.utils.deepClone(data));
+
+    let levelsChanged = false;
+    const changedFloorNumbers = [...new Set(data.floors
+      .filter((floor) => syncScope.floorIds.has(floor.id))
+      .map((floor) => Number(floor.level ?? 0)))].sort((a, b) => a - b);
+    for (const floorNumber of changedFloorNumbers) {
+      if (!findNativeLevel(floorNumber, scene)) levelsChanged = true;
+      await ensureNativeLevel(floorNumber, scene);
+    }
+    if (levelsChanged) await synchronizeLowerLevelVisibility(scene);
+
+    if (!floorSyncScopeEmpty(syncScope)) {
+      await queueFloorSurfaceSync(scene, syncScope);
+      await queueRubbleRegionSync(scene, syncScope);
+    }
+  } finally {
+    endLocalFloorMutation(scene);
+  }
+}
+
+function canManageFloorSurfaces() {
+  if (!game.user?.isGM) return false;
+  const activeGM = game.users?.activeGM;
+  return !activeGM || activeGM.id === game.user.id;
+}
+
+function physicalFloor(floor) {
+  return !styleIsOverlay(floor?.style) && normalizePolygon(floor?.points).length >= 3;
+}
+
+function regionSyncKey(scene) {
+  return scene?.id ?? scene?.uuid ?? "scene";
+}
+
+function beginLocalFloorMutation(scene) {
+  const key = regionSyncKey(scene);
+  localFloorMutationDepth.set(key, (localFloorMutationDepth.get(key) ?? 0) + 1);
+  return key;
+}
+
+function endLocalFloorMutation(scene) {
+  const key = regionSyncKey(scene);
+  const depth = (localFloorMutationDepth.get(key) ?? 1) - 1;
+  if (depth > 0) localFloorMutationDepth.set(key, depth);
+  else localFloorMutationDepth.delete(key);
+}
+
+function localFloorMutationInProgress(scene) {
+  return (localFloorMutationDepth.get(regionSyncKey(scene)) ?? 0) > 0;
+}
+
+function floorRegionSignature(floor) {
+  const points = normalizePolygon(floor?.points).map((point) => [Number(point.x), Number(point.y)]);
+  return JSON.stringify({
+    style: floor?.style ?? "",
+    level: Number(floor?.level ?? 0),
+    points,
+  });
+}
+
+function floorSyncPolygon(floor) {
+  const points = normalizePolygon(floor?.points);
+  return points.length >= 3 ? points : null;
+}
+
+function boundsIntersect(left, right) {
+  if (!left || !right) return false;
+  return left.x <= right.x + right.width + EPSILON
+    && left.x + left.width + EPSILON >= right.x
+    && left.y <= right.y + right.height + EPSILON
+    && left.y + left.height + EPSILON >= right.y;
+}
+
+function polygonsOverlap(left, right) {
+  if (!left?.length || !right?.length) return false;
+  if (!boundsIntersect(polygonBounds(left), polygonBounds(right))) return false;
+  if (left.some((point) => pointInPolygon(point, right)) || right.some((point) => pointInPolygon(point, left))) return true;
+  for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+    const a = left[leftIndex];
+    const b = left[(leftIndex + 1) % left.length];
+    for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+      const c = right[rightIndex];
+      const d = right[(rightIndex + 1) % right.length];
+      if (segmentIntersection(a, b, c, d)) return true;
+    }
+  }
+  return false;
+}
+
+function buildFloorSyncScope(previousData, nextData) {
+  const previous = new Map((previousData?.floors ?? []).map((floor) => [floor.id, floor]));
+  const next = new Map((nextData?.floors ?? []).map((floor) => [floor.id, floor]));
+  const floorIds = new Set();
+  const polygons = [];
+
+  for (const id of new Set([...previous.keys(), ...next.keys()])) {
+    const before = previous.get(id);
+    const after = next.get(id);
+    if (before && after && floorRegionSignature(before) === floorRegionSignature(after)) continue;
+    floorIds.add(id);
+    const beforePolygon = floorSyncPolygon(before);
+    const afterPolygon = floorSyncPolygon(after);
+    if (beforePolygon) polygons.push(beforePolygon);
+    if (afterPolygon) polygons.push(afterPolygon);
+  }
+  return { floorIds, polygons };
+}
+
+function floorSyncScopeEmpty(scope) {
+  return Boolean(scope) && !scope.floorIds?.size && !scope.polygons?.length;
+}
+
+function floorTouchesSyncScope(floor, scope) {
+  if (!scope) return true;
+  if (scope.floorIds?.has(floor?.id)) return true;
+  const polygon = floorSyncPolygon(floor);
+  return Boolean(polygon && scope.polygons?.some((dirtyPolygon) => polygonsOverlap(polygon, dirtyPolygon)));
+}
+
+function regionTouchesSyncScope(region, scope) {
+  if (!scope) return true;
+  const linkedFloorIds = [
+    floorSurfaceRegionLink(region)?.floorId,
+    rubbleRegionLink(region)?.floorId,
+  ].filter(Boolean);
+  if (linkedFloorIds.some((floorId) => scope.floorIds?.has(floorId))) return true;
+  const polygon = regionPolygon(region);
+  return Boolean(polygon?.length && scope.polygons?.some((dirtyPolygon) => polygonsOverlap(polygon, dirtyPolygon)));
+}
+
+function floorSurfaceRegionLink(region) {
+  return region?.flags?.[MODULE_ID]?.[FLOOR_SURFACE_REGION_FLAG] ?? null;
+}
+
+function floorSurfaceBehaviorData() {
+  return {
+    name: "",
+    type: "defineSurface",
+    system: {
+      placement: "bottom",
+      light: true,
+      move: false,
+      sight: false,
+      sound: false,
+      occlusion: false,
+      exposure: false,
+      culling: true,
+    },
+    disabled: false,
+  };
+}
+
+function floorSurfaceBehavior(region) {
+  return [...(region?.behaviors ?? [])].find((behavior) => behavior.type === "defineSurface"
+    && !behavior.disabled && Boolean(behavior.system?.culling ?? behavior._source?.system?.culling));
+}
+
+function regionHasFloorSurface(region) {
+  return Boolean(floorSurfaceBehavior(region));
+}
+
+function liveRegion(scene, regionOrId) {
+  const id = typeof regionOrId === "string" ? regionOrId : regionOrId?.id;
+  return id ? (scene?.regions?.get(id) ?? null) : null;
+}
+
+function missingRegionError(error) {
+  const message = String(error?.message ?? error ?? "");
+  return /\bRegion(?:Behavior)?\b.*(?:does not exist|not found)/i.test(message);
+}
+
+async function deleteLiveRegions(scene, ids) {
+  for (const id of [...new Set(ids)]) {
+    const region = liveRegion(scene, id);
+    if (!region) continue;
+    try {
+      await region.delete();
+    } catch (error) {
+      if (!missingRegionError(error)) throw error;
+    }
+  }
+}
+
+async function updateLiveRegion(scene, update) {
+  const id = update?._id;
+  const region = liveRegion(scene, id);
+  if (!region) return null;
+  const changes = { ...update };
+  delete changes._id;
+  try {
+    if (Object.keys(changes).length) await region.update(changes);
+  } catch (error) {
+    if (!missingRegionError(error)) throw error;
+    return null;
+  }
+  return liveRegion(scene, id);
+}
+
+async function updateLiveRegionBehavior(scene, regionOrId, update) {
+  const region = liveRegion(scene, regionOrId);
+  const behavior = region?.behaviors?.get(update?._id);
+  if (!region || !behavior) return null;
+  const changes = { ...update };
+  delete changes._id;
+  try {
+    if (Object.keys(changes).length) await behavior.update(changes);
+  } catch (error) {
+    if (!missingRegionError(error)) throw error;
+    return null;
+  }
+  return liveRegion(scene, region.id)?.behaviors?.get(behavior.id) ?? null;
+}
+
+async function createLiveRegionBehavior(scene, regionOrId, data, exists) {
+  const region = liveRegion(scene, regionOrId);
+  if (!region || (exists && exists(region))) return null;
+  try {
+    return await region.createEmbeddedDocuments("RegionBehavior", [data]);
+  } catch (error) {
+    if (!missingRegionError(error)) throw error;
+    return null;
+  }
+}
+
+async function withBrowserRegionLock(scene, task) {
+  const locks = globalThis.navigator?.locks;
+  if (!locks?.request) return task();
+  const worldId = game.world?.id ?? game.world?.name ?? "world";
+  const sceneId = scene?.id ?? scene?.uuid ?? "scene";
+  return locks.request(`${MODULE_ID}:region-sync:${worldId}:${sceneId}`, { mode: "exclusive" }, task);
+}
+
+function floorSurfacePlacement(scene, floor) {
+  const nativeLevel = findNativeLevel(Number(floor.level ?? 0), scene);
+  if (!nativeLevel) return null;
+  const elevation = Number(nativeLevel.elevation?.bottom ?? nativeLevel.elevation?.base ?? 0);
+  return { elevation, levels: [nativeLevel.id] };
+}
+
+function floorSurfaceRegionData(scene, floor) {
+  const placement = floorSurfacePlacement(scene, floor);
+  if (!placement) return null;
+  return {
+    name: localize("FloorSurfaceRegionName", "Floor surface (automatic)"),
+    shapes: [rubbleRegionShape(floor)],
+    elevation: { bottom: placement.elevation, top: placement.elevation, topInclusive: true },
+    levels: placement.levels,
+    restriction: { enabled: false, type: "move", priority: 0 },
+    attachment: { token: null },
+    behaviors: [floorSurfaceBehaviorData()],
+    visibility: globalThis.CONST?.REGION_VISIBILITY?.LAYER ?? 0,
+    highlightMode: "shapes",
+    displayMeasurements: false,
+    hidden: false,
+    locked: true,
+    flags: {
+      [MODULE_ID]: {
+        [FLOOR_SURFACE_REGION_FLAG]: { floorId: floor.id, version: FLOOR_SURFACE_REGION_VERSION },
+      },
+    },
+  };
+}
+
+async function synchronizeLowerLevelVisibility(scene) {
+  const levels = scene?.levels?.sorted ?? [];
+  const updates = [];
+  for (const level of levels) {
+    const floorNumber = getFloorNumberForNativeLevel(level);
+    const lowerIds = levels
+      .filter((candidate) => getFloorNumberForNativeLevel(candidate) < floorNumber)
+      .map((candidate) => candidate.id);
+    const desired = [...new Set([...(level._source?.visibility?.levels ?? []), ...lowerIds])];
+    if (!sameStringSet(level._source?.visibility?.levels ?? [], desired)) {
+      updates.push({ _id: level.id, "visibility.levels": desired });
+    }
+  }
+  if (updates.length) await scene.updateEmbeddedDocuments("Level", updates);
+}
+
+async function synchronizeFloorSurfaceRegions(scene, scope = null) {
+  if (!scene || !canManageFloorSurfaces() || !scene.regions) return;
+  if (!scope) await synchronizeLowerLevelVisibility(scene);
+
+  const allFloors = getSceneDataForScene(scene).floors.filter(physicalFloor);
+  const allFloorIds = new Set(allFloors.map((floor) => floor.id));
+  const floors = scope ? allFloors.filter((floor) => floorTouchesSyncScope(floor, scope)) : allFloors;
+  const managedByFloor = new Map();
+  const deleteIds = new Set();
+
+  for (const region of [...scene.regions]) {
+    const floorId = floorSurfaceRegionLink(region)?.floorId;
+    if (!floorId || !regionTouchesSyncScope(region, scope)) continue;
+    if (!allFloorIds.has(floorId) || managedByFloor.has(floorId)) deleteIds.add(region.id);
+    else managedByFloor.set(floorId, region.id);
+  }
+
+  await deleteLiveRegions(scene, deleteIds);
+
+  for (const floorSnapshot of floors) {
+    const floor = getSceneDataForScene(scene).floors.find((candidate) => candidate.id === floorSnapshot.id && physicalFloor(candidate));
+    if (!floor || !floorTouchesSyncScope(floor, scope)) continue;
+    const regionId = managedByFloor.get(floor.id);
+    let region = liveRegion(scene, regionId);
+    if (!region) continue;
+    const placement = floorSurfacePlacement(scene, floor);
+    if (!placement) continue;
+
+    const link = floorSurfaceRegionLink(region);
+    const update = { _id: region.id };
+    let changed = false;
+    if (!regionMatchesRubble(region, floor)) {
+      update.shapes = [rubbleRegionShape(floor)];
+      changed = true;
+    }
+    if (!sameStringSet(region._source?.levels ?? [], placement.levels)) {
+      update.levels = placement.levels;
+      changed = true;
+    }
+    const bottom = Number(region._source?.elevation?.bottom);
+    const top = Number(region._source?.elevation?.top);
+    if (bottom !== placement.elevation || top !== placement.elevation) {
+      update.elevation = { bottom: placement.elevation, top: placement.elevation, topInclusive: true };
+      changed = true;
+    }
+    if (link?.floorId !== floor.id || Number(link?.version) !== FLOOR_SURFACE_REGION_VERSION) {
+      update[`flags.${MODULE_ID}.${FLOOR_SURFACE_REGION_FLAG}`] = {
+        floorId: floor.id,
+        version: FLOOR_SURFACE_REGION_VERSION,
+      };
+      changed = true;
+    }
+    if (changed) region = await updateLiveRegion(scene, update);
+    else region = liveRegion(scene, region.id);
+    if (!region) continue;
+
+    const behavior = floorSurfaceBehavior(region);
+    if (!behavior) {
+      await createLiveRegionBehavior(scene, region.id, floorSurfaceBehaviorData(), floorSurfaceBehavior);
+    } else if (!Boolean(behavior.system?.light ?? behavior._source?.system?.light)) {
+      await updateLiveRegionBehavior(scene, region.id, { _id: behavior.id, "system.light": true });
+    }
+  }
+
+  const latestFloors = getSceneDataForScene(scene).floors
+    .filter(physicalFloor)
+    .filter((floor) => floorTouchesSyncScope(floor, scope));
+  const existingFloorIds = new Set([...scene.regions]
+    .map((region) => floorSurfaceRegionLink(region)?.floorId)
+    .filter(Boolean));
+  for (const floor of latestFloors) {
+    if (existingFloorIds.has(floor.id)) continue;
+    const data = floorSurfaceRegionData(scene, floor);
+    if (!data) continue;
+    await scene.createEmbeddedDocuments("Region", [data]);
+    existingFloorIds.add(floor.id);
+  }
+}
+
+function queueRegionSync(scene, task, errorLabel) {
+  if (!scene) return Promise.resolve();
+  const key = scene.id ?? scene.uuid;
+  const previous = regionSyncs.get(key) ?? Promise.resolve();
+  let queued;
+  queued = previous.catch(() => {}).then(() => withBrowserRegionLock(scene, task)).catch((error) => {
+    if (!missingRegionError(error)) console.error(`${MODULE_ID} | ${errorLabel}`, scene.name, error);
+  }).finally(() => {
+    if (regionSyncs.get(key) === queued) regionSyncs.delete(key);
+  });
+  regionSyncs.set(key, queued);
+  return queued;
+}
+
+function queueFloorSurfaceSync(scene, scope = null) {
+  if (!scene || !canManageFloorSurfaces()) return Promise.resolve();
+  if (floorSyncScopeEmpty(scope)) return Promise.resolve();
+  return queueRegionSync(
+    scene,
+    () => synchronizeFloorSurfaceRegions(scene, scope),
+    "Failed to synchronize procedural floor surfaces",
+  );
+}
+
+function canManageRubbleRegions() {
+  if (!game.user?.isGM) return false;
+  const activeGM = game.users?.activeGM;
+  return !activeGM || activeGM.id === game.user.id;
+}
+
+function rubbleFloor(floor) {
+  return floorMovementCost(floor) >= DIFFICULT_TERRAIN_COST;
+}
+
+function floorMovementCost(floor) {
+  const style = FLOOR_STYLES[floor?.style];
+  if (!style?.difficultTerrain) return 0;
+  const cost = Number(style.movementCost ?? DIFFICULT_TERRAIN_COST);
+  return cost >= GREATER_DIFFICULT_TERRAIN_COST
+    ? GREATER_DIFFICULT_TERRAIN_COST
+    : DIFFICULT_TERRAIN_COST;
+}
+
+function rubbleRegionLink(region) {
+  return region?.flags?.[MODULE_ID]?.[RUBBLE_REGION_FLAG] ?? null;
+}
+
+function rubbleRegionShape(floor) {
+  const points = normalizePolygon(floor.points).flatMap((point) => [Number(point.x), Number(point.y)]);
+  return { type: "polygon", hole: false, points, origin: null };
+}
+
+function regionPolygon(region) {
+  const shapes = region?._source?.shapes ?? region?.shapes ?? [];
+  if (shapes.length !== 1 || shapes[0]?.type !== "polygon" || !Array.isArray(shapes[0]?.points)) return null;
+  const points = [];
+  for (let index = 0; index < shapes[0].points.length; index += 2) {
+    points.push({ x: Number(shapes[0].points[index]), y: Number(shapes[0].points[index + 1]) });
+  }
+  return normalizePolygon(points);
+}
+
+function regionHasDifficultTerrain(region) {
+  return [...(region?.behaviors ?? [])].some((behavior) => {
+    if (behavior.type !== "modifyMovementCost" || behavior.disabled) return false;
+    const difficulties = behavior.system?.difficulties ?? behavior._source?.system?.difficulties ?? {};
+    return Number(difficulties.walk ?? 1) >= 2;
+  });
+}
+
+function regionMatchesRubble(region, floor) {
+  const polygon = regionPolygon(region);
+  return polygon && polygonsEquivalent(polygon, normalizePolygon(floor.points));
+}
+
+function rubbleRegionLevels(scene, floor) {
+  const nativeLevel = findNativeLevel(Number(floor.level ?? 0), scene);
+  return nativeLevel?.id ? [nativeLevel.id] : [];
+}
+
+function sameStringSet(left, right) {
+  const a = [...(left ?? [])].map(String).sort();
+  const b = [...(right ?? [])].map(String).sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function difficultTerrainBehaviorData(floor) {
+  const movementCost = floorMovementCost(floor) || DIFFICULT_TERRAIN_COST;
+  return {
+    name: "",
+    type: "modifyMovementCost",
+    system: { difficulties: { walk: movementCost, travel: movementCost } },
+    disabled: false,
+  };
+}
+
+function difficultTerrainBehaviorUpdate(region, floor) {
+  const behavior = [...(region?.behaviors ?? [])].find((candidate) => candidate.type === "modifyMovementCost");
+  const behaviorId = behavior?.id ?? behavior?._id;
+  if (!behavior || !behaviorId) return null;
+
+  const movementCost = floorMovementCost(floor) || DIFFICULT_TERRAIN_COST;
+  const difficulties = behavior.system?.difficulties ?? behavior._source?.system?.difficulties ?? {};
+  const update = { _id: behaviorId };
+  if (Number(difficulties.walk ?? 1) !== movementCost) update["system.difficulties.walk"] = movementCost;
+  if (Number(difficulties.travel ?? 1) !== movementCost) update["system.difficulties.travel"] = movementCost;
+  if (behavior.disabled) update.disabled = false;
+  return Object.keys(update).length > 1 ? update : null;
+}
+
+function difficultTerrainRegionName(floor) {
+  const style = FLOOR_STYLES[floor?.style];
+  return style?.warehouse
+    ? localize("WarehouseRegionName", "Warehouse clutter — difficult terrain")
+    : style?.forest
+      ? localize("ForestRegionName", "Forest — difficult terrain")
+      : floorMovementCost(floor) >= GREATER_DIFFICULT_TERRAIN_COST
+        ? localize("SwampRegionName", "Swamp — greater difficult terrain")
+        : localize("RubbleRegionName", "Rubble — difficult terrain");
+}
+
+function rubbleRegionData(scene, floor) {
+  return {
+    name: difficultTerrainRegionName(floor),
+    shapes: [rubbleRegionShape(floor)],
+    elevation: { bottom: null, top: null, topInclusive: false },
+    levels: rubbleRegionLevels(scene, floor),
+    restriction: { enabled: false, type: "move", priority: 0 },
+    attachment: { token: null },
+    behaviors: [difficultTerrainBehaviorData(floor)],
+    visibility: globalThis.CONST?.REGION_VISIBILITY?.LAYER_UNLOCKED ?? 4,
+    highlightMode: "shapes",
+    displayMeasurements: false,
+    hidden: false,
+    locked: false,
+    flags: {
+      [MODULE_ID]: {
+        [RUBBLE_REGION_FLAG]: { floorId: floor.id, version: RUBBLE_REGION_VERSION },
+      },
+    },
+  };
+}
+
+async function synchronizeRubbleRegions(scene, scope = null) {
+  if (!scene || !canManageRubbleRegions() || !scene.regions) return;
+  const allFloors = getSceneDataForScene(scene).floors.filter(rubbleFloor);
+  const allFloorIds = new Set(allFloors.map((floor) => floor.id));
+  const floors = scope ? allFloors.filter((floor) => floorTouchesSyncScope(floor, scope)) : allFloors;
+  const regions = [...scene.regions];
+  const claimedRegionIds = new Set();
+  const deleteIds = new Set();
+  const managedByFloor = new Map();
+
+  for (const region of regions) {
+    const floorId = rubbleRegionLink(region)?.floorId;
+    if (!floorId || !regionTouchesSyncScope(region, scope)) continue;
+    if (!allFloorIds.has(floorId)) {
+      deleteIds.add(region.id);
+      continue;
+    }
+    if (managedByFloor.has(floorId)) deleteIds.add(region.id);
+    else managedByFloor.set(floorId, region.id);
+  }
+
+  await deleteLiveRegions(scene, deleteIds);
+
+  for (const floorSnapshot of floors) {
+    const floor = getSceneDataForScene(scene).floors.find((candidate) => candidate.id === floorSnapshot.id && rubbleFloor(candidate));
+    if (!floor || !floorTouchesSyncScope(floor, scope)) continue;
+    let region = liveRegion(scene, managedByFloor.get(floor.id));
+    if (!region) {
+      region = [...scene.regions].find((candidate) => !claimedRegionIds.has(candidate.id)
+        && regionTouchesSyncScope(candidate, scope)
+        && !rubbleRegionLink(candidate)
+        && regionHasDifficultTerrain(candidate)
+        && regionMatchesRubble(candidate, floor)) ?? null;
+    }
+    if (!region) continue;
+    claimedRegionIds.add(region.id);
+
+    const update = { _id: region.id };
+    let changed = false;
+    if (!regionMatchesRubble(region, floor)) {
+      update.shapes = [rubbleRegionShape(floor)];
+      changed = true;
+    }
+    const desiredLevels = rubbleRegionLevels(scene, floor);
+    if (!sameStringSet(region._source?.levels ?? [], desiredLevels)) {
+      update.levels = desiredLevels;
+      changed = true;
+    }
+    const regionLink = rubbleRegionLink(region);
+    const desiredName = difficultTerrainRegionName(floor);
+    if (regionLink && region.name !== desiredName) {
+      update.name = desiredName;
+      changed = true;
+    }
+    if (regionLink?.floorId !== floor.id || Number(regionLink?.version) !== RUBBLE_REGION_VERSION) {
+      update[`flags.${MODULE_ID}.${RUBBLE_REGION_FLAG}`] = { floorId: floor.id, version: RUBBLE_REGION_VERSION };
+      changed = true;
+    }
+    if (changed) region = await updateLiveRegion(scene, update);
+    else region = liveRegion(scene, region.id);
+    if (!region) continue;
+
+    const behavior = [...(region.behaviors ?? [])].find((candidate) => candidate.type === "modifyMovementCost");
+    if (!behavior) {
+      await createLiveRegionBehavior(
+        scene,
+        region.id,
+        difficultTerrainBehaviorData(floor),
+        (candidate) => [...(candidate.behaviors ?? [])].some((item) => item.type === "modifyMovementCost"),
+      );
+    } else {
+      const behaviorUpdate = difficultTerrainBehaviorUpdate(region, floor);
+      if (behaviorUpdate) await updateLiveRegionBehavior(scene, region.id, behaviorUpdate);
+    }
+  }
+
+  const latestFloors = getSceneDataForScene(scene).floors
+    .filter(rubbleFloor)
+    .filter((floor) => floorTouchesSyncScope(floor, scope));
+  const existingFloorIds = new Set([...scene.regions]
+    .map((region) => rubbleRegionLink(region)?.floorId)
+    .filter(Boolean));
+  for (const floor of latestFloors) {
+    if (existingFloorIds.has(floor.id)) continue;
+    await scene.createEmbeddedDocuments("Region", [rubbleRegionData(scene, floor)]);
+    existingFloorIds.add(floor.id);
+  }
+}
+
+function queueRubbleRegionSync(scene, scope = null) {
+  if (!scene || !canManageRubbleRegions()) return Promise.resolve();
+  if (floorSyncScopeEmpty(scope)) return Promise.resolve();
+  return queueRegionSync(
+    scene,
+    () => synchronizeRubbleRegions(scene, scope),
+    "Failed to synchronize rubble difficult-terrain regions",
+  );
 }
 
 function randomId() {
@@ -985,78 +1724,58 @@ document.addEventListener("keydown", async (event) => {
   }
 });
 
-function getFloorContainer(create = true) {
-  const parent = canvas?.primary ?? canvas?.stage;
-  if (!parent) return null;
-  let container = parent.children?.find((child) => child.name === FLOOR_CONTAINER);
-  if (!container && create) {
-    container = new PIXI.Container();
-    container.name = FLOOR_CONTAINER;
-    container.eventMode = "none";
-    container.sortableChildren = true;
-    parent.sortableChildren = true;
-    parent.addChild(container);
-  }
-  if (parent === canvas?.primary) {
-    // Render above the viewed level's background, but below tiles, drawings,
-    // tokens, and the level foreground.
-    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
-    container.sortLayer = canvas.primary.constructor?.SORT_LAYERS?.SCENE ?? 0;
-    container.sort = 0;
-    container.zIndex = 1;
-    parent.sortDirty = true;
-  }
-  else container.zIndex = -10000;
-  return container;
+function levelContainerName(baseName, floorNumber) {
+  return `${baseName}:${Number(floorNumber) || 0}`;
 }
 
-function getCobwebAboveContainer(create = true) {
+function managedLevelContainers(baseName) {
+  const parent = canvas?.primary ?? canvas?.stage;
+  if (!parent) return [];
+  return parent.children?.filter((child) => child.name === baseName || child.name?.startsWith(`${baseName}:`)) ?? [];
+}
+
+function getLevelContainer(baseName, create, floorNumber, sortLayer, fallbackZIndex) {
   const parent = canvas?.primary ?? canvas?.stage;
   if (!parent) return null;
-  let container = parent.children?.find((child) => child.name === COBWEB_ABOVE_CONTAINER);
+  const name = levelContainerName(baseName, floorNumber);
+  let container = parent.children?.find((child) => child.name === name);
   if (!container && create) {
     container = new PIXI.Container();
-    container.name = COBWEB_ABOVE_CONTAINER;
+    container.name = name;
     container.eventMode = "none";
     container.sortableChildren = true;
     parent.sortableChildren = true;
     parent.addChild(container);
   }
+  if (!container) return null;
   if (parent === canvas?.primary) {
-    const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
-    // Above ordinary asset tiles, but below border (+1) and wall (+3) textures.
-    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
-    container.sortLayer = Number(sortLayers.TILES ?? 500) + 0.5;
+    const nativeLevel = findNativeLevel(floorNumber);
+    container.elevation = Number(nativeLevel?.elevation?.bottom ?? 0);
+    container.sortLayer = sortLayer;
     container.sort = 0;
     container.zIndex = 0;
     parent.sortDirty = true;
-  } else container.zIndex = 9999;
+  }
+  else container.zIndex = fallbackZIndex + Number(floorNumber || 0);
   return container;
 }
 
-function getForestContainer(create = true) {
-  const parent = canvas?.primary ?? canvas?.stage;
-  if (!parent) return null;
-  let container = parent.children?.find((child) => child.name === FOREST_CONTAINER);
-  if (!container && create) {
-    container = new PIXI.Container();
-    container.name = FOREST_CONTAINER;
-    container.eventMode = "none";
-    container.sortableChildren = true;
-    parent.sortableChildren = true;
-    parent.addChild(container);
-  }
-  if (parent === canvas?.primary) {
-    const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
-    // Canopies cover the wall border, while placement clearance prevents them
-    // from crossing the wall's inner edge.
-    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
-    container.sortLayer = Number(sortLayers.TILES ?? 500) + 2;
-    container.sort = 0;
-    container.zIndex = 0;
-    parent.sortDirty = true;
-  } else container.zIndex = 10001;
-  return container;
+function getFloorContainer(create = true, floorNumber = currentLevel) {
+  const sortLayers = canvas?.primary?.constructor?.SORT_LAYERS ?? {};
+  return getLevelContainer(FLOOR_CONTAINER, create, floorNumber, Number(sortLayers.SCENE ?? 0), -10000);
+}
+
+function getCobwebAboveContainer(create = true, floorNumber = currentLevel) {
+  const sortLayers = canvas?.primary?.constructor?.SORT_LAYERS ?? {};
+  // Above ordinary asset tiles, but below border (+1) and wall (+3) textures.
+  return getLevelContainer(COBWEB_ABOVE_CONTAINER, create, floorNumber, Number(sortLayers.TILES ?? 500) + 0.5, 9999);
+}
+
+function getForestContainer(create = true, floorNumber = currentLevel) {
+  const sortLayers = canvas?.primary?.constructor?.SORT_LAYERS ?? {};
+  // Canopies cover the wall border, while placement clearance prevents them
+  // from crossing the wall's inner edge.
+  return getLevelContainer(FOREST_CONTAINER, create, floorNumber, Number(sortLayers.TILES ?? 500) + 2, 10001);
 }
 
 function getEditorContainer(create = true) {
@@ -1078,6 +1797,16 @@ function clearContainer(container) {
   for (const child of container.removeChildren()) destroyDisplayObject(child);
 }
 
+function removeManagedLevelContainers(baseName) {
+  const parent = canvas?.primary ?? canvas?.stage;
+  if (!parent) return;
+  for (const container of managedLevelContainers(baseName)) {
+    parent.removeChild(container);
+    destroyDisplayObject(container);
+  }
+  if (parent === canvas?.primary) parent.sortDirty = true;
+}
+
 function destroyDisplayObject(displayObject) {
   const ownedTextures = new Set();
   const collect = (child) => {
@@ -1089,15 +1818,19 @@ function destroyDisplayObject(displayObject) {
   for (const texture of ownedTextures) texture.destroy?.(true);
 }
 
-function findForestLayer(container, floorId) {
-  return container?.children?.find((child) => child._tsuForestFloorId === floorId) ?? null;
+function findForestLayer(floorId) {
+  for (const container of managedLevelContainers(FOREST_CONTAINER)) {
+    const layer = container.children?.find((child) => child._tsuForestFloorId === floorId);
+    if (layer) return { container, layer };
+  }
+  return null;
 }
 
-function removeForestLayer(container, floorId) {
-  const layer = findForestLayer(container, floorId);
-  if (!layer) return;
-  container.removeChild(layer);
-  destroyDisplayObject(layer);
+function removeForestLayer(floorId) {
+  const found = findForestLayer(floorId);
+  if (!found) return;
+  found.container.removeChild(found.layer);
+  destroyDisplayObject(found.layer);
 }
 
 function newGraphics() {
@@ -1138,18 +1871,17 @@ function drawClosedStroke(graphics, points, color, width, alpha = 1, join = "rou
 }
 
 function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
-  const container = getFloorContainer(!forestOnly);
-  const cobwebAboveContainer = getCobwebAboveContainer(!forestOnly);
-  const forestContainer = getForestContainer();
   const targetedForestIds = forestOnly ? new Set(forestFloorIds) : null;
   if (!forestOnly) {
-    clearContainer(container);
-    clearContainer(cobwebAboveContainer);
+    removeManagedLevelContainers(FLOOR_CONTAINER);
+    removeManagedLevelContainers(COBWEB_ABOVE_CONTAINER);
+    removeManagedLevelContainers(FOREST_CONTAINER);
+    forestRenderSignatures.clear();
   }
   // The setting controls the GM drawing tools only. Persisted floor data must
   // remain visible when a scene is opened from a compendium or in another world.
   if (!canvas?.ready) {
-    clearContainer(forestContainer);
+    removeManagedLevelContainers(FOREST_CONTAINER);
     forestRenderSignatures.clear();
     return;
   }
@@ -1163,17 +1895,19 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     if (Number(floor.level ?? 0) > currentLevel) continue;
     const points = normalizePolygon(floor.points);
     if (points.length < 3) continue;
+    const floorNumber = Number(floor.level ?? 0);
     const style = FLOOR_STYLES[floor.style] ?? FLOOR_STYLES[DEFAULT_STYLE];
     if (style.forest) {
       if (targetedForestIds && !targetedForestIds.has(floor.id)) continue;
       visibleForestIds.add(floor.id);
+      const forestContainer = getForestContainer(true, floorNumber);
       const nearbyWalls = forestWallSegments(points, style.forest, blockingWalls);
       const signature = JSON.stringify({ gridSize, texturePreset, style: floor.style, level: floor.level, points, walls: nearbyWalls });
-      if (forestRenderSignatures.get(floor.id) === signature && findForestLayer(forestContainer, floor.id)) continue;
-      removeForestLayer(forestContainer, floor.id);
+      if (forestRenderSignatures.get(floor.id) === signature && findForestLayer(floor.id)) continue;
+      removeForestLayer(floor.id);
       const floorLayer = new PIXI.Container();
       floorLayer.eventMode = "none";
-      floorLayer.zIndex = Number(floor.level ?? 0);
+      floorLayer.zIndex = 0;
       floorLayer._tsuForestFloorId = floor.id;
       forestContainer?.addChild(floorLayer);
       const forest = createForestFill(points, style.forest, `${floor.id}:${floor.style}`, nearbyWalls);
@@ -1184,8 +1918,10 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     if (forestOnly) continue;
     const floorLayer = new PIXI.Container();
     floorLayer.eventMode = "none";
-    floorLayer.zIndex = Number(floor.level ?? 0);
-    const floorParent = style.cobweb?.layer === "above" ? cobwebAboveContainer : container;
+    floorLayer.zIndex = 0;
+    const floorParent = style.cobweb?.layer === "above"
+      ? getCobwebAboveContainer(true, floorNumber)
+      : getFloorContainer(true, floorNumber);
     floorParent?.addChild(floorLayer);
     const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
     const renderPoints = style.rubble
@@ -1236,13 +1972,15 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     if (!isNaturalPathEdge(style.edge)) drawPolygon(mask, renderPoints, 0xffffff);
     sprite.mask = mask;
     floorLayer.addChild(sprite, mask);
+    const scatter = createNaturalScatter(renderPoints, style.scatter, `${floor.id}:${floor.style}`);
+    if (scatter) floorLayer.addChild(scatter);
     const edgeGraphic = style.edge ? createFloorEdge(renderPoints, style.edge, `${floor.id}:${floor.style}`) : null;
     if (edgeGraphic) floorLayer.addChild(edgeGraphic);
   }
   if (!forestOnly) {
     for (const floorId of [...forestRenderSignatures.keys()]) {
       if (visibleForestIds.has(floorId)) continue;
-      removeForestLayer(forestContainer, floorId);
+      removeForestLayer(floorId);
       forestRenderSignatures.delete(floorId);
     }
   }
@@ -1585,6 +2323,96 @@ function rotateVector(vector, angle) {
   return { x: vector.x * cos - vector.y * sin, y: vector.x * sin + vector.y * cos };
 }
 
+function createNaturalScatter(points, scatter, seed) {
+  const assets = Array.isArray(scatter?.assets) ? scatter.assets : [];
+  if (!assets.length) return null;
+  const bounds = polygonBounds(points);
+  if (!bounds.width || !bounds.height) return null;
+
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  container.sortableChildren = true;
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const spacing = grid * Math.max(0.5, Number(scatter.spacingCells ?? 2.5));
+  const chance = Math.max(0, Math.min(1, Number(scatter.chance ?? 0.4)));
+  const maxPieces = Math.max(1, Number(scatter.maxPieces ?? 240));
+  const aspectJitter = Math.max(0, Math.min(0.45, Number(scatter.aspectJitter ?? 0)));
+  const startX = Math.floor(bounds.x / spacing) - 1;
+  const endX = Math.ceil((bounds.x + bounds.width) / spacing) + 1;
+  const startY = Math.floor(bounds.y / spacing) - 1;
+  const endY = Math.ceil((bounds.y + bounds.height) / spacing) + 1;
+  const placements = [];
+  const placementCounts = new Map();
+
+  const candidateCells = [];
+  for (let gy = startY; gy <= endY; gy += 1) {
+    for (let gx = startX; gx <= endX; gx += 1) candidateCells.push({ gx, gy });
+  }
+  const orderRandom = seededRandom(`${seed}:nature-order`);
+  for (let index = candidateCells.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(orderRandom() * (index + 1));
+    [candidateCells[index], candidateCells[swapIndex]] = [candidateCells[swapIndex], candidateCells[index]];
+  }
+
+  for (const { gx, gy } of candidateCells) {
+      if (placements.length >= maxPieces) break;
+      const random = seededRandom(`${seed}:nature:${gx}:${gy}`);
+      if (random() > chance) continue;
+      const eligibleAssets = assets.filter((candidate) => {
+        const limit = Number(candidate.maxPerFill);
+        if (!Number.isFinite(limit) || limit <= 0) return true;
+        const key = candidate.limitKey || candidate.src;
+        return (placementCounts.get(key) ?? 0) < limit;
+      });
+      const asset = weightedRubbleAsset(eligibleAssets, random());
+      if (!asset) continue;
+      const size = grid * lerp(Number(asset.minSize ?? 1), Number(asset.maxSize ?? 1.4), random());
+      const aspect = 1 + (random() * 2 - 1) * aspectJitter;
+      const width = size * Math.sqrt(aspect);
+      const height = size / Math.sqrt(aspect);
+      const rotation = random() * Math.PI * 2;
+      let point = null;
+      for (let attempt = 0; attempt < 18; attempt += 1) {
+        const candidate = {
+          x: (gx + 0.08 + random() * 0.84) * spacing,
+          y: (gy + 0.08 + random() * 0.84) * spacing,
+        };
+        if (!rotatedRectInsidePolygon(candidate, width, height, rotation, points)) continue;
+        const clearsOtherPatches = placements.every((placed) => (
+          distance(candidate, placed) >= (Math.max(width, height) + placed.radius * 2) * 0.43
+        ));
+        if (!clearsOtherPatches) continue;
+        point = candidate;
+        break;
+      }
+      if (point) {
+        placements.push({ ...point, asset, width, height, radius: Math.max(width, height) / 2, rotation });
+        const key = asset.limitKey || asset.src;
+        placementCounts.set(key, (placementCounts.get(key) ?? 0) + 1);
+      }
+  }
+
+  placements.sort((left, right) => left.y - right.y);
+  placements.forEach((placement, index) => {
+    const texture = PIXI.Texture.from(placement.asset.src);
+    let sprite;
+    try { sprite = new PIXI.Sprite({ texture }); }
+    catch { sprite = new PIXI.Sprite(texture); }
+    sprite.anchor?.set?.(0.5);
+    sprite.position.set(placement.x, placement.y);
+    sprite.width = placement.width;
+    sprite.height = placement.height;
+    sprite.rotation = placement.rotation;
+    sprite.alpha = Math.max(0, Math.min(1, Number(placement.asset.alpha ?? 1)));
+    sprite.zIndex = index;
+    sprite.eventMode = "none";
+    sprite.interactive = false;
+    container.addChild(sprite);
+  });
+  return container;
+}
+
 function createRubbleFill(points, rubble, seed) {
   const container = new PIXI.Container();
   container.eventMode = "none";
@@ -1600,6 +2428,11 @@ function createRubbleFill(points, rubble, seed) {
   const chance = Math.max(0, Math.min(1, Number(rubble.chance ?? 0.52)));
   const scaleMin = Math.max(0.1, Number(rubble.scaleMin ?? 0.82));
   const scaleMax = Math.max(scaleMin, Number(rubble.scaleMax ?? 1.08));
+  const minimumGap = grid * Math.max(0, Number(rubble.minimumGapCells ?? 0));
+  const groupOrder = Array.isArray(rubble.groupOrder) ? rubble.groupOrder.map(String).filter(Boolean) : [];
+  const orderedPacking = Boolean(rubble.orderedPacking);
+  const positionJitter = Math.max(0, Math.min(0.45, Number(rubble.positionJitter ?? 0.1)));
+  const rotationSteps = Math.max(0, Math.floor(Number(rubble.rotationSteps ?? 0)));
   const maxPieces = Math.max(1, Number(rubble.maxPieces ?? 12000));
   const startX = Math.floor(bounds.x / spacing) - 1;
   const endX = Math.ceil((bounds.x + bounds.width) / spacing) + 1;
@@ -1607,32 +2440,60 @@ function createRubbleFill(points, rubble, seed) {
   const endY = Math.ceil((bounds.y + bounds.height) / spacing) + 1;
 
   const placements = [];
+  const groupCounts = new Map(groupOrder.map((group) => [group, 0]));
+  const assetCounts = new Map();
   for (let gy = startY; gy <= endY && placements.length < maxPieces; gy += 1) {
     for (let gx = startX; gx <= endX && placements.length < maxPieces; gx += 1) {
       const random = seededRandom(`${seed}:rubble:${gx}:${gy}`);
       if (random() > chance) continue;
-      const asset = weightedRubbleAsset(assets, random());
-      if (!asset) continue;
-      const scale = lerp(scaleMin, scaleMax, random());
-      const width = grid * Math.max(0.02, Number(asset.widthCells ?? 0.3)) * scale;
-      const height = grid * Math.max(0.02, Number(asset.heightCells ?? 0.3)) * scale;
-      const rotation = random() * Math.PI * 2;
+      const assetCandidates = groupOrder.length
+        ? balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts)
+        : [weightedRubbleAsset(assets, random())].filter(Boolean);
+      for (let assetIndex = 0; assetIndex < assetCandidates.length; assetIndex += 1) {
+        const asset = assetCandidates[assetIndex];
+        const assetRandom = seededRandom(`${seed}:rubble:${gx}:${gy}:asset:${asset.key ?? assetIndex}`);
+        const scale = lerp(scaleMin, scaleMax, assetRandom());
+        const width = grid * Math.max(0.02, Number(asset.widthCells ?? 0.3)) * scale;
+        const height = grid * Math.max(0.02, Number(asset.heightCells ?? 0.3)) * scale;
+        const rotation = rotationSteps > 0
+          ? Math.floor(assetRandom() * rotationSteps) * Math.PI * 2 / rotationSteps
+          : assetRandom() * Math.PI * 2;
 
-      // Try several deterministic positions inside this lattice cell. A placement is accepted
-      // only when its complete rotated rectangular footprint is inside the floor polygon.
-      let point = null;
-      for (let attempt = 0; attempt < 16; attempt += 1) {
-        const candidate = {
-          x: (gx + 0.06 + random() * 0.88) * spacing,
-          y: (gy + 0.06 + random() * 0.88) * spacing,
-        };
-        if (rotatedRectInsidePolygon(candidate, width, height, rotation, points)) {
-          point = candidate;
-          break;
+        // Try several deterministic positions inside this lattice cell. Warehouse fills start
+        // close to the cell center, expanding their search only near boundaries or neighbours.
+        let point = null;
+        for (let attempt = 0; attempt < 20; attempt += 1) {
+          let candidate;
+          if (orderedPacking) {
+            const radius = attempt === 0 ? 0 : spacing * Math.min(0.45, positionJitter + attempt * 0.018);
+            const angle = assetRandom() * Math.PI * 2;
+            candidate = {
+              x: (gx + 0.5) * spacing + Math.cos(angle) * radius,
+              y: (gy + 0.5) * spacing + Math.sin(angle) * radius,
+            };
+          } else {
+            candidate = {
+              x: (gx + 0.06 + assetRandom() * 0.88) * spacing,
+              y: (gy + 0.06 + assetRandom() * 0.88) * spacing,
+            };
+          }
+          const overlaps = minimumGap > 0 && placements.some((existing) => {
+            const required = (Math.max(width, height) + Math.max(existing.width, existing.height)) * 0.42 + minimumGap;
+            return distance(candidate, existing) < required;
+          });
+          if (overlaps) continue;
+          if (rotatedRectInsidePolygon(candidate, width, height, rotation, points)) {
+            point = candidate;
+            break;
+          }
         }
+        if (!point) continue;
+        placements.push({ ...point, asset, width, height, rotation });
+        if (asset.groupKey) groupCounts.set(asset.groupKey, (groupCounts.get(asset.groupKey) ?? 0) + 1);
+        const assetKey = asset.key ?? asset.src;
+        assetCounts.set(assetKey, (assetCounts.get(assetKey) ?? 0) + 1);
+        break;
       }
-      if (!point) continue;
-      placements.push({ ...point, asset, width, height, rotation });
     }
   }
 
@@ -1665,6 +2526,20 @@ function weightedRubbleAsset(assets, roll) {
     if (cursor <= 0) return asset;
   }
   return assets.at(-1) ?? null;
+}
+
+function balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts) {
+  const groupRank = new Map(groupOrder.map((group, index) => [group, index]));
+  return [...assets].sort((left, right) => {
+    const groupDifference = (groupCounts.get(left.groupKey) ?? 0) - (groupCounts.get(right.groupKey) ?? 0);
+    if (groupDifference) return groupDifference;
+    const assetDifference = (assetCounts.get(left.key) ?? 0) - (assetCounts.get(right.key) ?? 0);
+    if (left.groupKey === right.groupKey && assetDifference) return assetDifference;
+    const rankDifference = (groupRank.get(left.groupKey) ?? groupOrder.length) - (groupRank.get(right.groupKey) ?? groupOrder.length);
+    if (rankDifference) return rankDifference;
+    if (assetDifference) return assetDifference;
+    return String(left.key ?? "").localeCompare(String(right.key ?? ""));
+  });
 }
 
 function rotatedRectInsidePolygon(center, width, height, rotation, polygon) {
@@ -2067,20 +2942,31 @@ function trackSceneWallStates() {
 }
 
 Hooks.on("canvasReady", () => {
+  if (canvas?.scene) floorDataSnapshots.set(regionSyncKey(canvas.scene), getSceneDataForScene(canvas.scene));
   currentLevel = canvas?.level ? getFloorNumberForNativeLevel(canvas.level) : 0;
   selectedLevel = currentLevel;
   trackSceneWallStates();
   bindStageEvents();
   scheduleRedraw();
+  if (canManageFloorSurfaces()) {
+    void (async () => {
+      const scene = canvas?.scene;
+      if (!scene) return;
+      const floorNumbers = [...new Set(getSceneDataForScene(scene).floors
+        .map((floor) => Number(floor.level ?? 0)))].sort((a, b) => a - b);
+      for (const floorNumber of floorNumbers) await ensureNativeLevel(floorNumber, scene);
+      await queueFloorSurfaceSync(scene);
+    })();
+  }
 });
 Hooks.on("canvasTearDown", () => {
   clearTimeout(redrawTimer);
   redrawTimer = null;
   redrawNeedsFullPass = false;
   pendingForestFloorIds.clear();
-  clearContainer(getFloorContainer(false));
-  clearContainer(getCobwebAboveContainer(false));
-  clearContainer(getForestContainer(false));
+  removeManagedLevelContainers(FLOOR_CONTAINER);
+  removeManagedLevelContainers(COBWEB_ABOVE_CONTAINER);
+  removeManagedLevelContainers(FOREST_CONTAINER);
   clearContainer(getEditorContainer(false));
   forestRenderSignatures.clear();
   trackedWallStates.clear();
@@ -2089,12 +2975,43 @@ Hooks.on("canvasTearDown", () => {
   lastClick = null;
   unbindStageEvents();
 });
-Hooks.on("updateScene", (_scene, change) => {
-  if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${FLAG_ROOT}`)
+Hooks.on("updateScene", (scene, change) => {
+  const floorDataChanged = foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${FLAG_ROOT}`);
+  if (floorDataChanged
       || foundry.utils.hasProperty(change, "grid")
       || foundry.utils.hasProperty(change, "width")
-      || foundry.utils.hasProperty(change, "height")) scheduleRedraw();
+      || foundry.utils.hasProperty(change, "height")) {
+    scheduleRedraw();
+    if (floorDataChanged) {
+      const key = regionSyncKey(scene);
+      const latestData = getSceneDataForScene(scene);
+      if (!localFloorMutationInProgress(scene)) {
+        const previousData = floorDataSnapshots.get(key);
+        const scope = previousData ? buildFloorSyncScope(previousData, latestData) : null;
+        void queueFloorSurfaceSync(scene, scope);
+        void queueRubbleRegionSync(scene, scope);
+      }
+      floorDataSnapshots.set(key, foundry.utils.deepClone(latestData));
+    }
+  }
 });
+Hooks.on("createLevel", (level) => {
+  const scene = level?.parent;
+  if (!localFloorMutationInProgress(scene)) void queueFloorSurfaceSync(scene);
+});
+Hooks.on("updateLevel", (level, change) => {
+  const scene = level?.parent;
+  if (localFloorMutationInProgress(scene)) return;
+  if (foundry.utils.hasProperty(change, "elevation")
+      || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${LEVEL_NUMBER_FLAG}`)) {
+    void queueFloorSurfaceSync(scene);
+  }
+});
+Hooks.on("deleteLevel", (level) => {
+  const scene = level?.parent;
+  if (!localFloorMutationInProgress(scene)) void queueFloorSurfaceSync(scene);
+});
+
 Hooks.on("createWall", (wall) => {
   if (!wallBelongsToCanvasScene(wall)) return;
   const current = snapshotWallState(wall);
@@ -2118,6 +3035,22 @@ Hooks.on("deleteWall", (wall) => {
   trackedWallStates.delete(wall.id);
   const forestFloorIds = affectedVisibleForestIds([previous]);
   if (forestFloorIds.size) scheduleRedraw({ forestOnly: true, forestFloorIds });
+});
+
+Hooks.once("ready", () => {
+  if (!canManageRubbleRegions() && !canManageFloorSurfaces()) return;
+  void (async () => {
+    for (const scene of game.scenes ?? []) {
+      floorDataSnapshots.set(regionSyncKey(scene), getSceneDataForScene(scene));
+      if (canManageFloorSurfaces()) {
+        const floorNumbers = [...new Set(getSceneDataForScene(scene).floors
+          .map((floor) => Number(floor.level ?? 0)))].sort((a, b) => a - b);
+        for (const floorNumber of floorNumbers) await ensureNativeLevel(floorNumber, scene);
+        await queueFloorSurfaceSync(scene);
+      }
+      if (canManageRubbleRegions()) await queueRubbleRegionSync(scene);
+    }
+  })();
 });
 
 function wallSegments() {

@@ -1,0 +1,4947 @@
+{
+  "assets": [
+    {
+      "logical": "scene-assets/altar.webp",
+      "output": "images/presets/enhanced-base/scene-assets/altar-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        598
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 163006,
+      "outputBytes": 159970,
+      "weightRatio": 0.981,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/armchair-burgundy-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/armchair-burgundy-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 260528,
+      "outputBytes": 271414,
+      "weightRatio": 1.042,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/armchair-green-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/armchair-green-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 234154,
+      "outputBytes": 254492,
+      "weightRatio": 1.087,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/ash.webp",
+      "output": "images/presets/enhanced-base/scene-assets/ash-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        930
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 221860,
+      "outputBytes": 231186,
+      "weightRatio": 1.042,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/banquet-table.webp",
+      "output": "images/presets/enhanced-base/scene-assets/banquet-table-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        414
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 54096,
+      "outputBytes": 71348,
+      "weightRatio": 1.319,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bar-counter-corner.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bar-counter-corner-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        906
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 58556,
+      "outputBytes": 145040,
+      "weightRatio": 2.477,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bar-counter-straight.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bar-counter-straight-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        278
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 32054,
+      "outputBytes": 57784,
+      "weightRatio": 1.803,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/barrel-side.webp",
+      "output": "images/presets/enhanced-base/scene-assets/barrel-side-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        636
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 76534,
+      "outputBytes": 119754,
+      "weightRatio": 1.565,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/barrel.webp",
+      "output": "images/presets/enhanced-base/scene-assets/barrel-base-refined-v1.webp",
+      "dimensions": [
+        644,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 114144,
+      "outputBytes": 130248,
+      "weightRatio": 1.141,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/barrels-side-cluster.webp",
+      "output": "images/presets/enhanced-base/scene-assets/barrels-side-cluster-base-refined-v1.webp",
+      "dimensions": [
+        630,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 100766,
+      "outputBytes": 212836,
+      "weightRatio": 2.112,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bathtub-copper.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bathtub-copper-base-refined-v1.webp",
+      "dimensions": [
+        347,
+        511
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 35390,
+      "outputBytes": 35168,
+      "weightRatio": 0.994,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bathtub-wood.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bathtub-wood-base-refined-v1.webp",
+      "dimensions": [
+        258,
+        531
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 34856,
+      "outputBytes": 36794,
+      "weightRatio": 1.056,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed-blue.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-blue-base-refined-v1.webp",
+      "dimensions": [
+        295,
+        599
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 40330,
+      "outputBytes": 38722,
+      "weightRatio": 0.96,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed-fur.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-fur-base-refined-v1.webp",
+      "dimensions": [
+        295,
+        606
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 45636,
+      "outputBytes": 44680,
+      "weightRatio": 0.979,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed-messy-blue.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-messy-blue-base-refined-v1.webp",
+      "dimensions": [
+        393,
+        635
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 67690,
+      "outputBytes": 69754,
+      "weightRatio": 1.03,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed-messy-brown.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-messy-brown-base-refined-v1.webp",
+      "dimensions": [
+        341,
+        628
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 60834,
+      "outputBytes": 64190,
+      "weightRatio": 1.055,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed-oak.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-oak-base-refined-v1.webp",
+      "dimensions": [
+        272,
+        601
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 38886,
+      "outputBytes": 44602,
+      "weightRatio": 1.147,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bed.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bed-base-refined-v1.webp",
+      "dimensions": [
+        521,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 100294,
+      "outputBytes": 109376,
+      "weightRatio": 1.091,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bedroll-blue.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bedroll-blue-base-refined-v1.webp",
+      "dimensions": [
+        294,
+        521
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 43164,
+      "outputBytes": 44594,
+      "weightRatio": 1.033,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bedroll-fur.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bedroll-fur-base-refined-v1.webp",
+      "dimensions": [
+        300,
+        517
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 53076,
+      "outputBytes": 52248,
+      "weightRatio": 0.984,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bedroll-green.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bedroll-green-base-refined-v1.webp",
+      "dimensions": [
+        320,
+        518
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 44988,
+      "outputBytes": 44260,
+      "weightRatio": 0.984,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/beehive-skep-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/beehive-skep-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 342760,
+      "outputBytes": 329742,
+      "weightRatio": 0.962,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bench-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bench-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        331
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 61696,
+      "outputBytes": 70334,
+      "weightRatio": 1.14,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/blood.webp",
+      "output": "images/presets/enhanced-base/scene-assets/blood-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        775
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 90214,
+      "outputBytes": 144746,
+      "weightRatio": 1.604,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/books-scrolls.webp",
+      "output": "images/presets/enhanced-base/scene-assets/books-scrolls-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        576
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 102356,
+      "outputBytes": 105994,
+      "weightRatio": 1.036,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-narrow-wall-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        687,
+        789
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 127446,
+      "outputBytes": 131842,
+      "weightRatio": 1.034,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf-narrow-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-narrow-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 109740,
+      "outputBytes": 117886,
+      "weightRatio": 1.074,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-narrow-wall-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 170882,
+      "outputBytes": 175900,
+      "weightRatio": 1.029,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        255
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 77090,
+      "outputBytes": 75594,
+      "weightRatio": 0.981,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf-wall-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-wall-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        255
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 81382,
+      "outputBytes": 85876,
+      "weightRatio": 1.055,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bookshelf.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bookshelf-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        378
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 55962,
+      "outputBytes": 86326,
+      "weightRatio": 1.543,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/brazier.webp",
+      "output": "images/presets/enhanced-base/scene-assets/brazier-base-refined-v1.webp",
+      "dimensions": [
+        998,
+        1017
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 196574,
+      "outputBytes": 211388,
+      "weightRatio": 1.075,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bridge.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bridge-base-refined-v1.webp",
+      "dimensions": [
+        1536,
+        534
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 220094,
+      "outputBytes": 218226,
+      "weightRatio": 0.992,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/broken-boards.webp",
+      "output": "images/presets/enhanced-base/scene-assets/broken-boards-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        822
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 154548,
+      "outputBytes": 152998,
+      "weightRatio": 0.99,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/bush.webp",
+      "output": "images/presets/enhanced-base/scene-assets/bush-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1003
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 171436,
+      "outputBytes": 175950,
+      "weightRatio": 1.026,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-narrow-topdown-v3.png",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-narrow-topdown-v3-base-refined-v1.png",
+      "dimensions": [
+        1509,
+        1042
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1056547,
+      "outputBytes": 1131895,
+      "weightRatio": 1.071,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-narrow-wall-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-narrow-wall-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        658,
+        693
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 105848,
+      "outputBytes": 113728,
+      "weightRatio": 1.074,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-narrow-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-narrow-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 137602,
+      "outputBytes": 148584,
+      "weightRatio": 1.08,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-narrow-wall-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-narrow-wall-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 166294,
+      "outputBytes": 162044,
+      "weightRatio": 0.974,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-narrow-wall-topdown-v6.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-narrow-wall-topdown-v6-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 185012,
+      "outputBytes": 187772,
+      "weightRatio": 1.015,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        362
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 85666,
+      "outputBytes": 77254,
+      "weightRatio": 0.902,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-wall-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-wall-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        255
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 107944,
+      "outputBytes": 119424,
+      "weightRatio": 1.106,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        255
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 106442,
+      "outputBytes": 99288,
+      "weightRatio": 0.933,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cabinet.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cabinet-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        362
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 30722,
+      "outputBytes": 56210,
+      "weightRatio": 1.83,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/campfire-embers.webp",
+      "output": "images/presets/enhanced-base/scene-assets/campfire-embers-base-refined-v1.webp",
+      "dimensions": [
+        422,
+        387
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 46812,
+      "outputBytes": 46888,
+      "weightRatio": 1.002,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/campfire-stones.webp",
+      "output": "images/presets/enhanced-base/scene-assets/campfire-stones-base-refined-v1.webp",
+      "dimensions": [
+        393,
+        402
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 54174,
+      "outputBytes": 52394,
+      "weightRatio": 0.967,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/candle.webp",
+      "output": "images/presets/enhanced-base/scene-assets/candle-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        445
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47598,
+      "outputBytes": 45352,
+      "weightRatio": 0.953,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/carriage-closed-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/carriage-closed-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 219914,
+      "outputBytes": 247620,
+      "weightRatio": 1.126,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/carriage-open-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/carriage-open-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 212648,
+      "outputBytes": 229894,
+      "weightRatio": 1.081,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/carriage-stagecoach-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/carriage-stagecoach-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 267964,
+      "outputBytes": 299290,
+      "weightRatio": 1.117,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cart-utility-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cart-utility-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 212558,
+      "outputBytes": 226792,
+      "weightRatio": 1.067,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/cauldron.webp",
+      "output": "images/presets/enhanced-base/scene-assets/cauldron-base-refined-v1.webp",
+      "dimensions": [
+        741,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 99850,
+      "outputBytes": 123668,
+      "weightRatio": 1.239,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/chair.webp",
+      "output": "images/presets/enhanced-base/scene-assets/chair-base-refined-v1.webp",
+      "dimensions": [
+        437,
+        512
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 42010,
+      "outputBytes": 74994,
+      "weightRatio": 1.785,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/chest.webp",
+      "output": "images/presets/enhanced-base/scene-assets/chest-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        728
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 164604,
+      "outputBytes": 168802,
+      "weightRatio": 1.026,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/coffin-stone-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/coffin-stone-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 166996,
+      "outputBytes": 152732,
+      "weightRatio": 0.915,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/coffin-wood-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/coffin-wood-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 132430,
+      "outputBytes": 131278,
+      "weightRatio": 0.991,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-stone-topdown-v1.png",
+      "output": "images/presets/enhanced-base/scene-assets/column-stone-topdown-v1-base-refined-v1.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 743218,
+      "outputBytes": 790989,
+      "weightRatio": 1.064,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-stone-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/column-stone-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 236602,
+      "outputBytes": 227322,
+      "weightRatio": 0.961,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-stone-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/column-stone-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 105944,
+      "outputBytes": 98506,
+      "weightRatio": 0.93,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-wood-topdown-v1.png",
+      "output": "images/presets/enhanced-base/scene-assets/column-wood-topdown-v1-base-refined-v1.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 521582,
+      "outputBytes": 558902,
+      "weightRatio": 1.072,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-wood-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/column-wood-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 226052,
+      "outputBytes": 232488,
+      "weightRatio": 1.028,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/column-wood-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/column-wood-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 100144,
+      "outputBytes": 110166,
+      "weightRatio": 1.1,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/corpse.webp",
+      "output": "images/presets/enhanced-base/scene-assets/corpse-base-refined-v1.webp",
+      "dimensions": [
+        863,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 84264,
+      "outputBytes": 90120,
+      "weightRatio": 1.069,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/crate.webp",
+      "output": "images/presets/enhanced-base/scene-assets/crate-base-refined-v1.webp",
+      "dimensions": [
+        747,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 167696,
+      "outputBytes": 160856,
+      "weightRatio": 0.959,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/dead-tree.webp",
+      "output": "images/presets/enhanced-base/scene-assets/dead-tree-base-refined-v1.webp",
+      "dimensions": [
+        1157,
+        1226
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 235764,
+      "outputBytes": 246462,
+      "weightRatio": 1.045,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/desk.webp",
+      "output": "images/presets/enhanced-base/scene-assets/desk-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        592
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 85714,
+      "outputBytes": 112834,
+      "weightRatio": 1.316,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/dock-corner.webp",
+      "output": "images/presets/enhanced-base/scene-assets/dock-corner-base-refined-v1.webp",
+      "dimensions": [
+        817,
+        1192
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 126430,
+      "outputBytes": 152132,
+      "weightRatio": 1.203,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/dock-straight.webp",
+      "output": "images/presets/enhanced-base/scene-assets/dock-straight-base-refined-v1.webp",
+      "dimensions": [
+        1536,
+        397
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 122640,
+      "outputBytes": 125224,
+      "weightRatio": 1.021,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/double-bed-linen.webp",
+      "output": "images/presets/enhanced-base/scene-assets/double-bed-linen-base-refined-v1.webp",
+      "dimensions": [
+        479,
+        620
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 74214,
+      "outputBytes": 81772,
+      "weightRatio": 1.102,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/double-bed-red.webp",
+      "output": "images/presets/enhanced-base/scene-assets/double-bed-red-base-refined-v1.webp",
+      "dimensions": [
+        440,
+        623
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 69464,
+      "outputBytes": 73738,
+      "weightRatio": 1.062,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/drums.webp",
+      "output": "images/presets/enhanced-base/scene-assets/drums-base-refined-v1.webp",
+      "dimensions": [
+        964,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 246492,
+      "outputBytes": 286432,
+      "weightRatio": 1.162,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/fallen-column.webp",
+      "output": "images/presets/enhanced-base/scene-assets/fallen-column-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        965
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 146750,
+      "outputBytes": 149598,
+      "weightRatio": 1.019,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/fireplace-brick-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/fireplace-brick-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        971,
+        857
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 263958,
+      "outputBytes": 282676,
+      "weightRatio": 1.071,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/fireplace-stone-wall-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/fireplace-stone-wall-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        874,
+        760
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 183192,
+      "outputBytes": 195540,
+      "weightRatio": 1.067,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/floor-lever-compact-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/floor-lever-compact-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 203764,
+      "outputBytes": 214330,
+      "weightRatio": 1.052,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/floor-lever-heavy-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/floor-lever-heavy-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 248454,
+      "outputBytes": 271750,
+      "weightRatio": 1.094,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/footprints.webp",
+      "output": "images/presets/enhanced-base/scene-assets/footprints-base-refined-v1.webp",
+      "dimensions": [
+        657,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 79992,
+      "outputBytes": 77960,
+      "weightRatio": 0.975,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/forest-deciduous-irregular-a.webp",
+      "output": "images/presets/enhanced-base/scene-assets/forest-deciduous-irregular-a-base-refined-v1.webp",
+      "dimensions": [
+        372,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 62200,
+      "outputBytes": 68150,
+      "weightRatio": 1.096,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/forest-deciduous-irregular-b.webp",
+      "output": "images/presets/enhanced-base/scene-assets/forest-deciduous-irregular-b-base-refined-v1.webp",
+      "dimensions": [
+        360,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 48536,
+      "outputBytes": 48952,
+      "weightRatio": 1.009,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/forest-pine-irregular-a.webp",
+      "output": "images/presets/enhanced-base/scene-assets/forest-pine-irregular-a-base-refined-v1.webp",
+      "dimensions": [
+        368,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 53914,
+      "outputBytes": 52614,
+      "weightRatio": 0.976,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/forest-pine-irregular-b.webp",
+      "output": "images/presets/enhanced-base/scene-assets/forest-pine-irregular-b-base-refined-v1.webp",
+      "dimensions": [
+        384,
+        365
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 38066,
+      "outputBytes": 45928,
+      "weightRatio": 1.207,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/fountain.webp",
+      "output": "images/presets/enhanced-base/scene-assets/fountain-base-refined-v1.webp",
+      "dimensions": [
+        980,
+        996
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 217558,
+      "outputBytes": 217100,
+      "weightRatio": 0.998,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/gold-pile.webp",
+      "output": "images/presets/enhanced-base/scene-assets/gold-pile-base-refined-v1.webp",
+      "dimensions": [
+        953,
+        917
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 252744,
+      "outputBytes": 261872,
+      "weightRatio": 1.036,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grand-piano-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grand-piano-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        773,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 181274,
+      "outputBytes": 162202,
+      "weightRatio": 0.895,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-mahogany-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-mahogany-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 111418,
+      "outputBytes": 117630,
+      "weightRatio": 1.056,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-mahogany-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-mahogany-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 112592,
+      "outputBytes": 117932,
+      "weightRatio": 1.047,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-mahogany-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-mahogany-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 86808,
+      "outputBytes": 81994,
+      "weightRatio": 0.945,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-mechanical-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-mechanical-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 123460,
+      "outputBytes": 123640,
+      "weightRatio": 1.001,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-oak-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-oak-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 97962,
+      "outputBytes": 89036,
+      "weightRatio": 0.909,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-oak-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-oak-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 146330,
+      "outputBytes": 157448,
+      "weightRatio": 1.076,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-oak-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-oak-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 153802,
+      "outputBytes": 176550,
+      "weightRatio": 1.148,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/grandfather-clock-oak-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/grandfather-clock-oak-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 136444,
+      "outputBytes": 140696,
+      "weightRatio": 1.031,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/harp-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/harp-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 55096,
+      "outputBytes": 89892,
+      "weightRatio": 1.632,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/hay-cluster.webp",
+      "output": "images/presets/enhanced-base/scene-assets/hay-cluster-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        665
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 190402,
+      "outputBytes": 244972,
+      "weightRatio": 1.287,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/hay-pile.webp",
+      "output": "images/presets/enhanced-base/scene-assets/hay-pile-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        946
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 241140,
+      "outputBytes": 358248,
+      "weightRatio": 1.486,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/hay-windrow.webp",
+      "output": "images/presets/enhanced-base/scene-assets/hay-windrow-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        277
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 96262,
+      "outputBytes": 112850,
+      "weightRatio": 1.172,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/ladder-vertical.webp",
+      "output": "images/presets/enhanced-base/scene-assets/ladder-vertical-base-refined-v1.webp",
+      "dimensions": [
+        234,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 45752,
+      "outputBytes": 52858,
+      "weightRatio": 1.155,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/ladder.webp",
+      "output": "images/presets/enhanced-base/scene-assets/ladder-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        271
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47230,
+      "outputBytes": 54458,
+      "weightRatio": 1.153,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/lake.webp",
+      "output": "images/presets/enhanced-base/scene-assets/lake-base-refined-v1.webp",
+      "dimensions": [
+        1536,
+        817
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 232912,
+      "outputBytes": 255324,
+      "weightRatio": 1.096,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/lantern.webp",
+      "output": "images/presets/enhanced-base/scene-assets/lantern-base-refined-v1.webp",
+      "dimensions": [
+        315,
+        512
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47926,
+      "outputBytes": 47620,
+      "weightRatio": 0.994,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/lectern-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/lectern-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        574,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 115428,
+      "outputBytes": 124490,
+      "weightRatio": 1.079,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/lectern-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/lectern-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        574,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 129642,
+      "outputBytes": 117092,
+      "weightRatio": 0.903,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/lectern.webp",
+      "output": "images/presets/enhanced-base/scene-assets/lectern-base-refined-v1.webp",
+      "dimensions": [
+        574,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 96422,
+      "outputBytes": 105240,
+      "weightRatio": 1.091,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/logs.webp",
+      "output": "images/presets/enhanced-base/scene-assets/logs-base-refined-v1.webp",
+      "dimensions": [
+        1015,
+        863
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 185434,
+      "outputBytes": 175432,
+      "weightRatio": 0.946,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/long-table.webp",
+      "output": "images/presets/enhanced-base/scene-assets/long-table-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        288
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 34544,
+      "outputBytes": 51172,
+      "weightRatio": 1.481,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/mooring-posts.webp",
+      "output": "images/presets/enhanced-base/scene-assets/mooring-posts-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        288
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 58898,
+      "outputBytes": 60560,
+      "weightRatio": 1.028,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/mud.webp",
+      "output": "images/presets/enhanced-base/scene-assets/mud-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        799
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 158734,
+      "outputBytes": 194150,
+      "weightRatio": 1.223,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-blue-damask-cloth-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-blue-damask-cloth-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        661
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 700848,
+      "outputBytes": 288050,
+      "weightRatio": 0.411,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-burgundy-velvet-cloth-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-burgundy-velvet-cloth-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        661
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 549988,
+      "outputBytes": 161444,
+      "weightRatio": 0.294,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-grand-banquet-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-grand-banquet-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        414
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 308138,
+      "outputBytes": 105054,
+      "weightRatio": 0.341,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-mahogany-oval-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-mahogany-oval-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        661
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 509010,
+      "outputBytes": 202710,
+      "weightRatio": 0.398,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-marquetry-round-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-marquetry-round-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 936654,
+      "outputBytes": 383450,
+      "weightRatio": 0.409,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/noble-table-walnut-rectangular-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/noble-table-walnut-rectangular-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        661
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 544296,
+      "outputBytes": 189114,
+      "weightRatio": 0.347,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/painting-landscape-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/painting-landscape-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        222
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 33902,
+      "outputBytes": 53838,
+      "weightRatio": 1.588,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/painting-portrait-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/painting-portrait-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        255
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 34728,
+      "outputBytes": 60894,
+      "weightRatio": 1.753,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/painting-still-life-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/painting-still-life-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        354
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 57690,
+      "outputBytes": 108270,
+      "weightRatio": 1.877,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/pew-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/pew-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        453
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 68420,
+      "outputBytes": 68848,
+      "weightRatio": 1.006,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/pew.webp",
+      "output": "images/presets/enhanced-base/scene-assets/pew-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        453
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 87928,
+      "outputBytes": 98216,
+      "weightRatio": 1.117,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/piano-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/piano-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        811
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 166234,
+      "outputBytes": 183514,
+      "weightRatio": 1.104,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/pine-tree.webp",
+      "output": "images/presets/enhanced-base/scene-assets/pine-tree-base-refined-v1.webp",
+      "dimensions": [
+        817,
+        1232
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 123756,
+      "outputBytes": 127722,
+      "weightRatio": 1.032,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/pond.webp",
+      "output": "images/presets/enhanced-base/scene-assets/pond-base-refined-v1.webp",
+      "dimensions": [
+        1110,
+        954
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 143568,
+      "outputBytes": 157452,
+      "weightRatio": 1.097,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/potted-flowers-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/potted-flowers-v2-base-refined-v1.webp",
+      "dimensions": [
+        973,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 186930,
+      "outputBytes": 293436,
+      "weightRatio": 1.57,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/potted-herbs-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/potted-herbs-v2-base-refined-v1.webp",
+      "dimensions": [
+        1003,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 185454,
+      "outputBytes": 268232,
+      "weightRatio": 1.446,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/potted-tree-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/potted-tree-v2-base-refined-v1.webp",
+      "dimensions": [
+        976,
+        1012
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 137284,
+      "outputBytes": 302040,
+      "weightRatio": 2.2,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/ritual-circle.webp",
+      "output": "images/presets/enhanced-base/scene-assets/ritual-circle-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1016
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 258412,
+      "outputBytes": 301406,
+      "weightRatio": 1.166,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/rocks.webp",
+      "output": "images/presets/enhanced-base/scene-assets/rocks-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        915
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 147174,
+      "outputBytes": 207488,
+      "weightRatio": 1.41,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/round-table-four-legs.webp",
+      "output": "images/presets/enhanced-base/scene-assets/round-table-four-legs-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 647378,
+      "outputBytes": 264710,
+      "weightRatio": 0.409,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/rowboat.webp",
+      "output": "images/presets/enhanced-base/scene-assets/rowboat-base-refined-v1.webp",
+      "dimensions": [
+        516,
+        1440
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 134018,
+      "outputBytes": 164206,
+      "weightRatio": 1.225,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/rug-red.webp",
+      "output": "images/presets/enhanced-base/scene-assets/rug-red-base-refined-v1.webp",
+      "dimensions": [
+        491,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 169814,
+      "outputBytes": 164212,
+      "weightRatio": 0.967,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/ruins.webp",
+      "output": "images/presets/enhanced-base/scene-assets/ruins-base-refined-v1.webp",
+      "dimensions": [
+        1100,
+        1127
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 262298,
+      "outputBytes": 277880,
+      "weightRatio": 1.059,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/sacks.webp",
+      "output": "images/presets/enhanced-base/scene-assets/sacks-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        995
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 193120,
+      "outputBytes": 187694,
+      "weightRatio": 0.972,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/short-stairs-down.webp",
+      "output": "images/presets/enhanced-base/scene-assets/short-stairs-down-base-refined-v1.webp",
+      "dimensions": [
+        577,
+        968
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 52384,
+      "outputBytes": 105116,
+      "weightRatio": 2.007,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/short-stairs-up.webp",
+      "output": "images/presets/enhanced-base/scene-assets/short-stairs-up-base-refined-v1.webp",
+      "dimensions": [
+        596,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 116150,
+      "outputBytes": 124294,
+      "weightRatio": 1.07,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/sink-stone.webp",
+      "output": "images/presets/enhanced-base/scene-assets/sink-stone-base-refined-v1.webp",
+      "dimensions": [
+        265,
+        381
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 28534,
+      "outputBytes": 30568,
+      "weightRatio": 1.071,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/sink-wood.webp",
+      "output": "images/presets/enhanced-base/scene-assets/sink-wood-base-refined-v1.webp",
+      "dimensions": [
+        262,
+        381
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 30244,
+      "outputBytes": 30872,
+      "weightRatio": 1.021,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/skeleton.webp",
+      "output": "images/presets/enhanced-base/scene-assets/skeleton-base-refined-v1.webp",
+      "dimensions": [
+        775,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 145334,
+      "outputBytes": 149902,
+      "weightRatio": 1.031,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/sofa-burgundy-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/sofa-burgundy-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 178798,
+      "outputBytes": 178134,
+      "weightRatio": 0.996,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/sofa-green-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/sofa-green-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 162472,
+      "outputBytes": 166316,
+      "weightRatio": 1.024,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-down.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-down-base-refined-v1.webp",
+      "dimensions": [
+        410,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 124764,
+      "outputBytes": 123502,
+      "weightRatio": 0.99,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-stone-square.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-stone-square-base-refined-v1.webp",
+      "dimensions": [
+        342,
+        477
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 48876,
+      "outputBytes": 48912,
+      "weightRatio": 1.001,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-up.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-up-base-refined-v1.webp",
+      "dimensions": [
+        444,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 127510,
+      "outputBytes": 143340,
+      "weightRatio": 1.124,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-wood-rustic.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-wood-rustic-base-refined-v1.webp",
+      "dimensions": [
+        272,
+        480
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 33128,
+      "outputBytes": 35010,
+      "weightRatio": 1.057,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-wood-square.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-wood-square-base-refined-v1.webp",
+      "dimensions": [
+        338,
+        478
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 39768,
+      "outputBytes": 50996,
+      "weightRatio": 1.282,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stairs-wood-straight.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stairs-wood-straight-base-refined-v1.webp",
+      "dimensions": [
+        313,
+        489
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 89204,
+      "outputBytes": 43612,
+      "weightRatio": 0.489,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/standing-column.webp",
+      "output": "images/presets/enhanced-base/scene-assets/standing-column-base-refined-v1.webp",
+      "dimensions": [
+        655,
+        817
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 159800,
+      "outputBytes": 157596,
+      "weightRatio": 0.986,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/standing-stone-broad.webp",
+      "output": "images/presets/enhanced-base/scene-assets/standing-stone-broad-base-refined-v1.webp",
+      "dimensions": [
+        914,
+        714
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 194980,
+      "outputBytes": 190776,
+      "weightRatio": 0.978,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/standing-stone-crooked.webp",
+      "output": "images/presets/enhanced-base/scene-assets/standing-stone-crooked-base-refined-v1.webp",
+      "dimensions": [
+        505,
+        1023
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 126048,
+      "outputBytes": 134938,
+      "weightRatio": 1.071,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/standing-stone-narrow.webp",
+      "output": "images/presets/enhanced-base/scene-assets/standing-stone-narrow-base-refined-v1.webp",
+      "dimensions": [
+        307,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 71636,
+      "outputBytes": 73524,
+      "weightRatio": 1.026,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/statue-child-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/statue-child-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 132578,
+      "outputBytes": 137576,
+      "weightRatio": 1.038,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/statue-knight-topdown-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/statue-knight-topdown-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 316036,
+      "outputBytes": 336888,
+      "weightRatio": 1.066,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/statue-man-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/statue-man-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 279528,
+      "outputBytes": 293252,
+      "weightRatio": 1.049,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/statue-woman-topdown-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/statue-woman-topdown-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 301742,
+      "outputBytes": 318318,
+      "weightRatio": 1.055,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/statue.webp",
+      "output": "images/presets/enhanced-base/scene-assets/statue-base-refined-v1.webp",
+      "dimensions": [
+        629,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 177994,
+      "outputBytes": 175308,
+      "weightRatio": 0.985,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stonehenge-circle.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stonehenge-circle-base-refined-v1.webp",
+      "dimensions": [
+        941,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 105460,
+      "outputBytes": 106898,
+      "weightRatio": 1.014,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stonehenge-fangs.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stonehenge-fangs-base-refined-v1.webp",
+      "dimensions": [
+        715,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 115232,
+      "outputBytes": 119164,
+      "weightRatio": 1.034,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stonehenge-trilithon-circle-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stonehenge-trilithon-circle-v2-base-refined-v1.webp",
+      "dimensions": [
+        938,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 176586,
+      "outputBytes": 185360,
+      "weightRatio": 1.05,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stool-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stool-v2-base-refined-v1.webp",
+      "dimensions": [
+        1005,
+        1017
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 81272,
+      "outputBytes": 238956,
+      "weightRatio": 2.94,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/stump.webp",
+      "output": "images/presets/enhanced-base/scene-assets/stump-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        738
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 128410,
+      "outputBytes": 131350,
+      "weightRatio": 1.023,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/table.webp",
+      "output": "images/presets/enhanced-base/scene-assets/table-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        661
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 94542,
+      "outputBytes": 161952,
+      "weightRatio": 1.713,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-alchemy-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-alchemy-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 374130,
+      "outputBytes": 382684,
+      "weightRatio": 1.023,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-arcane-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-arcane-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 371334,
+      "outputBytes": 361740,
+      "weightRatio": 0.974,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-books-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-books-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 290506,
+      "outputBytes": 294376,
+      "weightRatio": 1.013,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-cartography-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-cartography-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 337842,
+      "outputBytes": 322624,
+      "weightRatio": 0.955,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-jewelry-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-jewelry-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 291424,
+      "outputBytes": 295584,
+      "weightRatio": 1.014,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-medicine-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-medicine-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 376056,
+      "outputBytes": 383814,
+      "weightRatio": 1.021,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-metalworking-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-metalworking-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 265758,
+      "outputBytes": 263538,
+      "weightRatio": 0.992,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-torture-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-torture-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 292360,
+      "outputBytes": 280830,
+      "weightRatio": 0.961,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-woodworking-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-woodworking-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 318064,
+      "outputBytes": 322972,
+      "weightRatio": 1.015,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tabletop-set-writing-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tabletop-set-writing-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 332814,
+      "outputBytes": 327950,
+      "weightRatio": 0.985,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-ale.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-ale-base-refined-v1.webp",
+      "dimensions": [
+        989,
+        998
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 99062,
+      "outputBytes": 178030,
+      "weightRatio": 1.797,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-breakfast.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-breakfast-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        862
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 116076,
+      "outputBytes": 164626,
+      "weightRatio": 1.418,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-cheese-fruit.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-cheese-fruit-base-refined-v1.webp",
+      "dimensions": [
+        979,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 192252,
+      "outputBytes": 310278,
+      "weightRatio": 1.614,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-empty.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-empty-base-refined-v1.webp",
+      "dimensions": [
+        979,
+        1014
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 95688,
+      "outputBytes": 186294,
+      "weightRatio": 1.947,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-feast-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-feast-v2-base-refined-v1.webp",
+      "dimensions": [
+        978,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 239270,
+      "outputBytes": 277444,
+      "weightRatio": 1.16,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-fish.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-fish-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        643
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 131844,
+      "outputBytes": 171046,
+      "weightRatio": 1.297,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-roast.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-roast-base-refined-v1.webp",
+      "dimensions": [
+        817,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 105480,
+      "outputBytes": 176608,
+      "weightRatio": 1.674,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-stew.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-stew-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        751
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 107296,
+      "outputBytes": 156148,
+      "weightRatio": 1.455,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-tea.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-tea-base-refined-v1.webp",
+      "dimensions": [
+        968,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 108156,
+      "outputBytes": 217926,
+      "weightRatio": 2.015,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tableware-wine.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tableware-wine-base-refined-v1.webp",
+      "dimensions": [
+        973,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 170442,
+      "outputBytes": 243872,
+      "weightRatio": 1.431,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/throne.webp",
+      "output": "images/presets/enhanced-base/scene-assets/throne-base-refined-v1.webp",
+      "dimensions": [
+        615,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 153732,
+      "outputBytes": 152048,
+      "weightRatio": 0.989,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder-double-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-double-v3-base-refined-v1.webp",
+      "dimensions": [
+        242,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 26178,
+      "outputBytes": 25868,
+      "weightRatio": 0.988,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder-double-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-double-v4-base-refined-v1.webp",
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 584118,
+      "outputBytes": 629248,
+      "weightRatio": 1.077,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder-square-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-square-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 316472,
+      "outputBytes": 309734,
+      "weightRatio": 0.979,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder-square-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-square-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 371054,
+      "outputBytes": 402710,
+      "weightRatio": 1.085,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder-square-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-square-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 349166,
+      "outputBytes": 386824,
+      "weightRatio": 1.108,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-alder.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-alder-base-refined-v1.webp",
+      "dimensions": [
+        242,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 24630,
+      "outputBytes": 27044,
+      "weightRatio": 1.098,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak-double-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-double-v3-base-refined-v1.webp",
+      "dimensions": [
+        241,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 29846,
+      "outputBytes": 32742,
+      "weightRatio": 1.097,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak-double-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-double-v4-base-refined-v1.webp",
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 524538,
+      "outputBytes": 555226,
+      "weightRatio": 1.059,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak-square-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-square-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 394028,
+      "outputBytes": 382710,
+      "weightRatio": 0.971,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak-square-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-square-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 293680,
+      "outputBytes": 317552,
+      "weightRatio": 1.081,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak-square-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-square-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 275096,
+      "outputBytes": 246770,
+      "weightRatio": 0.897,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-oak.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-oak-base-refined-v1.webp",
+      "dimensions": [
+        241,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 26664,
+      "outputBytes": 29264,
+      "weightRatio": 1.098,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut-double-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-double-v3-base-refined-v1.webp",
+      "dimensions": [
+        242,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 23684,
+      "outputBytes": 26870,
+      "weightRatio": 1.135,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut-double-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-double-v4-base-refined-v1.webp",
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 428914,
+      "outputBytes": 457780,
+      "weightRatio": 1.067,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut-square-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-square-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 303828,
+      "outputBytes": 323668,
+      "weightRatio": 1.065,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut-square-v3.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-square-v3-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 277698,
+      "outputBytes": 290542,
+      "weightRatio": 1.046,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut-square-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-square-v4-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 262600,
+      "outputBytes": 283118,
+      "weightRatio": 1.078,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/toilet-board-walnut.webp",
+      "output": "images/presets/enhanced-base/scene-assets/toilet-board-walnut-base-refined-v1.webp",
+      "dimensions": [
+        242,
+        395
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 21706,
+      "outputBytes": 28488,
+      "weightRatio": 1.312,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/torch.webp",
+      "output": "images/presets/enhanced-base/scene-assets/torch-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        462
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 31806,
+      "outputBytes": 33060,
+      "weightRatio": 1.039,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/trapdoor.webp",
+      "output": "images/presets/enhanced-base/scene-assets/trapdoor-base-refined-v1.webp",
+      "dimensions": [
+        744,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 150984,
+      "outputBytes": 178042,
+      "weightRatio": 1.179,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tree.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tree-base-refined-v1.webp",
+      "dimensions": [
+        1142,
+        1140
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 313118,
+      "outputBytes": 310834,
+      "weightRatio": 0.993,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/tub.webp",
+      "output": "images/presets/enhanced-base/scene-assets/tub-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        666
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 134218,
+      "outputBytes": 140798,
+      "weightRatio": 1.049,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wagon-covered-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wagon-covered-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 216026,
+      "outputBytes": 224838,
+      "weightRatio": 1.041,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wagon-freight-topdown-v1.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wagon-freight-topdown-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 256096,
+      "outputBytes": 270974,
+      "weightRatio": 1.058,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-gear-large-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-gear-large-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 180884,
+      "outputBytes": 180978,
+      "weightRatio": 1.001,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-gear-small-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-gear-small-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 272942,
+      "outputBytes": 287792,
+      "weightRatio": 1.054,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-gear-small-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-gear-small-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 28468,
+      "outputBytes": 26198,
+      "weightRatio": 0.92,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-gears-cluster-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-gears-cluster-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        768,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 190154,
+      "outputBytes": 173082,
+      "weightRatio": 0.91,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-lever-brass-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-lever-brass-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 104266,
+      "outputBytes": 97630,
+      "weightRatio": 0.936,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-lever-brass-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-lever-brass-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 17330,
+      "outputBytes": 15684,
+      "weightRatio": 0.905,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-lever-iron-front-v2.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-lever-iron-front-v2-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 70204,
+      "outputBytes": 68764,
+      "weightRatio": 0.979,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-lever-iron-topdown-v4.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-lever-iron-topdown-v4-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        768
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 16410,
+      "outputBytes": 15178,
+      "weightRatio": 0.925,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-torch-bracket.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-torch-bracket-base-refined-v1.webp",
+      "dimensions": [
+        325,
+        458
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 48130,
+      "outputBytes": 19630,
+      "weightRatio": 0.408,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/wall-torch-iron.webp",
+      "output": "images/presets/enhanced-base/scene-assets/wall-torch-iron-base-refined-v1.webp",
+      "dimensions": [
+        208,
+        432
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 17882,
+      "outputBytes": 18996,
+      "weightRatio": 1.062,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/water-puddle.webp",
+      "output": "images/presets/enhanced-base/scene-assets/water-puddle-base-refined-v1.webp",
+      "dimensions": [
+        1020,
+        772
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 91314,
+      "outputBytes": 100930,
+      "weightRatio": 1.105,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-axes-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-axes-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 171438,
+      "outputBytes": 81226,
+      "weightRatio": 0.474,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-bow-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-bow-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 178294,
+      "outputBytes": 88696,
+      "weightRatio": 0.497,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-bows-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-bows-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 189440,
+      "outputBytes": 87588,
+      "weightRatio": 0.462,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-crossbows-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-crossbows-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 172360,
+      "outputBytes": 83210,
+      "weightRatio": 0.483,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-mixed-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-mixed-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 164356,
+      "outputBytes": 67272,
+      "weightRatio": 0.409,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-spears-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-spears-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 196276,
+      "outputBytes": 94002,
+      "weightRatio": 0.479,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
+      "output": "images/presets/enhanced-base/scene-assets/weapon-rack-swords-straight-standing-topdown-v5-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 155828,
+      "outputBytes": 70536,
+      "weightRatio": 0.453,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-assets/well.webp",
+      "output": "images/presets/enhanced-base/scene-assets/well-base-refined-v1.webp",
+      "dimensions": [
+        952,
+        1144
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 197850,
+      "outputBytes": 220250,
+      "weightRatio": 1.113,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/brick-red-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/brick-red-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 20603,
+      "outputBytes": 102371,
+      "weightRatio": 4.969,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-blue-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-blue-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 51026,
+      "outputBytes": 61342,
+      "weightRatio": 1.202,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-blue-ornate-floor-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-blue-ornate-floor-v2-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 84012,
+      "outputBytes": 32042,
+      "weightRatio": 0.381,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-corner-blue-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-corner-blue-v2-base-refined-v1.webp",
+      "dimensions": [
+        32,
+        32
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1672,
+      "outputBytes": 1472,
+      "weightRatio": 0.88,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-corner-red-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-corner-red-v2-base-refined-v1.webp",
+      "dimensions": [
+        32,
+        32
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1684,
+      "outputBytes": 1390,
+      "weightRatio": 0.825,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-edge-blue-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-edge-blue-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        32
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 84898,
+      "outputBytes": 28300,
+      "weightRatio": 0.333,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-edge-red-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-edge-red-v2-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        32
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 79064,
+      "outputBytes": 28948,
+      "weightRatio": 0.366,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-green-gold-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-green-gold-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 71116,
+      "outputBytes": 30288,
+      "weightRatio": 0.426,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-red-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-red-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47762,
+      "outputBytes": 59140,
+      "weightRatio": 1.238,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/carpet-red-ornate-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/carpet-red-ornate-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 69142,
+      "outputBytes": 28766,
+      "weightRatio": 0.416,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cave-brown-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/cave-brown-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 53187,
+      "outputBytes": 66769,
+      "weightRatio": 1.255,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cave-grey-pebbles-floor-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cave-grey-pebbles-floor-v2-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47354,
+      "outputBytes": 18456,
+      "weightRatio": 0.39,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-corner-above-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-corner-above-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 367546,
+      "outputBytes": 363020,
+      "weightRatio": 0.988,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-corner-below-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-corner-below-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 407822,
+      "outputBytes": 408778,
+      "weightRatio": 1.002,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-patch-above-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-patch-above-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 787102,
+      "outputBytes": 781050,
+      "weightRatio": 0.992,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-patch-below-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-patch-below-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 973418,
+      "outputBytes": 960256,
+      "weightRatio": 0.986,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-strip-above-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-strip-above-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 281858,
+      "outputBytes": 280486,
+      "weightRatio": 0.995,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/cobweb-strip-below-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/cobweb-strip-below-v1-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        543
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 309492,
+      "outputBytes": 310676,
+      "weightRatio": 1.004,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/flagstone-grey-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/flagstone-grey-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 48598,
+      "outputBytes": 65240,
+      "weightRatio": 1.342,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/flowering-shrubs-dense-floor-v1.webp",
+      "output": "images/presets/enhanced-base/scene-floors/flowering-shrubs-dense-floor-v1-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 25318,
+      "outputBytes": 24062,
+      "weightRatio": 0.95,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-cabbage-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-cabbage-floor-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 288276,
+      "outputBytes": 414960,
+      "weightRatio": 1.439,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-carrot-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-carrot-floor-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 391450,
+      "outputBytes": 449814,
+      "weightRatio": 1.149,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-crop-cabbage-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-crop-cabbage-v2-base-refined-v1.webp",
+      "dimensions": [
+        367,
+        368
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 16530,
+      "outputBytes": 35872,
+      "weightRatio": 2.17,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-crop-carrot-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-crop-carrot-v2-base-refined-v1.webp",
+      "dimensions": [
+        373,
+        384
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 50330,
+      "outputBytes": 54500,
+      "weightRatio": 1.083,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-crop-herbs-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-crop-herbs-v2-base-refined-v1.webp",
+      "dimensions": [
+        371,
+        369
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 27174,
+      "outputBytes": 37568,
+      "weightRatio": 1.382,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-crop-rice-v2.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-crop-rice-v2-base-refined-v1.webp",
+      "dimensions": [
+        338,
+        373
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 27006,
+      "outputBytes": 32838,
+      "weightRatio": 1.216,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-herbs-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-herbs-floor-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 290912,
+      "outputBytes": 398350,
+      "weightRatio": 1.369,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-rice-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-rice-floor-base-refined-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 402512,
+      "outputBytes": 470554,
+      "weightRatio": 1.169,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-rice-water-v5.png",
+      "output": "images/presets/enhanced-base/scene-floors/garden-rice-water-v5-base-refined-v1.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1776398,
+      "outputBytes": 2182719,
+      "weightRatio": 1.229,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/garden-soil-soft-v3.webp",
+      "output": "images/presets/enhanced-base/scene-floors/garden-soil-soft-v3-base-refined-v1.webp",
+      "dimensions": [
+        512,
+        512
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 49372,
+      "outputBytes": 59614,
+      "weightRatio": 1.207,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/grass-meadow-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/grass-meadow-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 82463,
+      "outputBytes": 79569,
+      "weightRatio": 0.965,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/path-cobblestone-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/path-cobblestone-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 66531,
+      "outputBytes": 87071,
+      "weightRatio": 1.309,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/path-dirt-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/path-dirt-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 53699,
+      "outputBytes": 62339,
+      "weightRatio": 1.161,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/roof-shingles-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/roof-shingles-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 46976,
+      "outputBytes": 18340,
+      "weightRatio": 0.39,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/roof-thatch-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/roof-thatch-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 65368,
+      "outputBytes": 25466,
+      "weightRatio": 0.39,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/roof-tiles-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/roof-tiles-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 61688,
+      "outputBytes": 26818,
+      "weightRatio": 0.435,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-boards-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-boards-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 11680,
+      "outputBytes": 11496,
+      "weightRatio": 0.984,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-brick-grey-boards-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-brick-grey-boards-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14424,
+      "outputBytes": 14670,
+      "weightRatio": 1.017,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-brick-grey-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-brick-grey-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 5542,
+      "outputBytes": 5652,
+      "weightRatio": 1.02,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-brick-red-boards-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-brick-red-boards-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 13766,
+      "outputBytes": 13744,
+      "weightRatio": 0.998,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-brick-red-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-brick-red-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6256,
+      "outputBytes": 6242,
+      "weightRatio": 0.998,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-01-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-01-v16-base-refined-v1.webp",
+      "dimensions": [
+        107,
+        107
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9710,
+      "outputBytes": 6256,
+      "weightRatio": 0.644,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-02-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-02-v16-base-refined-v1.webp",
+      "dimensions": [
+        107,
+        88
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7666,
+      "outputBytes": 5114,
+      "weightRatio": 0.667,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-03-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-03-v16-base-refined-v1.webp",
+      "dimensions": [
+        88,
+        107
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7710,
+      "outputBytes": 5052,
+      "weightRatio": 0.655,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-04-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-04-v16-base-refined-v1.webp",
+      "dimensions": [
+        107,
+        163
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 13338,
+      "outputBytes": 8354,
+      "weightRatio": 0.626,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-05-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-05-v16-base-refined-v1.webp",
+      "dimensions": [
+        130,
+        157
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14902,
+      "outputBytes": 9704,
+      "weightRatio": 0.651,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-06-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-06-v16-base-refined-v1.webp",
+      "dimensions": [
+        130,
+        157
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14866,
+      "outputBytes": 9694,
+      "weightRatio": 0.652,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-07-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-07-v16-base-refined-v1.webp",
+      "dimensions": [
+        165,
+        115
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14430,
+      "outputBytes": 8776,
+      "weightRatio": 0.608,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-08-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-08-v16-base-refined-v1.webp",
+      "dimensions": [
+        157,
+        130
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14692,
+      "outputBytes": 9436,
+      "weightRatio": 0.642,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-09-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-09-v16-base-refined-v1.webp",
+      "dimensions": [
+        293,
+        197
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 45302,
+      "outputBytes": 28650,
+      "weightRatio": 0.632,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-10-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-10-v16-base-refined-v1.webp",
+      "dimensions": [
+        198,
+        289
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 44462,
+      "outputBytes": 28344,
+      "weightRatio": 0.637,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-11-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-11-v16-base-refined-v1.webp",
+      "dimensions": [
+        291,
+        209
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 45406,
+      "outputBytes": 28476,
+      "weightRatio": 0.627,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-boards-12-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-boards-12-v16-base-refined-v1.webp",
+      "dimensions": [
+        203,
+        274
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 42946,
+      "outputBytes": 27158,
+      "weightRatio": 0.632,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-01-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-01-v16-base-refined-v1.webp",
+      "dimensions": [
+        104,
+        104
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9368,
+      "outputBytes": 6004,
+      "weightRatio": 0.641,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-02-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-02-v16-base-refined-v1.webp",
+      "dimensions": [
+        105,
+        104
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9440,
+      "outputBytes": 6060,
+      "weightRatio": 0.642,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-03-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-03-v16-base-refined-v1.webp",
+      "dimensions": [
+        104,
+        106
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9990,
+      "outputBytes": 6368,
+      "weightRatio": 0.637,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-04-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-04-v16-base-refined-v1.webp",
+      "dimensions": [
+        94,
+        93
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7042,
+      "outputBytes": 4690,
+      "weightRatio": 0.666,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-05-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-05-v16-base-refined-v1.webp",
+      "dimensions": [
+        155,
+        173
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 20234,
+      "outputBytes": 12328,
+      "weightRatio": 0.609,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-06-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-06-v16-base-refined-v1.webp",
+      "dimensions": [
+        165,
+        175
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 27626,
+      "outputBytes": 17748,
+      "weightRatio": 0.642,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-07-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-07-v16-base-refined-v1.webp",
+      "dimensions": [
+        165,
+        175
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 27700,
+      "outputBytes": 17710,
+      "weightRatio": 0.639,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-08-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-08-v16-base-refined-v1.webp",
+      "dimensions": [
+        175,
+        164
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 27176,
+      "outputBytes": 17898,
+      "weightRatio": 0.659,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-09-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-09-v16-base-refined-v1.webp",
+      "dimensions": [
+        166,
+        153
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 17570,
+      "outputBytes": 11272,
+      "weightRatio": 0.642,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-10-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-10-v16-base-refined-v1.webp",
+      "dimensions": [
+        222,
+        262
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 47142,
+      "outputBytes": 30576,
+      "weightRatio": 0.649,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-11-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-11-v16-base-refined-v1.webp",
+      "dimensions": [
+        248,
+        194
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 39652,
+      "outputBytes": 25350,
+      "weightRatio": 0.639,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-grey-12-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-grey-12-v16-base-refined-v1.webp",
+      "dimensions": [
+        185,
+        246
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 39386,
+      "outputBytes": 25474,
+      "weightRatio": 0.647,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-01-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-01-v16-base-refined-v1.webp",
+      "dimensions": [
+        98,
+        98
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9586,
+      "outputBytes": 6250,
+      "weightRatio": 0.652,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-02-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-02-v16-base-refined-v1.webp",
+      "dimensions": [
+        102,
+        85
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9614,
+      "outputBytes": 6106,
+      "weightRatio": 0.635,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-03-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-03-v16-base-refined-v1.webp",
+      "dimensions": [
+        98,
+        97
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9450,
+      "outputBytes": 6268,
+      "weightRatio": 0.663,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-04-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-04-v16-base-refined-v1.webp",
+      "dimensions": [
+        92,
+        98
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7828,
+      "outputBytes": 5168,
+      "weightRatio": 0.66,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-05-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-05-v16-base-refined-v1.webp",
+      "dimensions": [
+        141,
+        167
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 21142,
+      "outputBytes": 12440,
+      "weightRatio": 0.588,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-06-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-06-v16-base-refined-v1.webp",
+      "dimensions": [
+        167,
+        141
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 20922,
+      "outputBytes": 12556,
+      "weightRatio": 0.6,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-07-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-07-v16-base-refined-v1.webp",
+      "dimensions": [
+        145,
+        174
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 23428,
+      "outputBytes": 14004,
+      "weightRatio": 0.598,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-08-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-08-v16-base-refined-v1.webp",
+      "dimensions": [
+        141,
+        167
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 21124,
+      "outputBytes": 12454,
+      "weightRatio": 0.59,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-09-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-09-v16-base-refined-v1.webp",
+      "dimensions": [
+        142,
+        130
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 18056,
+      "outputBytes": 10874,
+      "weightRatio": 0.602,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-10-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-10-v16-base-refined-v1.webp",
+      "dimensions": [
+        201,
+        266
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 57856,
+      "outputBytes": 35508,
+      "weightRatio": 0.614,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-11-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-11-v16-base-refined-v1.webp",
+      "dimensions": [
+        267,
+        201
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 57894,
+      "outputBytes": 35170,
+      "weightRatio": 0.607,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-brick-red-12-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-brick-red-12-v16-base-refined-v1.webp",
+      "dimensions": [
+        267,
+        201
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 57910,
+      "outputBytes": 35038,
+      "weightRatio": 0.605,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-01-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-01-v16-base-refined-v1.webp",
+      "dimensions": [
+        93,
+        99
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6912,
+      "outputBytes": 4624,
+      "weightRatio": 0.669,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-02-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-02-v16-base-refined-v1.webp",
+      "dimensions": [
+        99,
+        93
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6942,
+      "outputBytes": 4678,
+      "weightRatio": 0.674,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-03-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-03-v16-base-refined-v1.webp",
+      "dimensions": [
+        93,
+        99
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7030,
+      "outputBytes": 4614,
+      "weightRatio": 0.656,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-04-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-04-v16-base-refined-v1.webp",
+      "dimensions": [
+        99,
+        93
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6886,
+      "outputBytes": 4636,
+      "weightRatio": 0.673,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-05-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-05-v16-base-refined-v1.webp",
+      "dimensions": [
+        136,
+        132
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 13086,
+      "outputBytes": 7940,
+      "weightRatio": 0.607,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-06-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-06-v16-base-refined-v1.webp",
+      "dimensions": [
+        126,
+        135
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 12570,
+      "outputBytes": 8124,
+      "weightRatio": 0.646,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-07-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-07-v16-base-refined-v1.webp",
+      "dimensions": [
+        126,
+        135
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 12612,
+      "outputBytes": 8152,
+      "weightRatio": 0.646,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-08-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-08-v16-base-refined-v1.webp",
+      "dimensions": [
+        116,
+        111
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9702,
+      "outputBytes": 6278,
+      "weightRatio": 0.647,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-09-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-09-v16-base-refined-v1.webp",
+      "dimensions": [
+        112,
+        116
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9780,
+      "outputBytes": 6074,
+      "weightRatio": 0.621,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-10-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-10-v16-base-refined-v1.webp",
+      "dimensions": [
+        209,
+        280
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 40738,
+      "outputBytes": 26284,
+      "weightRatio": 0.645,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-11-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-11-v16-base-refined-v1.webp",
+      "dimensions": [
+        281,
+        208
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 40514,
+      "outputBytes": 25102,
+      "weightRatio": 0.62,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-cutout-stone-12-v16.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-cutout-stone-12-v16-base-refined-v1.webp",
+      "dimensions": [
+        236,
+        169
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 34508,
+      "outputBytes": 20496,
+      "weightRatio": 0.594,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-stone-boards-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-stone-boards-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14162,
+      "outputBytes": 14110,
+      "weightRatio": 0.996,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/rubble-stone-floor-v9.webp",
+      "output": "images/presets/enhanced-base/scene-floors/rubble-stone-floor-v9-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 8852,
+      "outputBytes": 9212,
+      "weightRatio": 1.041,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/sea-deep-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/sea-deep-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 44580,
+      "outputBytes": 17198,
+      "weightRatio": 0.386,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/sea-shallow-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/sea-shallow-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 58034,
+      "outputBytes": 14558,
+      "weightRatio": 0.251,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/sea-stormy-floor.webp",
+      "output": "images/presets/enhanced-base/scene-floors/sea-stormy-floor-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 52816,
+      "outputBytes": 19582,
+      "weightRatio": 0.371,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-brick-red.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-brick-red-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 74714,
+      "outputBytes": 87120,
+      "weightRatio": 1.166,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-flagstone-grey.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-flagstone-grey-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 56689,
+      "outputBytes": 71528,
+      "weightRatio": 1.262,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-uneven-limestone.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-uneven-limestone-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 72231,
+      "outputBytes": 97570,
+      "weightRatio": 1.351,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-wood-alder.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-wood-alder-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 62644,
+      "outputBytes": 83556,
+      "weightRatio": 1.334,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-wood-outdoor-brown.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-wood-outdoor-brown-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 83518,
+      "outputBytes": 111518,
+      "weightRatio": 1.335,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/stairs-wood-walnut.png",
+      "output": "images/presets/enhanced-base/scene-floors/stairs-wood-walnut-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 55557,
+      "outputBytes": 68004,
+      "weightRatio": 1.224,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/swamp-floor-v1.png",
+      "output": "images/presets/enhanced-base/scene-floors/swamp-floor-v1-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 50439,
+      "outputBytes": 62227,
+      "weightRatio": 1.234,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/uneven-limestone-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/uneven-limestone-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 58496,
+      "outputBytes": 73410,
+      "weightRatio": 1.255,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/wood-alder-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/wood-alder-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 15788,
+      "outputBytes": 89046,
+      "weightRatio": 5.64,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/wood-outdoor-brown-v3.png",
+      "output": "images/presets/enhanced-base/scene-floors/wood-outdoor-brown-v3-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 77677,
+      "outputBytes": 102239,
+      "weightRatio": 1.316,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-floors/wood-walnut-floor.png",
+      "output": "images/presets/enhanced-base/scene-floors/wood-walnut-floor-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 15971,
+      "outputBytes": 76226,
+      "weightRatio": 4.773,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-curtain-blue.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-curtain-blue-base-refined-v1.webp",
+      "dimensions": [
+        256,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 10852,
+      "outputBytes": 10622,
+      "weightRatio": 0.979,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-curtain-gold.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-curtain-gold-base-refined-v1.webp",
+      "dimensions": [
+        256,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 12036,
+      "outputBytes": 14994,
+      "weightRatio": 1.246,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-curtain-red.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-curtain-red-base-refined-v1.webp",
+      "dimensions": [
+        256,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 12860,
+      "outputBytes": 14060,
+      "weightRatio": 1.093,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v2.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v2-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7138,
+      "outputBytes": 6362,
+      "weightRatio": 0.891,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v3.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v3-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7370,
+      "outputBytes": 6334,
+      "weightRatio": 0.859,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v4.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v4-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7840,
+      "outputBytes": 7152,
+      "weightRatio": 0.912,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v5.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v5-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 9044,
+      "outputBytes": 8214,
+      "weightRatio": 0.908,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v6.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v6-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 14534,
+      "outputBytes": 13712,
+      "weightRatio": 0.943,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog-v7.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-v7-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 11890,
+      "outputBytes": 11652,
+      "weightRatio": 0.98,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-green-fog.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-green-fog-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 21296,
+      "outputBytes": 9574,
+      "weightRatio": 0.45,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/border-wood-stone-v2.webp",
+      "output": "images/presets/enhanced-base/scene-walls/border-wood-stone-v2-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 2478,
+      "outputBytes": 2964,
+      "weightRatio": 1.196,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/brick-grey-dense.webp",
+      "output": "images/presets/enhanced-base/scene-walls/brick-grey-dense-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 2196,
+      "outputBytes": 5648,
+      "weightRatio": 2.572,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/brick-grey.webp",
+      "output": "images/presets/enhanced-base/scene-walls/brick-grey-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1920,
+      "outputBytes": 3038,
+      "weightRatio": 1.582,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/brick-red.webp",
+      "output": "images/presets/enhanced-base/scene-walls/brick-red-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 1892,
+      "outputBytes": 4054,
+      "weightRatio": 2.143,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/cliff-coastal-stone-v3.webp",
+      "output": "images/presets/enhanced-base/scene-walls/cliff-coastal-stone-v3-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 25626,
+      "outputBytes": 12610,
+      "weightRatio": 0.492,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/cliff-limestone.webp",
+      "output": "images/presets/enhanced-base/scene-walls/cliff-limestone-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 7998,
+      "outputBytes": 8758,
+      "weightRatio": 1.095,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/cliff-sandy-v2.webp",
+      "output": "images/presets/enhanced-base/scene-walls/cliff-sandy-v2-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 26324,
+      "outputBytes": 13466,
+      "weightRatio": 0.512,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/cliff-volcanic-v3.webp",
+      "output": "images/presets/enhanced-base/scene-walls/cliff-volcanic-v3-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 21386,
+      "outputBytes": 11204,
+      "weightRatio": 0.524,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/hedge-maze.webp",
+      "output": "images/presets/enhanced-base/scene-walls/hedge-maze-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 16932,
+      "outputBytes": 7964,
+      "weightRatio": 0.47,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/metal-iron.png",
+      "output": "images/presets/enhanced-base/scene-walls/metal-iron-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 8981,
+      "outputBytes": 20820,
+      "weightRatio": 2.318,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/window-iron.webp",
+      "output": "images/presets/enhanced-base/scene-walls/window-iron-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 13156,
+      "outputBytes": 4592,
+      "weightRatio": 0.349,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/window-stained.webp",
+      "output": "images/presets/enhanced-base/scene-walls/window-stained-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 20746,
+      "outputBytes": 8652,
+      "weightRatio": 0.417,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/window-wood.webp",
+      "output": "images/presets/enhanced-base/scene-walls/window-wood-base-refined-v1.webp",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 15454,
+      "outputBytes": 5510,
+      "weightRatio": 0.357,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/wood-alder.png",
+      "output": "images/presets/enhanced-base/scene-walls/wood-alder-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6106,
+      "outputBytes": 20054,
+      "weightRatio": 3.284,
+      "webpQuality": null
+    },
+    {
+      "logical": "scene-walls/wood-nut.png",
+      "output": "images/presets/enhanced-base/scene-walls/wood-nut-base-refined-v1.png",
+      "dimensions": [
+        200,
+        200
+      ],
+      "detailSource": "existing refined output",
+      "alphaIoU": 1.0,
+      "originalBytes": 6022,
+      "outputBytes": 20206,
+      "weightRatio": 3.355,
+      "webpQuality": null
+    }
+  ],
+  "failures": []
+}

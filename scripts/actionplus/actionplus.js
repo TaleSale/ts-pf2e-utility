@@ -241,6 +241,16 @@ Hooks.once("init", () => {
     },
   });
 
+  game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("affliction"), {
+    name: i18nKey(`${SETTINGS_ROOT}.Affliction.Name`),
+    hint: i18nKey(`${SETTINGS_ROOT}.Affliction.Hint`),
+    scope: "world",
+    config: true,
+    default: true,
+    type: Boolean,
+    onChange: () => rerenderOpenActionSheets(),
+  });
+
   game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey("shoulderToShoulder"), {
     name: i18nKey(`${SETTINGS_ROOT}.ShoulderToShoulder.Name`),
     hint: i18nKey(`${SETTINGS_ROOT}.ShoulderToShoulder.Hint`),

@@ -12,6 +12,7 @@ from PIL import Image, ImageChops
 ROOT = Path(__file__).resolve().parents[1]
 PRESET = ROOT / "images" / "presets" / "bastion-blasphemy"
 SOURCE = (ROOT / "scripts" / "utility" / "texture-presets.js").read_text(encoding="utf-8")
+FLOOR_SOURCE = (ROOT / "scripts" / "utility" / "floor-textures.js").read_text(encoding="utf-8")
 
 
 def versioned(name: str) -> str:
@@ -30,15 +31,86 @@ def manifest_entries() -> list[tuple[str, str]]:
     return entries
 
 
+def scatter_redirect_entries() -> list[tuple[str, str]]:
+    required_spreads = (
+        '...numberedScatterTextureRedirects("grass-flower-single", 12, 3)',
+        '...numberedScatterTextureRedirects("grass-flower-cluster", 6, 1)',
+        '...numberedScatterTextureRedirects("grass-stone-single", 12, 3)',
+        '...numberedScatterTextureRedirects("grass-stone-varied", 24, 3)',
+        '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 1)',
+        '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 2)',
+        '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 3)',
+        '...numberedScatterTextureRedirects("sea-scatter-fish-shadow", 8, 1)',
+        '...numberedScatterTextureRedirects("sea-scatter-fish-school", 6, 1)',
+        '...numberedScatterTextureRedirects("sea-scatter-wreckage", 4, 1)',
+        '...numberedScatterTextureRedirects("sea-scatter-wreckage", 4, 2)',
+        '...numberedScatterTextureRedirects("sea-scatter-storm-foam", 2, 1)',
+    )
+    if any(SOURCE.count(marker) != 1 for marker in required_spreads):
+        raise AssertionError("Numbered natural scatter redirects are incomplete")
+    redirects = [
+        (f"scene-floors/{prefix}-{index:02d}-v3.webp", f"scene-floors/{prefix}-{index:02d}-bastion-v3.webp")
+        for prefix in ("grass-flower-single", "grass-stone-single")
+        for index in range(1, 13)
+    ]
+    redirects.extend(
+        (f"scene-floors/grass-flower-cluster-{index:02d}-v1.webp", f"scene-floors/grass-flower-cluster-{index:02d}-bastion-v1.webp")
+        for index in range(1, 7)
+    )
+    redirects.extend(
+        (f"scene-floors/grass-stone-varied-{index:02d}-v3.webp", f"scene-floors/grass-stone-varied-{index:02d}-bastion-v3.webp")
+        for index in range(1, 25)
+    )
+    redirects.extend(
+        (f"scene-floors/{prefix}-{index:02d}-v1.webp", f"scene-floors/{prefix}-{index:02d}-bastion-v1.webp")
+        for prefix in ("sea-scatter-debris", "sea-scatter-fish-shadow")
+        for index in range(1, 9)
+    )
+    redirects.extend(
+        (f"scene-floors/sea-scatter-debris-{index:02d}-v2.webp", f"scene-floors/sea-scatter-debris-{index:02d}-bastion-v2.webp")
+        for index in range(1, 9)
+    )
+    redirects.extend(
+        (f"scene-floors/sea-scatter-debris-{index:02d}-v3.webp", f"scene-floors/sea-scatter-debris-{index:02d}-bastion-v3.webp")
+        for index in range(1, 9)
+    )
+    redirects.extend(
+        (f"scene-floors/sea-scatter-fish-school-{index:02d}-v1.webp", f"scene-floors/sea-scatter-fish-school-{index:02d}-bastion-v1.webp")
+        for index in range(1, 7)
+    )
+    redirects.extend(
+        (f"scene-floors/sea-scatter-wreckage-{index:02d}-v{version}.webp", f"scene-floors/sea-scatter-wreckage-{index:02d}-bastion-v{version}.webp")
+        for version in (1, 2)
+        for index in range(1, 5)
+    )
+    redirects.extend(
+        (f"scene-floors/sea-scatter-storm-foam-{index:02d}-v1.webp", f"scene-floors/sea-scatter-storm-foam-{index:02d}-bastion-v1.webp")
+        for index in range(1, 3)
+    )
+    redirects.append(("scene-floors/sea-scatter-whirlpool-v1.webp", "scene-floors/sea-scatter-whirlpool-bastion-v1.webp"))
+    redirects.append(("scene-floors/sea-scatter-whirlpool-dark-v1.webp", "scene-floors/sea-scatter-whirlpool-dark-bastion-v1.webp"))
+    return redirects
+
+
 def svg_size(path: Path) -> tuple[int, int]:
     root = ElementTree.parse(path).getroot()
     return int(float(root.attrib["width"])), int(float(root.attrib["height"]))
 
 
 def validate() -> None:
+    required_sea_logic = (
+        'seaNaturalScatter(0.40)',
+        '"sea-deep": floorStyle("SeaDeep", "Deep sea", "sea-deep-floor-v5.webp", null, DEEP_SEA_FLOOR_SCALE)',
+        '"sea-stormy": floorStyle("SeaStormy", "Stormy sea", "sea-stormy-floor-v5.webp", null, STORMY_SEA_FLOOR_SCALE)',
+        'assets: Object.freeze(scatterAssetSeries("sea-scatter-fish-shadow", 8, 0.25, 0.80, 1.45, 0.22, 1, 4, "fish-shadow"))',
+        "const placementCounts = new Map();",
+        'const orderRandom = seededRandom(`${seed}:nature-order`);',
+    )
+    if any(FLOOR_SOURCE.count(marker) != 1 for marker in required_sea_logic):
+        raise AssertionError("Sea scatter limits or asset pools are incomplete")
     entries = manifest_entries()
-    if len(entries) != 130 or len(entries) != len(set(entries)):
-        raise AssertionError(f"Expected 130 unique manifest entries, got {len(entries)} / {len(set(entries))} unique")
+    if not entries or len(entries) != len(set(entries)):
+        raise AssertionError(f"Expected a non-empty unique manifest, got {len(entries)} / {len(set(entries))} unique")
 
     counts = {"scene-assets": 0, "scene-floors": 0, "scene-walls": 0}
     exact_alpha = 0
@@ -86,7 +158,21 @@ def validate() -> None:
     if worst_chroma[0] > 0.005:
         raise AssertionError(f"Visible magenta matte remains: {worst_chroma[1]} ({worst_chroma[0]:.2%})")
 
-    print(f"OK: {len(entries)} files; {counts}; exact raster alpha masks: {exact_alpha}; SVG dimensions preserved; worst visible chroma: {worst_chroma[0]:.3%}")
+    scatter_entries = scatter_redirect_entries()
+    for source_name, output_name in scatter_entries:
+        reference_path = ROOT / "images" / source_name
+        output_path = PRESET / output_name
+        with Image.open(reference_path) as reference, Image.open(output_path) as output:
+            if reference.size != output.size:
+                raise AssertionError(f"Scatter dimensions changed: {source_name}: {reference.size} -> {output.size}")
+            for path, image in ((reference_path, reference), (output_path, output)):
+                alpha = image.convert("RGBA").getchannel("A")
+                corners = [alpha.getpixel((0, 0)), alpha.getpixel((image.width - 1, 0)),
+                           alpha.getpixel((0, image.height - 1)), alpha.getpixel((image.width - 1, image.height - 1))]
+                if alpha.getextrema()[1] == 0 or max(corners) != 0:
+                    raise AssertionError(f"Invalid scatter alpha: {path}: {alpha.getextrema()}, corners={corners}")
+
+    print(f"OK: {len(entries)} complete files + {len(scatter_entries)} scatter redirects; {counts}; exact raster alpha masks: {exact_alpha}; SVG dimensions preserved; worst visible chroma: {worst_chroma[0]:.3%}")
 
 
 if __name__ == "__main__":

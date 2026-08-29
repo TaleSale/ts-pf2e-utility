@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20260823-statues-size-v2";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260823-statues-size-v2";
+import { ASSETS } from "./scene-assets.js?v=20260829-warehouse-balance-v42";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260829-warehouse-balance-v42";
 
 const GALLERY_FLAG = "bastionGallery";
 
@@ -8,6 +8,7 @@ const FLOOR_STYLES = Object.freeze([
   ["uneven-limestone", "Uneven limestone"], ["cave-brown", "Brown cave"],
   ["cave-grey-pebbles", "Grey cave pebbles"], ["flagstone-grey", "Grey flagstone"],
   ["brick-red", "Red brick"], ["wood-walnut", "Walnut boards"], ["wood-alder", "Alder boards"],
+  ["wood-continuous", "Continuous wood grain"],
   ["wood-outdoor", "Outdoor boards"], ["grass-meadow", "Meadow grass"], ["swamp", "Swamp"], ["path-dirt", "Dirt path"],
   ["path-cobblestone", "Cobblestone path"], ["carpet-red", "Red carpet"],
   ["carpet-blue", "Blue carpet"], ["carpet-red-ornate", "Ornate red carpet"],
