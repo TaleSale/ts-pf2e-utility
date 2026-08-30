@@ -1,3 +1,8 @@
-2026/08/29-17:39:15.400 1168 Recovering log #515
-2026/08/29-17:39:15.523 1168 Delete type=0 #515
-2026/08/29-17:39:15.523 1168 Delete type=3 #514
+2026/08/30-08:20:50.656 e34 Recovering log #517
+2026/08/30-08:20:50.776 e34 Delete type=0 #517
+2026/08/30-08:20:50.776 e34 Delete type=3 #516
+2026/08/30-15:18:31.712 36ac Level-0 table #521: started
+2026/08/30-15:18:31.712 36ac Level-0 table #521: 0 bytes OK
+2026/08/30-15:18:31.753 36ac Delete type=0 #519
+2026/08/30-15:18:31.795 36ac Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/08/30-15:18:31.795 36ac Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
