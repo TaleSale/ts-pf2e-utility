@@ -1,5 +1,5 @@
 import { MODULE_ID, t } from "../core.js";
-import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20260829-warehouse-balance-v42";
+import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20260901-linked-light-primary-gm-v43";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_PRESETS = "sceneDecoratorPresets";

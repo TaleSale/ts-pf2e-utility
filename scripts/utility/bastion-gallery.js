@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
 import { ASSETS } from "./scene-assets.js?v=20260829-warehouse-balance-v42";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260829-warehouse-balance-v42";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const GALLERY_FLAG = "bastionGallery";
 

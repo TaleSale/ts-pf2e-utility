@@ -2,7 +2,7 @@ import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20260829-warehouse-balance-v42";
+} from "../utility/texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";

@@ -4,7 +4,7 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260829-light-floor-fix-v43";
+} from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -27,6 +27,9 @@ const RUBBLE_REGION_FLAG = "rubbleDifficultTerrain";
 const RUBBLE_REGION_VERSION = 1;
 const FLOOR_SURFACE_REGION_FLAG = "floorSurface";
 const FLOOR_SURFACE_REGION_VERSION = 2;
+const MANAGED_LOWER_VISIBILITY_FLAG = "managedLowerFloorVisibility";
+const SETTING_VISIBILITY_MIGRATION = "floorVisibilityMigration";
+const FLOOR_VISIBILITY_MIGRATION_VERSION = 1;
 const regionSyncs = new Map();
 const localFloorMutationDepth = new Map();
 const floorDataSnapshots = new Map();
@@ -541,6 +544,12 @@ Hooks.once("init", () => {
       refreshControls();
     },
   });
+  game.settings.register(MODULE_ID, SETTING_VISIBILITY_MIGRATION, {
+    scope: "world",
+    config: false,
+    default: 0,
+    type: Number,
+  });
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, () => {
@@ -866,15 +875,13 @@ async function setSceneData(data) {
     await scene.setFlag(MODULE_ID, FLAG_ROOT, data);
     floorDataSnapshots.set(sceneKey, foundry.utils.deepClone(data));
 
-    let levelsChanged = false;
     const changedFloorNumbers = [...new Set(data.floors
       .filter((floor) => syncScope.floorIds.has(floor.id))
       .map((floor) => Number(floor.level ?? 0)))].sort((a, b) => a - b);
     for (const floorNumber of changedFloorNumbers) {
-      if (!findNativeLevel(floorNumber, scene)) levelsChanged = true;
       await ensureNativeLevel(floorNumber, scene);
     }
-    if (levelsChanged) await synchronizeLowerLevelVisibility(scene);
+    await synchronizeLowerLevelVisibility(scene);
 
     if (!floorSyncScopeEmpty(syncScope)) {
       await queueFloorSurfaceSync(scene, syncScope);
@@ -1129,17 +1136,41 @@ function floorSurfaceRegionData(scene, floor) {
 }
 
 async function synchronizeLowerLevelVisibility(scene) {
+  return reconcileLowerLevelVisibility(scene);
+}
+
+function managedLowerLevelIds(level) {
+  const value = level?.flags?.[MODULE_ID]?.[MANAGED_LOWER_VISIBILITY_FLAG];
+  return Array.isArray(value) ? value.filter((id) => typeof id === "string" && id) : [];
+}
+
+async function reconcileLowerLevelVisibility(scene, { legacyCleanup = false } = {}) {
+  if (!scene || !canManageFloorSurfaces()) return;
   const levels = scene?.levels?.sorted ?? [];
+  const coveredFloorNumbers = new Set(getSceneDataForScene(scene).floors
+    .filter(physicalFloor)
+    .map((floor) => Number(floor.level ?? 0)));
   const updates = [];
   for (const level of levels) {
     const floorNumber = getFloorNumberForNativeLevel(level);
     const lowerIds = levels
       .filter((candidate) => getFloorNumberForNativeLevel(candidate) < floorNumber)
       .map((candidate) => candidate.id);
-    const desired = [...new Set([...(level._source?.visibility?.levels ?? []), ...lowerIds])];
-    if (!sameStringSet(level._source?.visibility?.levels ?? [], desired)) {
-      updates.push({ _id: level.id, "visibility.levels": desired });
-    }
+    const current = level._source?.visibility?.levels ?? [];
+    const previousManaged = managedLowerLevelIds(level);
+    const hasAutomaticOcclusion = coveredFloorNumbers.has(floorNumber);
+    const desired = hasAutomaticOcclusion
+      ? [...new Set([...current, ...lowerIds])]
+      : current.filter((id) => !(legacyCleanup ? lowerIds : previousManaged).includes(id));
+    const nextManaged = hasAutomaticOcclusion
+      ? [...new Set([...previousManaged, ...lowerIds.filter((id) => legacyCleanup || !current.includes(id))])]
+      : [];
+    if (sameStringSet(current, desired) && sameStringSet(previousManaged, nextManaged)) continue;
+    updates.push({
+      _id: level.id,
+      "visibility.levels": desired,
+      [`flags.${MODULE_ID}.${MANAGED_LOWER_VISIBILITY_FLAG}`]: nextManaged,
+    });
   }
   if (updates.length) await scene.updateEmbeddedDocuments("Level", updates);
 }
@@ -3040,15 +3071,21 @@ Hooks.on("deleteWall", (wall) => {
 Hooks.once("ready", () => {
   if (!canManageRubbleRegions() && !canManageFloorSurfaces()) return;
   void (async () => {
+    const legacyCleanup = canManageFloorSurfaces()
+      && Number(game.settings.get(MODULE_ID, SETTING_VISIBILITY_MIGRATION) ?? 0) < FLOOR_VISIBILITY_MIGRATION_VERSION;
     for (const scene of game.scenes ?? []) {
       floorDataSnapshots.set(regionSyncKey(scene), getSceneDataForScene(scene));
       if (canManageFloorSurfaces()) {
         const floorNumbers = [...new Set(getSceneDataForScene(scene).floors
           .map((floor) => Number(floor.level ?? 0)))].sort((a, b) => a - b);
         for (const floorNumber of floorNumbers) await ensureNativeLevel(floorNumber, scene);
+        await reconcileLowerLevelVisibility(scene, { legacyCleanup });
         await queueFloorSurfaceSync(scene);
       }
       if (canManageRubbleRegions()) await queueRubbleRegionSync(scene);
+    }
+    if (legacyCleanup) {
+      await game.settings.set(MODULE_ID, SETTING_VISIBILITY_MIGRATION, FLOOR_VISIBILITY_MIGRATION_VERSION);
     }
   })();
 });

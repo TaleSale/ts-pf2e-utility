@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core.js";
-import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260829-warehouse-balance-v42";
+import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const ASSET_FLAG = "sceneAsset";
 const CONTAINER_NAME = "tsu-mirror-reflections";

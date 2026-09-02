@@ -1,5 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260829-warehouse-balance-v42";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";

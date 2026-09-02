@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260829-light-floor-fix-v43";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260829-light-floor-fix-v43";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260902-auto-floor-visibility-v45";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -1705,8 +1705,16 @@ function linkedLightLevelIds(tile) {
   return nativeLevel?.id ? [nativeLevel.id] : [];
 }
 
+// Document hooks run on every connected client. Keep linked-light maintenance
+// on one authoritative GM so players do not attempt Scene mutations and
+// multiple GMs do not race to update or delete the same AmbientLight.
+function isPrimaryGM() {
+  const activeGM = game.users?.activeGM ?? game.users?.find?.((user) => user.isGM && user.active);
+  return Boolean(game.user?.isGM && (!activeGM || activeGM.id === game.user.id));
+}
+
 async function synchronizeLinkedLightLevels(scene = canvas?.scene) {
-  if (!scene || !game.user?.isGM) return;
+  if (!scene || !isPrimaryGM()) return;
   const updates = [];
   for (const tile of scene.tiles ?? []) {
     const lightId = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.lightId;
@@ -1754,6 +1762,7 @@ function isAssetDocumentVisible(tile) {
 }
 
 Hooks.on("updateTile", (tile, change) => {
+  if (!isPrimaryGM()) return;
   const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
   if (!flag?.lightId || !tile.parent || !["x", "y", "width", "height", "elevation", "levels", "hidden"].some((key) => key in change)) return;
   const light = tile.parent.lights?.get(flag.lightId);
@@ -1834,7 +1843,9 @@ Hooks.on("preUpdateTile", (tile, change) => {
 Hooks.on("deleteTile", (tile) => {
   selectedTileIds.delete(tile.id); drawSelection();
   const lightId = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.lightId;
-  if (lightId && tile.parent?.lights?.get(lightId)) void tile.parent.deleteEmbeddedDocuments("AmbientLight", [lightId]);
+  if (isPrimaryGM() && lightId && tile.parent?.lights?.get(lightId)) {
+    void tile.parent.deleteEmbeddedDocuments("AmbientLight", [lightId]);
+  }
   if (active) {
     queueMicrotask(rerenderPicker);
     setTimeout(() => forceOpenAssetLibrary(activeTool), 60);
@@ -1842,6 +1853,7 @@ Hooks.on("deleteTile", (tile) => {
 });
 
 Hooks.on("deleteAmbientLight", (light) => {
+  if (!isPrimaryGM()) return;
   const tileId = light.flags?.[MODULE_ID]?.[FLAG_ROOT]?.tileId;
   const tile = tileId ? light.parent?.tiles?.get(tileId) : null;
   if (tile) void tile.update({ [`flags.${MODULE_ID}.${FLAG_ROOT}.lightId`]: null });
