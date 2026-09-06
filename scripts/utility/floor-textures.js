@@ -4,7 +4,7 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
+} from "./texture-presets.js?v=20260906-shadow-overlay-v66";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -26,7 +26,7 @@ const LEVEL_NUMBER_FLAG = "floorLevelNumber";
 const RUBBLE_REGION_FLAG = "rubbleDifficultTerrain";
 const RUBBLE_REGION_VERSION = 1;
 const FLOOR_SURFACE_REGION_FLAG = "floorSurface";
-const FLOOR_SURFACE_REGION_VERSION = 2;
+const FLOOR_SURFACE_REGION_VERSION = 3;
 const MANAGED_LOWER_VISIBILITY_FLAG = "managedLowerFloorVisibility";
 const SETTING_VISIBILITY_MIGRATION = "floorVisibilityMigration";
 const FLOOR_VISIBILITY_MIGRATION_VERSION = 1;
@@ -110,8 +110,15 @@ const FLOOR_STYLES = Object.freeze({
     fallback: "Uneven limestone",
     get src() { return resolvePresetTexture(`modules/${MODULE_ID}/images/scene-floors/uneven-limestone-floor.png`); },
   }),
-  "cave-brown": floorStyle("CaveBrown", "Brown cave floor", "cave-brown-floor.png"),
-  "cave-grey-pebbles": floorStyle("CaveGreyPebbles", "Grey cave pebbles", "cave-grey-pebbles-floor-v2.webp"),
+  "cave-brown": floorStyle("CaveBrown", "Brown cave floor", "cave-brown-floor.png", caveEdge(0x352a20, 0x9a8469, 0xb39a78)),
+  "cave-grey-pebbles": floorStyle("CaveGreyPebbles", "Grey cave pebbles", "cave-grey-pebbles-floor-v2.webp", caveEdge(0x292925, 0x918d80, 0xaaa698)),
+  "cave-walls": floorStyle("CaveWalls", "Cave walls", "cave-walls-floor-v1.webp", caveEdge(0x211d19, 0x8f8578, 0xa79e90), HIGH_RES_FLOOR_SCALE),
+  "cave-solid-rock": floorStyle("CaveSolidRock", "Solid rock", "cave-solid-rock-v1.svg"),
+  "cave-shadow": floorStyle("CaveShadow", "Shadow", "cave-shadow-v2.svg", null, 1, true, null, null, null, 2000),
+  "sand-clean": floorStyle("SandClean", "Clean sand", "sand-clean-floor-v1.webp", null, HIGH_RES_FLOOR_SCALE),
+  "sand-arena": floorStyle("SandArena", "Arena sand with pebbles", "sand-arena-floor-v1.webp", null, HIGH_RES_FLOOR_SCALE),
+  "sand-outdoor": floorStyle("SandOutdoor", "Outdoor sand", "sand-outdoor-floor-v1.webp", null, HIGH_RES_FLOOR_SCALE),
+  "courtyard-cobblestone": floorStyle("CourtyardCobblestone", "Courtyard cobblestone", "courtyard-cobblestone-floor-v1.webp", null, HIGH_RES_FLOOR_SCALE),
   "flagstone-grey": floorStyle("FlagstoneGrey", "Grey flagstone", "flagstone-grey-floor.png"),
   "brick-red": floorStyle("BrickRed", "Red brick", "brick-red-floor.png"),
   "wood-walnut": floorStyle("WoodWalnut", "Walnut boards", "wood-walnut-floor.png"),
@@ -180,7 +187,7 @@ const FLOOR_STYLES = Object.freeze({
   ...stairStyles("stairs-wood-outdoor", "WoodOutdoor", "Outdoor boards", "stairs-wood-outdoor-brown.png"),
 });
 const FLOOR_STYLE_CATEGORIES = Object.freeze([
-  Object.freeze({ key: "Stone", fallback: "Stone", styles: ["uneven-limestone", "flagstone-grey", "brick-red"] }),
+  Object.freeze({ key: "Stone", fallback: "Stone", styles: ["uneven-limestone", "courtyard-cobblestone", "flagstone-grey", "brick-red"] }),
   Object.freeze({ key: "Rubble", fallback: "Rubble", styles: [
     "rubble-stone", "rubble-stone-boards", "rubble-boards", "rubble-brick-grey",
     "rubble-brick-red", "rubble-brick-grey-boards", "rubble-brick-red-boards",
@@ -190,7 +197,10 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
     "warehouse-crates-barrels", "warehouse-crates-sacks", "warehouse-sacks-barrels",
     "warehouse-crates-barrels-sacks",
   ] }),
-  Object.freeze({ key: "Caves", fallback: "Caves", styles: ["cave-brown", "cave-grey-pebbles"] }),
+  Object.freeze({ key: "Earth", fallback: "Earth", styles: [
+    "sand-clean", "sand-arena", "sand-outdoor",
+    "cave-brown", "cave-grey-pebbles", "cave-walls", "cave-solid-rock", "cave-shadow",
+  ] }),
   Object.freeze({ key: "Wood", fallback: "Wood", styles: ["wood-walnut", "wood-alder", "wood-continuous", "wood-outdoor"] }),
   Object.freeze({ key: "Stairs", fallback: "Stairs", styles: [
     ...stairStyleKeys("stairs-uneven-limestone"),
@@ -212,7 +222,7 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
   ] }),
 ]);
 
-function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay = false, rubble = null, scatter = null, movementCost = null) {
+function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay = false, rubble = null, scatter = null, movementCost = null, renderOrder = null) {
   const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
   const style = {
     labelKey: `Settings.FloorTextures.Choices.${label}`,
@@ -221,6 +231,7 @@ function floorStyle(label, fallback, filename, edge = null, scale = 1, overlay =
     edge,
     scale,
     overlay,
+    renderOrder: renderOrder === null ? (overlay ? 1000 : 0) : Number(renderOrder),
     rubble,
     scatter,
   };
@@ -254,13 +265,29 @@ function scatterAssetSeries(prefix, count, weight, minSize, maxSize, alpha = 1, 
 function grassMeadowScatter() {
   return Object.freeze({
     assets: Object.freeze([
-      ...scatterAssetSeries("grass-flower-single", 12, 1, 0.14, 0.32, 1, 3),
+      ...scatterAssetSeries("grass-flower-single", 12, 1, 0.14, 0.32, 1, 3).filter((_asset, index) => index !== 6),
       ...scatterAssetSeries("grass-flower-cluster", 6, 0.42, 0.34, 0.52, 1, 1),
     ]),
     spacingCells: 0.9,
     chance: 0.12,
     aspectJitter: 0.12,
     maxPieces: 400,
+  });
+}
+
+function caveEdge(shadow, highlight, rockTint) {
+  return Object.freeze({
+    kind: "cave",
+    jitter: 5,
+    width: 10,
+    shadow: Number(shadow),
+    highlight: Number(highlight),
+    rockTint: Number(rockTint),
+    rockAssets: Object.freeze(scatterAssetSeries("rubble-cutout-stone", 12, 1, 0.10, 0.23, 0.96, 16)),
+    rockSpacingCells: 0.24,
+    rockChance: 0.66,
+    rockSpreadCells: 0.30,
+    maxRocks: 900,
   });
 }
 
@@ -328,15 +355,16 @@ function warehouseStyle(label, fallback, groups) {
     rubble: Object.freeze({
       assets,
       groupOrder: Object.freeze([...groups]),
-      orderedPacking: true,
-      positionJitter: 0.1,
-      rotationSteps: 4,
-      spacingCells: 0.58,
+      pilePacking: true,
+      orderedPacking: false,
+      positionJitter: 0.62,
+      rotationSteps: 0,
+      spacingCells: 0.38,
       chance: 1,
-      scaleMin: 0.9,
-      scaleMax: 1.02,
-      minimumGapCells: 0.005,
-      maxPieces: 5000,
+      scaleMin: 0.86,
+      scaleMax: 1.08,
+      minimumGapCells: 0,
+      maxPieces: 8000,
     }),
   });
 }
@@ -1122,7 +1150,7 @@ function floorSurfaceRegionData(scene, floor) {
     restriction: { enabled: false, type: "move", priority: 0 },
     attachment: { token: null },
     behaviors: [floorSurfaceBehaviorData()],
-    visibility: globalThis.CONST?.REGION_VISIBILITY?.LAYER ?? 0,
+    visibility: globalThis.CONST?.REGION_VISIBILITY?.LAYER_UNLOCKED ?? 4,
     highlightMode: "shapes",
     displayMeasurements: false,
     hidden: false,
@@ -1206,6 +1234,19 @@ async function synchronizeFloorSurfaceRegions(scene, scope = null) {
     const link = floorSurfaceRegionLink(region);
     const update = { _id: region.id };
     let changed = false;
+    const desiredVisibility = globalThis.CONST?.REGION_VISIBILITY?.LAYER_UNLOCKED ?? 4;
+    if (Number(region._source?.visibility ?? region.visibility) !== desiredVisibility) {
+      update.visibility = desiredVisibility;
+      changed = true;
+    }
+    if ((region._source?.highlightMode ?? region.highlightMode) !== "shapes") {
+      update.highlightMode = "shapes";
+      changed = true;
+    }
+    if (Boolean(region._source?.displayMeasurements ?? region.displayMeasurements)) {
+      update.displayMeasurements = false;
+      changed = true;
+    }
     if (!regionMatchesRubble(region, floor)) {
       update.shapes = [rubbleRegionShape(floor)];
       changed = true;
@@ -1949,7 +1990,7 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     if (forestOnly) continue;
     const floorLayer = new PIXI.Container();
     floorLayer.eventMode = "none";
-    floorLayer.zIndex = 0;
+    floorLayer.zIndex = Number(style.renderOrder ?? (style.overlay ? 1000 : 0));
     const floorParent = style.cobweb?.layer === "above"
       ? getCobwebAboveContainer(true, floorNumber)
       : getFloorContainer(true, floorNumber);
@@ -2461,8 +2502,9 @@ function createRubbleFill(points, rubble, seed) {
   const scaleMax = Math.max(scaleMin, Number(rubble.scaleMax ?? 1.08));
   const minimumGap = grid * Math.max(0, Number(rubble.minimumGapCells ?? 0));
   const groupOrder = Array.isArray(rubble.groupOrder) ? rubble.groupOrder.map(String).filter(Boolean) : [];
+  const pilePacking = Boolean(rubble.pilePacking);
   const orderedPacking = Boolean(rubble.orderedPacking);
-  const positionJitter = Math.max(0, Math.min(0.45, Number(rubble.positionJitter ?? 0.1)));
+  const positionJitter = Math.max(0, Math.min(0.75, Number(rubble.positionJitter ?? 0.1)));
   const rotationSteps = Math.max(0, Math.floor(Number(rubble.rotationSteps ?? 0)));
   const maxPieces = Math.max(1, Number(rubble.maxPieces ?? 12000));
   const startX = Math.floor(bounds.x / spacing) - 1;
@@ -2477,8 +2519,9 @@ function createRubbleFill(points, rubble, seed) {
     for (let gx = startX; gx <= endX && placements.length < maxPieces; gx += 1) {
       const random = seededRandom(`${seed}:rubble:${gx}:${gy}`);
       if (random() > chance) continue;
+      const groupOffset = groupOrder.length ? Math.floor(random() * groupOrder.length) : 0;
       const assetCandidates = groupOrder.length
-        ? balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts)
+        ? balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts, groupOffset)
         : [weightedRubbleAsset(assets, random())].filter(Boolean);
       for (let assetIndex = 0; assetIndex < assetCandidates.length; assetIndex += 1) {
         const asset = assetCandidates[assetIndex];
@@ -2490,12 +2533,17 @@ function createRubbleFill(points, rubble, seed) {
           ? Math.floor(assetRandom() * rotationSteps) * Math.PI * 2 / rotationSteps
           : assetRandom() * Math.PI * 2;
 
-        // Try several deterministic positions inside this lattice cell. Warehouse fills start
-        // close to the cell center, expanding their search only near boundaries or neighbours.
+        // Try several deterministic positions inside this lattice cell. Pile props may overlap,
+        // but every rotated footprint must remain entirely inside the selected floor polygon.
         let point = null;
         for (let attempt = 0; attempt < 20; attempt += 1) {
           let candidate;
-          if (orderedPacking) {
+          if (pilePacking) {
+            candidate = {
+              x: (gx + 0.5) * spacing + (assetRandom() - 0.5) * spacing * positionJitter * 2,
+              y: (gy + 0.5) * spacing + (assetRandom() - 0.5) * spacing * positionJitter * 2,
+            };
+          } else if (orderedPacking) {
             const radius = attempt === 0 ? 0 : spacing * Math.min(0.45, positionJitter + attempt * 0.018);
             const angle = assetRandom() * Math.PI * 2;
             candidate = {
@@ -2519,7 +2567,7 @@ function createRubbleFill(points, rubble, seed) {
           }
         }
         if (!point) continue;
-        placements.push({ ...point, asset, width, height, rotation });
+        placements.push({ ...point, asset, width, height, rotation, stackOrder: assetRandom() });
         if (asset.groupKey) groupCounts.set(asset.groupKey, (groupCounts.get(asset.groupKey) ?? 0) + 1);
         const assetKey = asset.key ?? asset.src;
         assetCounts.set(assetKey, (assetCounts.get(assetKey) ?? 0) + 1);
@@ -2528,8 +2576,8 @@ function createRubbleFill(points, rubble, seed) {
     }
   }
 
-  // Stable y ordering keeps overlaps readable but does not create spatial clusters.
-  placements.sort((a, b) => a.y - b.y);
+  // Pile layers are deliberately shuffled so neighbouring props visibly stack over one another.
+  placements.sort((a, b) => pilePacking ? a.stackOrder - b.stackOrder : a.y - b.y);
   placements.forEach((placement, index) => {
     const texture = PIXI.Texture.from(placement.asset.src);
     let sprite;
@@ -2559,8 +2607,11 @@ function weightedRubbleAsset(assets, roll) {
   return assets.at(-1) ?? null;
 }
 
-function balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts) {
-  const groupRank = new Map(groupOrder.map((group, index) => [group, index]));
+function balancedRubbleAssets(assets, groupOrder, groupCounts, assetCounts, groupOffset = 0) {
+  const groupRank = new Map(groupOrder.map((group, index) => [
+    group,
+    (index - groupOffset + groupOrder.length) % groupOrder.length,
+  ]));
   return [...assets].sort((left, right) => {
     const groupDifference = (groupCounts.get(left.groupKey) ?? 0) - (groupCounts.get(right.groupKey) ?? 0);
     if (groupDifference) return groupDifference;
@@ -2711,6 +2762,7 @@ function createFloorEdge(points, edge, seed) {
   if (edge.kind === "cut") return null;
   if (isNaturalPathEdge(edge)) return null;
   if (edge.texture) return createTexturedFloorEdge(points, edge);
+  if (edge.kind === "cave") return createCaveFloorEdge(points, edge, seed);
   const graphics = newGraphics();
   if (edge.kind === "garden") {
     // The Bastion water/soil treatment already supplies its own dark edge.
@@ -2755,6 +2807,80 @@ function createFloorEdge(points, edge, seed) {
   graphics.eventMode = "none";
   graphics.interactive = false;
   return graphics;
+}
+
+function createCaveFloorEdge(points, edge, seed) {
+  const container = new PIXI.Container();
+  container.eventMode = "none";
+  container.interactive = false;
+  container.sortableChildren = true;
+
+  const graphics = newGraphics();
+  const width = Math.max(2, Number(edge.width ?? 10));
+  drawClosedStroke(graphics, points, Number(edge.shadow ?? 0x29251f), width, 0.72);
+  drawClosedStroke(graphics, points, Number(edge.highlight ?? 0x948875), Math.max(1, width * 0.22), 0.52);
+  graphics.eventMode = "none";
+  graphics.interactive = false;
+  graphics.zIndex = 0;
+  container.addChild(graphics);
+
+  const assets = Array.isArray(edge.rockAssets) ? edge.rockAssets : [];
+  if (!assets.length) return container;
+  const grid = Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+  const spacing = grid * Math.max(0.12, Number(edge.rockSpacingCells ?? 0.24));
+  const chance = Math.max(0, Math.min(1, Number(edge.rockChance ?? 0.66)));
+  const spread = grid * Math.max(0, Number(edge.rockSpreadCells ?? 0.30));
+  const maxRocks = Math.max(1, Number(edge.maxRocks ?? 900));
+  let rockCount = 0;
+
+  for (let edgeIndex = 0; edgeIndex < points.length && rockCount < maxRocks; edgeIndex += 1) {
+    const from = points[edgeIndex];
+    const to = points[(edgeIndex + 1) % points.length];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    if (length <= EPSILON) continue;
+    const tangent = { x: dx / length, y: dy / length };
+    const normal = { x: -tangent.y, y: tangent.x };
+    const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const normalTest = grid * 0.12;
+    const positiveIsInside = pointInPolygon({ x: midpoint.x + normal.x * normalTest, y: midpoint.y + normal.y * normalTest }, points);
+    const outward = positiveIsInside ? { x: -normal.x, y: -normal.y } : normal;
+    const divisions = Math.max(1, Math.ceil(length / spacing));
+
+    for (let step = 0; step < divisions && rockCount < maxRocks; step += 1) {
+      const random = seededRandom(`${seed}:cave-rock:${edgeIndex}:${step}`);
+      if (random() > chance) continue;
+      const asset = weightedRubbleAsset(assets, random());
+      if (!asset) continue;
+      const ratio = (step + 0.18 + random() * 0.64) / divisions;
+      const along = (random() * 2 - 1) * spacing * 0.28;
+      // A few stones overlap the lip, while most spill out onto the adjacent floor.
+      const away = spread * (-0.08 + Math.pow(random(), 1.35) * 1.08);
+      const size = grid * lerp(Number(asset.minSize ?? 0.10), Number(asset.maxSize ?? 0.23), random());
+      const position = {
+        x: from.x + dx * ratio + tangent.x * along + outward.x * away,
+        y: from.y + dy * ratio + tangent.y * along + outward.y * away,
+      };
+      const texture = PIXI.Texture.from(asset.src);
+      let sprite;
+      try { sprite = new PIXI.Sprite({ texture }); }
+      catch { sprite = new PIXI.Sprite(texture); }
+      sprite.anchor?.set?.(0.5);
+      sprite.position.set(position.x, position.y);
+      sprite.width = size * lerp(0.82, 1.18, random());
+      sprite.height = size * lerp(0.76, 1.08, random());
+      sprite.rotation = random() * Math.PI * 2;
+      sprite.alpha = Math.max(0, Math.min(1, Number(asset.alpha ?? 1)));
+      sprite.tint = Number(edge.rockTint ?? 0xffffff);
+      sprite.zIndex = 1 + rockCount;
+      sprite.eventMode = "none";
+      sprite.interactive = false;
+      container.addChild(sprite);
+      rockCount += 1;
+    }
+  }
+  return container;
 }
 
 function drawRoofEdge(graphics, points, edge, seed) {

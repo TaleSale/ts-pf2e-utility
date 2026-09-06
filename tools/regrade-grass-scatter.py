@@ -1,4 +1,4 @@
-"""Make grass scatter opaque and palette-matched without changing silhouettes."""
+"""Make grass flower scatter opaque and palette-matched without changing silhouettes."""
 
 from __future__ import annotations
 
@@ -12,14 +12,6 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "images" / "scene-floors"
 BASTION = ROOT / "images" / "presets" / "bastion-blasphemy" / "scene-floors"
 
-BASE_STONES = (
-    (107, 105, 58), (91, 98, 47), (119, 109, 69), (82, 92, 53),
-    (104, 94, 62), (76, 89, 50), (113, 112, 69), (88, 91, 57),
-)
-BASTION_STONES = (
-    (72, 77, 57), (61, 72, 50), (81, 78, 62), (57, 68, 49),
-    (75, 68, 57), (54, 66, 48), (79, 82, 62), (65, 69, 54),
-)
 BASE_FLOWERS = (
     (141, 126, 54), (137, 133, 82), (115, 96, 111), (134, 119, 45),
     (145, 137, 83), (126, 112, 48), (111, 91, 108), (143, 124, 48),
@@ -37,21 +29,6 @@ BASTION_LEAF = np.array((48, 64, 43), dtype=np.float32)
 def hardened_alpha(alpha: np.ndarray) -> np.ndarray:
     # Keep only a narrow antialiased edge; normal object pixels become opaque.
     return np.uint8(np.clip((alpha.astype(np.float32) - 12.0) * (255.0 / 100.0), 0, 255))
-
-
-def grade_stone(source: Image.Image, target: tuple[int, int, int]) -> Image.Image:
-    rgba = np.asarray(source.convert("RGBA"), dtype=np.uint8).copy()
-    alpha = hardened_alpha(rgba[..., 3])
-    visible = alpha > 0
-    rgb = rgba[..., :3].astype(np.float32)
-    luminance = rgb[..., 0] * 0.213 + rgb[..., 1] * 0.715 + rgb[..., 2] * 0.072
-    center = float(np.median(luminance[visible]))
-    detail = np.clip((luminance - center) * 0.58, -24, 26)
-    neutral = np.asarray(target, dtype=np.float32)
-    graded = neutral + detail[..., None] + (rgb - luminance[..., None]) * 0.08
-    rgba[..., :3] = np.where(visible[..., None], np.clip(graded, 0, 255), 0).astype(np.uint8)
-    rgba[..., 3] = alpha
-    return Image.fromarray(rgba, "RGBA")
 
 
 def grade_flower(source: Image.Image, petal: tuple[int, int, int], leaf: np.ndarray) -> Image.Image:
@@ -79,6 +56,8 @@ def save_pair(base_image: Image.Image, preset_image: Image.Image, base_name: str
 
 def main() -> None:
     for index in range(1, 13):
+        if index == 7:
+            continue
         flower = Image.open(BASE / f"grass-flower-single-{index:02d}-v2.webp")
         save_pair(
             grade_flower(flower, BASE_FLOWERS[index - 1], BASE_LEAF),
@@ -86,23 +65,5 @@ def main() -> None:
             f"grass-flower-single-{index:02d}-v3.webp",
             f"grass-flower-single-{index:02d}-bastion-v3.webp",
         )
-        stone = Image.open(BASE / f"grass-stone-single-{index:02d}-v2.webp")
-        save_pair(
-            grade_stone(stone, BASE_STONES[(index - 1) % len(BASE_STONES)]),
-            grade_stone(stone, BASTION_STONES[(index - 1) % len(BASTION_STONES)]),
-            f"grass-stone-single-{index:02d}-v3.webp",
-            f"grass-stone-single-{index:02d}-bastion-v3.webp",
-        )
-
-    for index in range(1, 25):
-        stone = Image.open(BASE / f"grass-stone-varied-{index:02d}-v1.webp")
-        save_pair(
-            grade_stone(stone, BASE_STONES[(index + 2) % len(BASE_STONES)]),
-            grade_stone(stone, BASTION_STONES[(index + 2) % len(BASTION_STONES)]),
-            f"grass-stone-varied-{index:02d}-v2.webp",
-            f"grass-stone-varied-{index:02d}-bastion-v2.webp",
-        )
-
-
 if __name__ == "__main__":
     main()

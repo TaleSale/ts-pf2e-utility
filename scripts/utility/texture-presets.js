@@ -25,30 +25,32 @@ const BASTION_COMPLETE_TEXTURE_FILES = Object.freeze({
     "bathtub-copper.webp", "bathtub-wood.webp", "bed.webp", "bed-blue.webp", "bed-fur.webp",
     "bed-messy-blue.webp", "bed-messy-brown.webp", "bed-oak.webp", "bedroll-blue.webp",
     "bedroll-fur.webp", "bedroll-green.webp", "bench-topdown-v2.webp", "blood.webp",
-    "bookshelf.webp", "books-scrolls.webp", "brazier.webp", "bridge.webp", "broken-boards.webp",
-    "bush.webp", "cabinet.webp", "campfire-embers.webp", "campfire-stones.webp", "candle.webp",
+    "books-scrolls.webp", "brazier.webp", "bridge.webp", "broken-boards.webp",
+    "broken-column-stump-v1.webp",
+    "bush.webp", "campfire-embers.webp", "campfire-stones.webp", "candle.webp",
     "chandelier-round-topdown-v1.webp",
     "cauldron.webp", "chest.webp", "corpse.webp", "crate.webp", "dead-tree.webp", "desk.webp",
     "grave-buried-topdown-v1.webp", "grave-open-topdown-v1.webp",
     "grave-marker-rounded-topdown-v1.webp", "grave-marker-pointed-topdown-v1.webp",
     "dock-corner.webp", "dock-straight.webp", "double-bed-linen.webp", "double-bed-red.webp",
     "fallen-column.webp", "footprints.webp", "fountain.webp", "gold-pile.webp", "ladder.webp",
-    "ladder-vertical.webp", "lake.webp", "lantern.webp", "lectern.webp", "logs.webp",
-    "long-table.webp", "mooring-posts.webp", "mud.webp", "pew.webp", "pine-tree.webp", "pond.webp",
+    "ladder-vertical.webp", "lantern.webp", "logs.webp", "long-table.webp", "mooring-posts.webp",
+    "mud.webp", "pine-tree.webp",
     "ritual-circle.webp", "rocks.webp", "round-table-four-legs.webp", "rowboat.webp", "rug-red.webp",
-    "ruins.webp", "sacks.webp", "short-stairs-down.webp", "short-stairs-up.webp", "sink-stone-topdown-v2.webp",
-    "sink-wood-topdown-v2.webp", "sink-stone-topdown-v3.webp", "sink-wood-topdown-v3.webp", "skeleton.webp", "stairs-down.webp", "stairs-stone-square.webp", "stairs-up.webp",
+    "ruins.webp", "sacks.webp", "short-stairs-down.webp", "short-stairs-up.webp",
+    "sink-stone-topdown-v3.webp", "sink-wood-topdown-v3.webp", "skeleton.webp", "stairs-down.webp", "stairs-stone-square.webp", "stairs-up.webp",
     "stairs-wood-rustic.webp", "stairs-wood-straight.webp", "standing-column.webp",
     "standing-stone-broad.webp", "standing-stone-crooked.webp", "standing-stone-narrow.webp",
-    "statue.webp", "stonehenge-circle.webp", "stonehenge-fangs.webp",
+    "stonehenge-circle.webp", "stonehenge-fangs.webp",
     "stonehenge-trilithon-circle-v2.webp", "stump.webp", "tableware-ale.webp",
     "tableware-breakfast.webp", "tableware-cheese-fruit.webp", "tableware-feast-v2.webp",
     "tableware-fish.webp", "tableware-roast.webp", "tableware-stew.webp", "tableware-wine.webp",
-    "throne-topdown-v1.webp", "toilet-board-alder.webp", "toilet-board-oak.webp", "toilet-board-walnut.webp",
-    "torch.webp", "trapdoor.webp", "tree.webp", "tub.webp", "wall-torch-bracket.webp",
-    "wall-torch-iron.webp", "water-puddle.webp", "well.webp",
+    "throne-topdown-v1.webp",
+    "side-wall-torch-topdown-v1.webp", "torch.webp", "trapdoor.webp", "tree.webp", "tub.webp", "wall-torch-bracket.webp",
+    "wall-torch-iron.webp", "well.webp",
   ]),
   "scene-floors": Object.freeze([
+    "cave-solid-rock-v1.svg", "cave-shadow-v2.svg",
     "carpet-blue-ornate-floor-v2.webp", "carpet-green-gold-floor.webp", "carpet-red-ornate-floor.webp",
     "rubble-stone-floor-v9.webp", "rubble-stone-boards-floor-v9.webp", "rubble-boards-floor-v9.webp",
     "rubble-brick-grey-floor-v9.webp", "rubble-brick-red-floor-v9.webp",
@@ -101,7 +103,7 @@ const BASTION_COMPLETE_TEXTURE_FILES = Object.freeze({
     "rubble-cutout-brick-red-10-v16.webp",
     "rubble-cutout-brick-red-11-v16.webp",
     "rubble-cutout-brick-red-12-v16.webp",
-    "sea-deep-floor.webp", "sea-shallow-floor.webp", "sea-stormy-floor.webp", "stairs-brick-red.png",
+    "stairs-brick-red.png",
     "stairs-flagstone-grey.png", "stairs-uneven-limestone.png", "stairs-wood-alder.png",
     "stairs-wood-outdoor-brown.png", "stairs-wood-walnut.png",
   ]),
@@ -126,15 +128,19 @@ const BASTION_COMPLETE_TEXTURE_REDIRECTS = Object.freeze(Object.fromEntries(
   ])),
 ));
 
-function numberedScatterTexturePaths(prefix, count, version = 1) {
-  return Array.from({ length: count }, (_, index) => (
-    `scene-floors/${prefix}-${String(index + 1).padStart(2, "0")}-v${version}.webp`
-  ));
+function numberedScatterTexturePaths(prefix, count, version = 1, excluded = []) {
+  const excludedNumbers = new Set(excluded.map(Number));
+  return Array.from({ length: count }, (_, index) => index + 1)
+    .filter((number) => !excludedNumbers.has(number))
+    .map((number) => `scene-floors/${prefix}-${String(number).padStart(2, "0")}-v${version}.webp`);
 }
 
-function numberedScatterTextureRedirects(prefix, count, version = 1) {
-  return Object.fromEntries(Array.from({ length: count }, (_, index) => {
-    const number = String(index + 1).padStart(2, "0");
+function numberedScatterTextureRedirects(prefix, count, version = 1, excluded = []) {
+  const excludedNumbers = new Set(excluded.map(Number));
+  return Object.fromEntries(Array.from({ length: count }, (_, index) => index + 1)
+    .filter((number) => !excludedNumbers.has(number))
+    .map((index) => {
+    const number = String(index).padStart(2, "0");
     return [
       `scene-floors/${prefix}-${number}-v${version}.webp`,
       `scene-floors/${prefix}-${number}-bastion-v${version}.webp`,
@@ -153,6 +159,26 @@ function numberedScatterLegacyCanonicalPaths(prefix, count, oldVersion, newVersi
   }).flat());
 }
 
+function retiredGrassStoneCanonicalPaths(prefix, count) {
+  return Object.fromEntries(Array.from({ length: count }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    const rubbleNumber = String((index % 12) + 1).padStart(2, "0");
+    const replacement = `scene-floors/rubble-cutout-stone-${rubbleNumber}-v16.webp`;
+    return [1, 2, 3].flatMap((version) => [
+      [`scene-floors/${prefix}-${number}-v${version}.webp`, replacement],
+      [`scene-floors/${prefix}-${number}-bastion-v${version}.webp`, replacement],
+    ]);
+  }).flat());
+}
+
+function retiredScatterAssetCanonicalPaths(prefix, number, replacement, latestVersion = 3) {
+  const padded = String(number).padStart(2, "0");
+  return Object.fromEntries(Array.from({ length: latestVersion }, (_, index) => index + 1).flatMap((version) => [
+    [`scene-floors/${prefix}-${padded}-v${version}.webp`, replacement],
+    [`scene-floors/${prefix}-${padded}-bastion-v${version}.webp`, replacement],
+  ]));
+}
+
 // Complete registered texture coverage for the Bastion of Blasphemy preset.
 // A path is redirected only when its alternate file is present in this
 // manifest, so clients request one active variant instead of every preset.
@@ -161,6 +187,7 @@ const BASTION_TEXTURES = new Set([
   "scene-assets/armchair-green-topdown-v1.webp",
   "scene-assets/bar-counter-corner.webp",
   "scene-assets/bar-counter-straight.webp",
+  "scene-assets/laborer-counter-straight-topdown-v1.webp",
   "scene-assets/barrels-side-cluster.webp",
   "scene-assets/beehive-skep-topdown-v1.webp",
   "scene-assets/floor-lever-compact-front-v2.webp",
@@ -215,6 +242,9 @@ const BASTION_TEXTURES = new Set([
   "scene-assets/hay-cluster.webp",
   "scene-assets/hay-pile.webp",
   "scene-assets/hay-windrow.webp",
+  "scene-assets/feeding-trough-topdown-v1.webp",
+  "scene-assets/hay-scatter-topdown-v1.webp",
+  "scene-assets/hay-bale-rectangular-topdown-v1.webp",
   "scene-assets/painting-landscape-topdown-v2.webp",
   "scene-assets/mirror-wall-square-topdown-v3.webp",
   "scene-assets/mirror-wall-rectangular-2-topdown-v3.webp",
@@ -234,6 +264,8 @@ const BASTION_TEXTURES = new Set([
   "scene-assets/sofa-green-topdown-v1.webp",
   "scene-assets/stairs-wood-square.webp",
   "scene-assets/statue-child-topdown-v2.webp",
+  "scene-assets/statue-dwarf-guardian-topdown-v1.webp",
+  "scene-assets/statue-dwarf-smith-topdown-v1.webp",
   "scene-assets/statue-knight-topdown-v3.webp",
   "scene-assets/statue-man-topdown-v2.webp",
   "scene-assets/statue-woman-topdown-v2.webp",
@@ -256,12 +288,17 @@ const BASTION_TEXTURES = new Set([
   "scene-assets/wall-gear-small-topdown-v4.webp",
   "scene-assets/wall-lever-brass-topdown-v4.webp",
   "scene-assets/wall-lever-iron-topdown-v4.webp",
+  "scene-assets/printing-press-topdown-v1.webp",
+  "scene-assets/floor-loom-topdown-v1.webp",
+  "scene-assets/woodworking-circular-saw-bench-topdown-v1.webp",
   "scene-assets/weapon-rack-axes-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-bows-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-bow-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-crossbows-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-mixed-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-mixed-wall-topdown-v1.webp",
+  "scene-assets/weapon-rack-armorer-display-topdown-v1.webp",
+  "scene-assets/weapon-rack-polearms-cradle-topdown-v1.webp",
   "scene-assets/weapon-rack-spears-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
   "scene-assets/tabletop-set-cartography-v1.webp",
@@ -310,6 +347,11 @@ const BASTION_TEXTURES = new Set([
   "scene-floors/cobweb-strip-below-v1.webp",
   "scene-floors/cave-brown-floor.png",
   "scene-floors/cave-grey-pebbles-floor-v2.webp",
+  "scene-floors/cave-walls-floor-v1.webp",
+  "scene-floors/sand-clean-floor-v1.webp",
+  "scene-floors/sand-arena-floor-v1.webp",
+  "scene-floors/sand-outdoor-floor-v1.webp",
+  "scene-floors/courtyard-cobblestone-floor-v1.webp",
   "scene-floors/flagstone-grey-floor.png",
   "scene-floors/garden-cabbage-floor.webp",
   "scene-floors/garden-carrot-floor.webp",
@@ -325,10 +367,8 @@ const BASTION_TEXTURES = new Set([
   "scene-floors/grass-meadow-floor-v3.webp",
   "scene-floors/grass-meadow-floor-v2.png",
   "scene-floors/grass-meadow-floor.png",
-  ...numberedScatterTexturePaths("grass-flower-single", 12, 3),
+  ...numberedScatterTexturePaths("grass-flower-single", 12, 3, [7]),
   ...numberedScatterTexturePaths("grass-flower-cluster", 6, 1),
-  ...numberedScatterTexturePaths("grass-stone-single", 12, 3),
-  ...numberedScatterTexturePaths("grass-stone-varied", 24, 3),
   "scene-floors/swamp-floor-v1.png",
   "scene-floors/flowering-shrubs-dense-floor-v1.webp",
   "scene-floors/path-cobblestone-floor.png",
@@ -384,7 +424,7 @@ const BASTION_TEXTURES = new Set([
   "scene-walls/brick-grey-dense.webp",
   "scene-walls/brick-grey.webp",
   "scene-walls/brick-red.webp",
-  "scene-walls/cliff-limestone.webp",
+  "scene-walls/cliff-limestone-v2.webp",
   "scene-walls/cliff-sandy-v2.webp",
   "scene-walls/hedge-maze.webp",
   "scene-walls/window-stained.webp",
@@ -402,13 +442,16 @@ const BASTION_TEXTURE_REDIRECTS = Object.freeze({
   "scene-floors/grass-meadow-floor-v3.webp": "scene-floors/grass-meadow-floor-bastion-v9.webp",
   "scene-floors/grass-meadow-floor-v2.png": "scene-floors/grass-meadow-floor-bastion-v8.png",
   "scene-floors/grass-meadow-floor.png": "scene-floors/grass-meadow-floor-bastion-v7.png",
-  ...numberedScatterTextureRedirects("grass-flower-single", 12, 3),
+  ...numberedScatterTextureRedirects("grass-flower-single", 12, 3, [7]),
   ...numberedScatterTextureRedirects("grass-flower-cluster", 6, 1),
-  ...numberedScatterTextureRedirects("grass-stone-single", 12, 3),
-  ...numberedScatterTextureRedirects("grass-stone-varied", 24, 3),
   "scene-floors/swamp-floor-v1.png": "scene-floors/swamp-floor-bastion-v1.png",
   "scene-floors/path-cobblestone-floor-v3.webp": "scene-floors/path-cobblestone-floor-bastion-v4.webp",
   "scene-floors/path-cobblestone-floor-v2.png": "scene-floors/path-cobblestone-floor-bastion-v3.png",
+  "scene-floors/courtyard-cobblestone-floor-v1.webp": "scene-floors/courtyard-cobblestone-floor-bastion-v1.webp",
+  "scene-floors/cave-walls-floor-v1.webp": "scene-floors/cave-walls-floor-bastion-v1.webp",
+  "scene-floors/sand-clean-floor-v1.webp": "scene-floors/sand-clean-floor-bastion-v1.webp",
+  "scene-floors/sand-arena-floor-v1.webp": "scene-floors/sand-arena-floor-bastion-v1.webp",
+  "scene-floors/sand-outdoor-floor-v1.webp": "scene-floors/sand-outdoor-floor-bastion-v1.webp",
   "scene-floors/path-dirt-floor-v3.webp": "scene-floors/path-dirt-floor-dark-fantasy-v6.webp",
   "scene-floors/path-dirt-floor-v2.png": "scene-floors/path-dirt-floor-dark-fantasy-v5.png",
   "scene-floors/path-dirt-floor.png": "scene-floors/path-dirt-floor-dark-fantasy-v4.png",
@@ -442,6 +485,7 @@ const BASTION_TEXTURE_REDIRECTS = Object.freeze({
   "scene-floors/warehouse-sack-c-topdown-v2.webp": "scene-floors/warehouse-sack-c-topdown-bastion-v2.webp",
   "scene-assets/bar-counter-corner.webp": "scene-assets/bar-counter-corner-fixed.webp",
   "scene-assets/bar-counter-straight.webp": "scene-assets/bar-counter-straight-fixed.webp",
+  "scene-assets/laborer-counter-straight-topdown-v1.webp": "scene-assets/laborer-counter-straight-topdown-bastion-v1.webp",
   "scene-assets/barrels-side-cluster.webp": "scene-assets/barrels-side-cluster-fixed.webp",
   "scene-assets/bookshelf-narrow-wall-topdown-v3.webp": "scene-assets/bookshelf-narrow-wall-topdown-v3.webp",
   "scene-assets/cabinet-narrow-wall-topdown-v2.webp": "scene-assets/cabinet-narrow-wall-topdown-v2.webp",
@@ -464,6 +508,9 @@ const BASTION_TEXTURE_REDIRECTS = Object.freeze({
   "scene-assets/hay-cluster.webp": "scene-assets/hay-cluster-fixed.webp",
   "scene-assets/hay-pile.webp": "scene-assets/hay-pile-fixed.webp",
   "scene-assets/hay-windrow.webp": "scene-assets/hay-windrow-fixed.webp",
+  "scene-assets/feeding-trough-topdown-v1.webp": "scene-assets/feeding-trough-topdown-v1-bastion-v2.webp",
+  "scene-assets/hay-scatter-topdown-v1.webp": "scene-assets/hay-scatter-topdown-v1-bastion-v2.webp",
+  "scene-assets/hay-bale-rectangular-topdown-v1.webp": "scene-assets/hay-bale-rectangular-topdown-v1-bastion-v2.webp",
   "scene-assets/painting-landscape-topdown-v2.webp": "scene-assets/painting-landscape-topdown-v2-fixed.webp",
   "scene-assets/mirror-wall-square-topdown-v3.webp": "scene-assets/mirror-wall-square-topdown-v3-bastion-v1.webp",
   "scene-assets/mirror-wall-rectangular-2-topdown-v3.webp": "scene-assets/mirror-wall-rectangular-2-topdown-v3-bastion-v1.webp",
@@ -481,12 +528,16 @@ const BASTION_TEXTURE_REDIRECTS = Object.freeze({
   "scene-assets/table.webp": "scene-assets/table-fixed.webp",
   "scene-assets/tableware-empty.webp": "scene-assets/tableware-empty-fixed.webp",
   "scene-assets/tableware-tea.webp": "scene-assets/tableware-tea-fixed.webp",
+  "scene-assets/printing-press-topdown-v1.webp": "scene-assets/printing-press-topdown-bastion-v1.webp",
+  "scene-assets/floor-loom-topdown-v1.webp": "scene-assets/floor-loom-topdown-bastion-v1.webp",
+  "scene-assets/woodworking-circular-saw-bench-topdown-v1.webp": "scene-assets/woodworking-circular-saw-bench-topdown-bastion-v1.webp",
   "scene-floors/garden-crop-carrot-v2.webp": "scene-floors/garden-crop-carrot-v2-fixed.webp",
   "scene-floors/garden-crop-rice-v2.webp": "scene-floors/garden-crop-rice-v2-fixed.webp",
   "scene-walls/border-curtain-gold.webp": "scene-walls/border-curtain-gold-fixed.webp",
   "scene-walls/brick-grey-dense.webp": "scene-walls/brick-grey-dense-fixed.webp",
   "scene-walls/brick-red.webp": "scene-walls/brick-red-fixed.webp",
   "scene-walls/cliff-sandy-v2.webp": "scene-walls/cliff-sandy-v2-fixed.webp",
+  "scene-walls/cliff-limestone-v2.webp": "scene-walls/cliff-limestone-fixed-v2.webp",
   ...BASTION_COMPLETE_TEXTURE_REDIRECTS,
   "scene-walls/wood-alder.png": "scene-walls/wood-alder-bastion-v3.png",
   "scene-walls/wood-nut.png": "scene-walls/wood-nut-bastion-v3.png",
@@ -512,6 +563,9 @@ const PRESET_TEXTURE_CANONICAL_PATHS = Object.freeze(Object.fromEntries(
 ));
 
 const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
+  "scene-walls/cliff-limestone.webp": "scene-walls/cliff-limestone-v2.webp",
+  "scene-floors/cave-shadow-v1.svg": "scene-floors/cave-shadow-v2.svg",
+  "scene-floors/cave-shadow-v1-bastion-v2.svg": "scene-floors/cave-shadow-v2.svg",
   "scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
   "scene-assets/music-stand-sheet-music-topdown-v1.webp": "scene-assets/music-stand-sheet-music-topdown-v2.webp",
   "scene-assets/throne-bastion-v2.webp": "scene-assets/throne-topdown-v1.webp",
@@ -549,16 +603,21 @@ const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
   "scene-floors/grass-scatter-flowers-v2.webp": "scene-floors/grass-flower-single-01-v3.webp",
   "scene-floors/grass-scatter-flowers-bastion-v1.webp": "scene-floors/grass-flower-single-01-v3.webp",
   "scene-floors/grass-scatter-flowers-bastion-v2.webp": "scene-floors/grass-flower-single-01-v3.webp",
-  "scene-floors/grass-scatter-stones-v1.webp": "scene-floors/grass-stone-single-01-v3.webp",
-  "scene-floors/grass-scatter-stones-v2.webp": "scene-floors/grass-stone-single-01-v3.webp",
-  "scene-floors/grass-scatter-stones-bastion-v1.webp": "scene-floors/grass-stone-single-01-v3.webp",
-  "scene-floors/grass-scatter-stones-bastion-v2.webp": "scene-floors/grass-stone-single-01-v3.webp",
+  "scene-floors/grass-scatter-stones-v1.webp": "scene-floors/rubble-cutout-stone-01-v16.webp",
+  "scene-floors/grass-scatter-stones-v2.webp": "scene-floors/rubble-cutout-stone-01-v16.webp",
+  "scene-floors/grass-scatter-stones-bastion-v1.webp": "scene-floors/rubble-cutout-stone-01-v16.webp",
+  "scene-floors/grass-scatter-stones-bastion-v2.webp": "scene-floors/rubble-cutout-stone-01-v16.webp",
+  "scene-floors/grass-scatter-dirt-v1.webp": "scene-assets/mud.webp",
+  "scene-floors/grass-scatter-dirt-bastion-v1.webp": "scene-assets/mud.webp",
   ...numberedScatterLegacyCanonicalPaths("grass-flower-single", 12, 1, 3),
   ...numberedScatterLegacyCanonicalPaths("grass-flower-single", 12, 2, 3),
-  ...numberedScatterLegacyCanonicalPaths("grass-stone-single", 12, 1, 3),
-  ...numberedScatterLegacyCanonicalPaths("grass-stone-single", 12, 2, 3),
-  ...numberedScatterLegacyCanonicalPaths("grass-stone-varied", 24, 1, 3),
-  ...numberedScatterLegacyCanonicalPaths("grass-stone-varied", 24, 2, 3),
+  ...retiredScatterAssetCanonicalPaths(
+    "grass-flower-single",
+    7,
+    "scene-floors/grass-flower-single-08-v3.webp",
+  ),
+  ...retiredGrassStoneCanonicalPaths("grass-stone-single", 12),
+  ...retiredGrassStoneCanonicalPaths("grass-stone-varied", 24),
   ...numberedScatterLegacyCanonicalPaths("sea-scatter-debris", 8, 1, 2),
   "scene-floors/path-cobblestone-floor.png": "scene-floors/path-cobblestone-floor-v3.webp",
   "scene-floors/path-cobblestone-floor-v2.png": "scene-floors/path-cobblestone-floor-v3.webp",
@@ -607,6 +666,13 @@ const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
   "scene-assets/bookshelf-corner-wall-topdown-v1.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
   "scene-assets/bookshelf-corner-wall-topdown-v2.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
   "scene-assets/bookshelf-corner-wall-topdown-v3.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v4.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v5.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v6.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v7.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v8.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v9.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
+  "scene-assets/bookshelf-corner-wall-topdown-v10.webp": "scene-assets/bookshelf-corner-wall-topdown-v11.webp",
   "scene-assets/bookshelf-bastion-v2.webp": "scene-assets/bookshelf-wall-topdown-v5.webp",
   "scene-assets/bookshelf-wall-topdown-v4.webp": "scene-assets/bookshelf-wall-topdown-v5.webp",
   "scene-assets/bookshelf-narrow.webp": "scene-assets/bookshelf-narrow-wall-topdown-v5.webp",
@@ -617,6 +683,13 @@ const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
   "scene-assets/cabinet-corner-wall-topdown-v1.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
   "scene-assets/cabinet-corner-wall-topdown-v2.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
   "scene-assets/cabinet-corner-wall-topdown-v3.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v4.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v5.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v6.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v7.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v8.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v9.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
+  "scene-assets/cabinet-corner-wall-topdown-v10.webp": "scene-assets/cabinet-corner-wall-topdown-v11.webp",
   "scene-assets/cabinet-bastion-v2.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
   "scene-assets/cabinet-topdown-v2.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
   "scene-assets/cabinet-wall-topdown-v3.webp": "scene-assets/cabinet-wall-topdown-v4.webp",
@@ -634,7 +707,9 @@ const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
   "scene-assets/fireplace-stone-v3.webp": "scene-assets/fireplace-stone-wall-topdown-v4.webp",
   "scene-assets/fireplace-stone-v3-fixed.webp": "scene-assets/fireplace-stone-wall-topdown-v4.webp",
   "scene-assets/floor-lever-compact-topdown-v1.webp": "scene-assets/floor-lever-compact-front-v2.webp",
+  "scene-assets/floor-lever-compact-topdown-v2.webp": "scene-assets/floor-lever-compact-front-v2.webp",
   "scene-assets/floor-lever-heavy-topdown-v1.webp": "scene-assets/floor-lever-heavy-front-v2.webp",
+  "scene-assets/floor-lever-heavy-topdown-v2.webp": "scene-assets/floor-lever-heavy-front-v2.webp",
   "scene-assets/grand-piano.webp": "scene-assets/grand-piano-topdown-v2.webp",
   "scene-assets/grand-piano-fixed.webp": "scene-assets/grand-piano-topdown-v2.webp",
   "scene-assets/lectern.webp": "scene-assets/lectern-topdown-v3.webp",
@@ -651,13 +726,28 @@ const LEGACY_PRESET_CANONICAL_PATHS = Object.freeze({
   "scene-assets/statue-woman-topdown-v1.webp": "scene-assets/statue-woman-topdown-v2.webp",
   "scene-assets/statue-child-topdown-v1.webp": "scene-assets/statue-child-topdown-v2.webp",
   "scene-assets/wall-gear-large-topdown-v1.webp": "scene-assets/wall-gear-large-front-v2.webp",
+  "scene-assets/wall-gear-large-topdown-v2.webp": "scene-assets/wall-gear-large-front-v2.webp",
+  "scene-assets/wall-gear-large-topdown-v3.webp": "scene-assets/wall-gear-large-front-v2.webp",
   "scene-assets/wall-gear-small-topdown-v1.webp": "scene-assets/wall-gear-small-front-v2.webp",
+  "scene-assets/wall-gear-small-topdown-v2.webp": "scene-assets/wall-gear-small-topdown-v4.webp",
   "scene-assets/wall-gear-small-topdown-v3.webp": "scene-assets/wall-gear-small-topdown-v4.webp",
   "scene-assets/wall-gears-cluster-topdown-v1.webp": "scene-assets/wall-gears-cluster-front-v2.webp",
+  "scene-assets/wall-gears-cluster-topdown-v2.webp": "scene-assets/wall-gears-cluster-front-v2.webp",
+  "scene-assets/wall-gears-cluster-topdown-v3.webp": "scene-assets/wall-gears-cluster-front-v2.webp",
   "scene-assets/wall-lever-brass-topdown-v1.webp": "scene-assets/wall-lever-brass-front-v2.webp",
+  "scene-assets/wall-lever-brass-topdown-v2.webp": "scene-assets/wall-lever-brass-topdown-v4.webp",
   "scene-assets/wall-lever-iron-topdown-v1.webp": "scene-assets/wall-lever-iron-front-v2.webp",
+  "scene-assets/wall-lever-iron-topdown-v2.webp": "scene-assets/wall-lever-iron-topdown-v4.webp",
   "scene-assets/wall-lever-brass-topdown-v3.webp": "scene-assets/wall-lever-brass-topdown-v4.webp",
   "scene-assets/wall-lever-iron-topdown-v3.webp": "scene-assets/wall-lever-iron-topdown-v4.webp",
+  "scene-assets/cobweb-floor-above-v1.webp": "scene-floors/cobweb-patch-above-v1.webp",
+  "scene-assets/cobweb-floor-below-v1.webp": "scene-floors/cobweb-patch-below-v1.webp",
+  "scene-walls/border-green-fog.webp": "scene-walls/border-green-fog-v7.webp",
+  "scene-walls/border-green-fog-v2.webp": "scene-walls/border-green-fog-v7.webp",
+  "scene-walls/border-green-fog-v3.webp": "scene-walls/border-green-fog-v7.webp",
+  "scene-walls/border-green-fog-v4.webp": "scene-walls/border-green-fog-v7.webp",
+  "scene-walls/border-green-fog-v5.webp": "scene-walls/border-green-fog-v7.webp",
+  "scene-walls/border-green-fog-v6.webp": "scene-walls/border-green-fog-v7.webp",
   "scene-assets/weapon-rack-swords-topdown-v1.webp": "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-swords-open-standing-topdown-v3.webp": "scene-assets/weapon-rack-swords-straight-standing-topdown-v5.webp",
   "scene-assets/weapon-rack-spears-topdown-v1.webp": "scene-assets/weapon-rack-spears-straight-standing-topdown-v5.webp",
@@ -703,6 +793,18 @@ function removedEnhancedBaseLogicalPath(relative) {
     ?? relative.replace(/-base-refined-v1(?=\.[^/.]+$)/, "");
 }
 
+function currentBaseLogicalPath(relative) {
+  let current = removedEnhancedBaseLogicalPath(relative);
+  const visited = new Set();
+  while (!visited.has(current)) {
+    visited.add(current);
+    const replacement = LEGACY_PRESET_CANONICAL_PATHS[current];
+    if (!replacement || replacement === current) break;
+    current = removedEnhancedBaseLogicalPath(replacement);
+  }
+  return current;
+}
+
 function sceneFlagValue(scene) {
   try {
     return scene?.getFlag?.(MODULE_ID, TEXTURE_PRESET_FLAG)
@@ -726,7 +828,7 @@ export function baseTextureRelativePath(source) {
   if (typeof source !== "string" || !source.startsWith(MODULE_IMAGE_ROOT)) return null;
   const relative = source.slice(MODULE_IMAGE_ROOT.length).split(/[?#]/, 1)[0];
   if (!relative.startsWith("presets/")) {
-    return removedEnhancedBaseLogicalPath(relative);
+    return currentBaseLogicalPath(relative);
   }
   const parts = relative.split("/");
   if (parts.length <= 2) return null;
@@ -735,9 +837,11 @@ export function baseTextureRelativePath(source) {
   const canonical = preset === REMOVED_ENHANCED_BASE_PRESET
     ? removedEnhancedBaseLogicalPath(presetRelative)
     : PRESET_TEXTURE_CANONICAL_PATHS[preset]?.[presetRelative] ?? presetRelative;
-  return LEGACY_PRESET_CANONICAL_PATHS[canonical]
-    ?? LEGACY_PRESET_CANONICAL_PATHS[presetRelative]
-    ?? canonical;
+  return currentBaseLogicalPath(
+    LEGACY_PRESET_CANONICAL_PATHS[canonical]
+      ?? LEGACY_PRESET_CANONICAL_PATHS[presetRelative]
+      ?? canonical,
+  );
 }
 
 export function baseTextureSource(source) {
@@ -756,7 +860,7 @@ export function resolvePresetTexture(source, preset = null, scene = globalThis.c
 }
 
 export function presetTextureManifest(preset = currentTexturePreset()) {
-  return [...(PRESET_TEXTURES[preset] ?? [])];
+  return [...new Set([...(PRESET_TEXTURES[preset] ?? [])].map(currentBaseLogicalPath))];
 }
 
 function getElement(root) {

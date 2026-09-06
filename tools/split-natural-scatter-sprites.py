@@ -1,4 +1,4 @@
-"""Split clean scatter atlases into independent, preset-safe flower and stone sprites."""
+"""Split a clean scatter atlas into independent, preset-safe flower sprites."""
 
 from __future__ import annotations
 
@@ -61,17 +61,6 @@ def fit_sprite(crop: Image.Image) -> Image.Image:
     return canvas
 
 
-def bastion_palette(image: Image.Image, kind: str) -> Image.Image:
-    rgba = np.asarray(image, dtype=np.uint8).copy()
-    rgb = rgba[..., :3].astype(np.float32)
-    luminance = rgb[..., 0] * 0.24 + rgb[..., 1] * 0.68 + rgb[..., 2] * 0.08
-    saturation_mix = 0.48 if kind == "flower" else 0.30
-    rgb = rgb * saturation_mix + luminance[..., None] * (1.0 - saturation_mix)
-    multiplier = np.array([0.66, 0.70, 0.58] if kind == "flower" else [0.52, 0.58, 0.52])
-    rgba[..., :3] = np.uint8(np.clip(rgb * multiplier, 0, 255))
-    return Image.fromarray(rgba, "RGBA")
-
-
 def neutralize_purple_petals(image: Image.Image) -> Image.Image:
     rgba = np.asarray(image, dtype=np.uint8).copy()
     rgb = rgba[..., :3].astype(np.float32)
@@ -94,14 +83,15 @@ def terrain_blend(image: Image.Image, palette: np.ndarray, strength: float) -> I
     return Image.fromarray(rgba, "RGBA")
 
 
-def export(kind: str, source: Path, dilation: int, minimum_area: int) -> None:
-    prefix = f"grass-{kind}-single"
+def export(source: Path, dilation: int, minimum_area: int) -> None:
+    prefix = "grass-flower-single"
     for index, crop in enumerate(components(source, dilation, minimum_area), start=1):
+        if index == 7:
+            continue
         base = fit_sprite(crop)
-        if kind == "flower":
-            base = neutralize_purple_petals(base)
-        base = terrain_blend(base, BASE_GRASS, 0.46 if kind == "flower" else 0.38)
-        preset = terrain_blend(base, BASTION_GRASS, 0.62 if kind == "flower" else 0.56)
+        base = neutralize_purple_petals(base)
+        base = terrain_blend(base, BASE_GRASS, 0.46)
+        preset = terrain_blend(base, BASTION_GRASS, 0.62)
         base_path = BASE / f"{prefix}-{index:02d}-v2.webp"
         preset_path = BASTION / f"{prefix}-{index:02d}-bastion-v2.webp"
         base.save(base_path, "WEBP", lossless=True, quality=100, method=6, exact=True)
@@ -110,8 +100,7 @@ def export(kind: str, source: Path, dilation: int, minimum_area: int) -> None:
 
 
 def main() -> None:
-    export("flower", BASE / "grass-scatter-flowers-v2.webp", dilation=5, minimum_area=150)
-    export("stone", BASE / "grass-scatter-stones-v2.webp", dilation=4, minimum_area=500)
+    export(BASE / "grass-scatter-flowers-v2.webp", dilation=5, minimum_area=150)
 
 
 if __name__ == "__main__":

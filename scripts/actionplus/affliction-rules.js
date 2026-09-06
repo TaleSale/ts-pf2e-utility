@@ -31,16 +31,17 @@ export function periodicTransition({ stage, outcome, maxStage, virulent = false,
       }
     } else {
       successes = 0;
-      if (outcome === "criticalFailure") next += 2;
+      if (outcome === "failure") next += 1;
+      else if (outcome === "criticalFailure") next += 2;
     }
   } else {
     successes = 0;
     if (outcome === "criticalSuccess") next -= 2;
     else if (outcome === "success") next -= 1;
+    else if (outcome === "failure") next += 1;
     else if (outcome === "criticalFailure") next += 2;
   }
 
   next = clampStage(next, maxStage);
   return { stage: next, virulentSuccesses: successes, cured: next <= 0 };
 }
-

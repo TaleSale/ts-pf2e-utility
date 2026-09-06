@@ -11,7 +11,7 @@ test("re-exposure only worsens failures", () => {
 test("ordinary periodic saves follow PF2e stage steps", () => {
   assert.equal(periodicTransition({ stage: 3, outcome: "criticalSuccess", maxStage: 5 }).stage, 1);
   assert.equal(periodicTransition({ stage: 3, outcome: "success", maxStage: 5 }).stage, 2);
-  assert.equal(periodicTransition({ stage: 3, outcome: "failure", maxStage: 5 }).stage, 3);
+  assert.equal(periodicTransition({ stage: 3, outcome: "failure", maxStage: 5 }).stage, 4);
   assert.equal(periodicTransition({ stage: 3, outcome: "criticalFailure", maxStage: 5 }).stage, 5);
   assert.equal(periodicTransition({ stage: 1, outcome: "success", maxStage: 5 }).cured, true);
 });
@@ -21,6 +21,6 @@ test("virulent poison requires two successes", () => {
   assert.deepEqual(first, { stage: 2, virulentSuccesses: 1, cured: false });
   const second = periodicTransition({ stage: 2, outcome: "success", maxStage: 4, virulent: true, virulentSuccesses: first.virulentSuccesses });
   assert.deepEqual(second, { stage: 1, virulentSuccesses: 0, cured: false });
+  assert.deepEqual(periodicTransition({ stage: 2, outcome: "failure", maxStage: 4, virulent: true, virulentSuccesses: 1 }), { stage: 3, virulentSuccesses: 0, cured: false });
   assert.equal(periodicTransition({ stage: 1, outcome: "criticalSuccess", maxStage: 4, virulent: true }).cured, true);
 });
-

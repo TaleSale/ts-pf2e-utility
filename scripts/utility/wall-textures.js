@@ -1,5 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260906-shadow-overlay-v66";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
@@ -27,7 +27,10 @@ const BULK_SELECTION_DRAG_CLASS = "tsu-wall-texture-selection-drag";
 const BULK_SELECTION_CONTAINER = "tsu-wall-texture-selection";
 const SOURCE_TEXTURE_SIZE = 200;
 const SOURCE_WALL_WIDTH = 60;
-const WALL_WIDTH_GRID_RATIO = 0.2;
+// Keep textured walls just wider than Foundry's animated door leaves and jambs.
+const WALL_WIDTH_GRID_RATIO = 0.22;
+// Cliff ribbons need to read as a substantial drop at normal map scale.
+const CLIFF_BORDER_WIDTH_GRID_RATIO = 0.36;
 const ENDPOINT_MASK_REACH_RATIO = 3;
 const SEGMENT_OVERLAY_TRIM_RATIO = 1;
 const SHORT_SEGMENT_OVERLAY_ONLY_GRID_RATIO = 1.25;
@@ -80,10 +83,10 @@ const WALL_TEXTURE_STYLES = Object.freeze({
   "border-curtain-blue": createWallTextureStyle("BorderCurtainBlue", "Curtain - muted blue", "border-curtain-blue.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
   "border-curtain-gold": createWallTextureStyle("BorderCurtainGold", "Curtain - ochre", "border-curtain-gold.webp", 5, 195, I18N_ROOT, { borderOnly: true, widthRatio: 0.18, periodScale: 1.28, smooth: true, textureSize: 256 }),
   "hedge-maze": createWallTextureStyle("HedgeMaze", "Maze hedge", "hedge-maze.webp", 72, 128),
-  "cliff-coastal": createWallTextureStyle("CliffCoastal", "Uneven coastal cliff", "cliff-coastal-stone-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.14, periodScale: 1.5, smooth: true, textureSize: 200 }),
-  "cliff-limestone": createWallTextureStyle("CliffLimestone", "Limestone coast cliff", "cliff-limestone.webp", 78, 122, I18N_ROOT, { borderOnly: true, widthRatio: 0.06, smooth: true }),
-  "cliff-sandy": createWallTextureStyle("CliffSandy", "Sandy coast cliff", "cliff-sandy-v2.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.12, periodScale: 1.5, smooth: true, textureSize: 200 }),
-  "cliff-volcanic": createWallTextureStyle("CliffVolcanic", "Volcanic coast cliff", "cliff-volcanic-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: 0.09, periodScale: 1, smooth: true, textureSize: 200 }),
+  "cliff-coastal": createWallTextureStyle("CliffCoastal", "Uneven coastal cliff", "cliff-coastal-stone-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: CLIFF_BORDER_WIDTH_GRID_RATIO, periodScale: 1.5, smooth: true, textureSize: 200 }),
+  "cliff-limestone": createWallTextureStyle("CliffLimestone", "Limestone coast cliff", "cliff-limestone-v2.webp", 78, 122, I18N_ROOT, { borderOnly: true, widthRatio: CLIFF_BORDER_WIDTH_GRID_RATIO, smooth: true }),
+  "cliff-sandy": createWallTextureStyle("CliffSandy", "Sandy coast cliff", "cliff-sandy-v2.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: CLIFF_BORDER_WIDTH_GRID_RATIO, periodScale: 1.5, smooth: true, textureSize: 200 }),
+  "cliff-volcanic": createWallTextureStyle("CliffVolcanic", "Volcanic coast cliff", "cliff-volcanic-v3.webp", 63, 138, I18N_ROOT, { borderOnly: true, widthRatio: CLIFF_BORDER_WIDTH_GRID_RATIO, periodScale: 1, smooth: true, textureSize: 200 }),
 });
 const WINDOW_TEXTURE_STYLES = Object.freeze({
   "window-wood": createWallTextureStyle("WindowWood", "Window - Walnut", "window-wood.webp", 70, 130, "Settings.WindowTextures"),

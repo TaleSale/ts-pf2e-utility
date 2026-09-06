@@ -4799,6 +4799,22 @@
 .tsu-affliction-effects > div { display: grid; grid-template-columns: 24px minmax(0, 1fr) 26px; gap: 5px; align-items: center; margin: 3px 0; }
 .tsu-affliction-effects img { width: 24px; height: 24px; border: 0; }
 .tsu-affliction-save-card { display: grid; gap: 6px; }
+.tsu-affliction-initial-save { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem; min-width: 0; margin-top: .45rem; padding-top: .4rem; border-top: 1px solid var(--color-border-light-primary); }
+.tsu-affliction-initial-save strong { min-width: 0; overflow-wrap: anywhere; }
+.tsu-affliction-initial-save a.inline-check { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.message-content:has(.pf2e-toolbelt-target-targetRows) .tsu-affliction-initial-save .tsu-affliction-save-separator,
+.message-content:has(.pf2e-toolbelt-target-targetRows) .tsu-affliction-initial-save a.inline-check { display: none; }
+.tsu-affliction-stage-card p { margin: .35rem 0 0; }
+.tsu-dos-immunity,.tsu-dos-aura { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.tsu-dos-aura { padding: .45rem; border: 1px solid var(--color-border-light-primary); border-radius: 3px; }
+.tsu-dos-aura-label { flex-basis: 100%; font-weight: 600; }
+.tsu-dos-manual-immunity { margin-top: .4rem; }
+.tsu-dos-manual-immunity button { width: 100%; }
+.tsu-dos-immunity { margin-top: 5px; }
+.tsu-dos-immunity input[type="number"],.tsu-dos-aura input[type="number"] { width: 4.5rem; }
+.tsu-dos-immune { display: inline-block; padding: .1rem .35rem; border: 2px solid #8b1e1e; border-radius: .25rem; color: #8b1e1e; font-size: .72rem; font-weight: 800; letter-spacing: .06em; transform: rotate(-4deg); }
+.tsu-dos-is-immune [data-action="roll-save"] { display: none !important; }
+.tsu-dos-aura-targets { margin-top: .4rem; }
 @media (max-width: 560px) { .tsu-affliction-import { grid-template-columns: 30px 1fr; } .tsu-affliction-import button { grid-column: 1 / -1; } }
 
 .ts-spell-set-editor { container-type:inline-size; min-width:0; overflow:hidden; }

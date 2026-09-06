@@ -33,10 +33,8 @@ def manifest_entries() -> list[tuple[str, str]]:
 
 def scatter_redirect_entries() -> list[tuple[str, str]]:
     required_spreads = (
-        '...numberedScatterTextureRedirects("grass-flower-single", 12, 3)',
+        '...numberedScatterTextureRedirects("grass-flower-single", 12, 3, [7])',
         '...numberedScatterTextureRedirects("grass-flower-cluster", 6, 1)',
-        '...numberedScatterTextureRedirects("grass-stone-single", 12, 3)',
-        '...numberedScatterTextureRedirects("grass-stone-varied", 24, 3)',
         '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 1)',
         '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 2)',
         '...numberedScatterTextureRedirects("sea-scatter-debris", 8, 3)',
@@ -50,16 +48,13 @@ def scatter_redirect_entries() -> list[tuple[str, str]]:
         raise AssertionError("Numbered natural scatter redirects are incomplete")
     redirects = [
         (f"scene-floors/{prefix}-{index:02d}-v3.webp", f"scene-floors/{prefix}-{index:02d}-bastion-v3.webp")
-        for prefix in ("grass-flower-single", "grass-stone-single")
+        for prefix in ("grass-flower-single",)
         for index in range(1, 13)
+        if index != 7
     ]
     redirects.extend(
         (f"scene-floors/grass-flower-cluster-{index:02d}-v1.webp", f"scene-floors/grass-flower-cluster-{index:02d}-bastion-v1.webp")
         for index in range(1, 7)
-    )
-    redirects.extend(
-        (f"scene-floors/grass-stone-varied-{index:02d}-v3.webp", f"scene-floors/grass-stone-varied-{index:02d}-bastion-v3.webp")
-        for index in range(1, 25)
     )
     redirects.extend(
         (f"scene-floors/{prefix}-{index:02d}-v1.webp", f"scene-floors/{prefix}-{index:02d}-bastion-v1.webp")

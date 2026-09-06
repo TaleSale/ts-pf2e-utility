@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260902-auto-floor-visibility-v45";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260902-auto-floor-visibility-v45";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260906-shadow-overlay-v66";
+import { baseTextureSource, resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260906-shadow-overlay-v66";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -11,6 +11,8 @@ const PREVIEW_NAME = "tsu-asset-preview";
 const SELECTION_NAME = "tsu-asset-selection";
 const SELECTION_DRAG_NAME = "tsu-asset-selection-drag";
 const FLAG_ROOT = "sceneAsset";
+const LIGHT_SWITCH_FLAG_KEY = "lightSwitch";
+const DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS = new Set(["candle", "torch", "lantern"]);
 const DEFAULT_ASSET = "table";
 const ROTATION_STEP = 15;
 const MOVEMENT_STEP_RATIO = 0.1;
@@ -33,6 +35,7 @@ const RECTANGULAR_MIRROR_CONFIG = mirrorConfig({ x: 0.145, y: 0.47, width: 0.71,
 const ROUND_MIRROR_CONFIG = mirrorConfig({ x: 0.19, y: 0.45, width: 0.62, height: 0.23 }, "ellipse", 2);
 const OVAL_MIRROR_CONFIG = mirrorConfig({ x: 0.14, y: 0.47, width: 0.72, height: 0.20 }, "ellipse", 4);
 const TOPDOWN_COLUMN_KEYS = new Set(["columnStoneTopdown", "columnWoodTopdown"]);
+const TEXTURE_MIGRATION_UPDATE_OPTIONS = Object.freeze({ render: false, noHook: true });
 const LEGACY_ASSET_REDIRECTS = Object.freeze({
   "scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
   "scene-assets/music-stand-sheet-music-topdown-v1.webp": "scene-assets/music-stand-sheet-music-topdown-v2.webp",
@@ -233,6 +236,7 @@ export const ASSETS = Object.freeze({
   torch: asset("Lighting", "Torch", "torch.webp", 0.3, "object", 512 / 462, "torch"),
   wallTorchIron: asset("Lighting", "WallTorchIron", "wall-torch-iron.webp", 0.65, "object", 0.475, "torch"),
   wallTorchBracket: asset("Lighting", "WallTorchBracket", "wall-torch-bracket.webp", 0.65, "object", 0.696, "torch"),
+  sideWallTorch: asset("Lighting", "Side wall torch", "side-wall-torch-topdown-v1.webp", 0.65, "object", 208 / 432, "torch", 0, "Choices.SideWallTorch"),
   brazier: asset("Lighting", "Brazier", "brazier.webp", 0.7, "object", 998 / 1017, "brazier"),
   chandelierRound: asset("Lighting", "ChandelierRound", "chandelier-round-topdown-v1.webp", 2, "overhead", 1, "chandelier", 0, null, null, 15),
   roundTable: asset("Furniture", "RoundTable", "round-table-four-legs.webp", 1, "object", 1),
@@ -249,6 +253,8 @@ export const ASSETS = Object.freeze({
   weaponRackCrossbows: asset("Armory", "WeaponRackCrossbows", "weapon-rack-crossbows-straight-standing-topdown-v5.webp", 1.5, "object", 3),
   weaponRackMixed: asset("Armory", "WeaponRackMixed", "weapon-rack-mixed-straight-standing-topdown-v5.webp", 1.5, "object", 3),
   weaponRackMixedWall: asset("Armory", "Wall-mounted mixed weapon rack", "weapon-rack-mixed-wall-topdown-v1.webp", 1.5, "object", 3, null, 0, "Choices.WeaponRackMixedWall"),
+  weaponRackArmorerDisplay: asset("Armory", "Armorer display rack", "weapon-rack-armorer-display-topdown-v1.webp", 1.75, "object", 1024 / 661, null, 0, "Choices.WeaponRackArmorerDisplay"),
+  weaponRackPolearmsCradle: asset("Armory", "Low polearm arsenal rack", "weapon-rack-polearms-cradle-topdown-v1.webp", 1.5, "object", 3, null, 0, "Choices.WeaponRackPolearmsCradle"),
   wallLeverIron: asset("Mechanisms", "WallLeverIron", "wall-lever-iron-front-v2.webp", 0.75, "object", 2 / 3),
   wallLeverBrass: asset("Mechanisms", "WallLeverBrass", "wall-lever-brass-front-v2.webp", 0.75, "object", 2 / 3),
   floorLeverCompact: asset("Mechanisms", "FloorLeverCompact", "floor-lever-compact-front-v2.webp", 0.75, "object", 1),
@@ -261,6 +267,9 @@ export const ASSETS = Object.freeze({
   wallLeverIronTopdown: asset("Mechanisms", "Wall lever — iron (top-down)", "wall-lever-iron-topdown-v4.webp", 0.75, "object", 2 / 3, null, 0, "Choices.WallLeverIronTopdown"),
   wallLeverBrassTopdown: asset("Mechanisms", "Wall lever — brass (top-down)", "wall-lever-brass-topdown-v4.webp", 0.75, "object", 2 / 3, null, 0, "Choices.WallLeverBrassTopdown"),
   wallGearSmallTopdown: asset("Mechanisms", "Wall gear — small (top-down)", "wall-gear-small-topdown-v4.webp", 0.6, "object", 1, null, 0, "Choices.WallGearSmallTopdown"),
+  printingPress: asset("Mechanisms", "Printing press", "printing-press-topdown-v1.webp", 2, "object", 1, null, 0, "Choices.PrintingPress"),
+  floorLoom: asset("Mechanisms", "Floor loom", "floor-loom-topdown-v1.webp", 2, "object", 2, null, 0, "Choices.FloorLoom"),
+  woodworkingCircularSawBench: asset("Mechanisms", "Circular-saw woodworking machine", "woodworking-circular-saw-bench-topdown-v1.webp", 2, "object", 2, null, 0, "Choices.WoodworkingCircularSawBench"),
   barrel: asset("Household", "Barrel", "barrel.webp", 0.6, "object", 644 / 768),
   barrelSide: asset("Household", "BarrelSide", "barrel-side.webp", 0.9, "object", 1.61),
   barrelsSideCluster: asset("Household", "BarrelsSideCluster", "barrels-side-cluster.webp", 1.4, "object", 0.615),
@@ -318,6 +327,7 @@ export const ASSETS = Object.freeze({
   banquetTable: asset("Furniture", "BanquetTable", "banquet-table.webp", 2, "object", 2.473),
   barCounterStraight: asset("Furniture", "BarCounterStraight", "bar-counter-straight.webp", 2.4, "object", 3.683),
   barCounterCorner: asset("Furniture", "BarCounterCorner", "bar-counter-corner.webp", 2.2, "object", 1.13),
+  laborerCounterStraight: asset("Furniture", "LaborerCounterStraight", "laborer-counter-straight-topdown-v1.webp", 2.4, "object", 3.683),
   bench: asset("Furniture", "Bench", "bench-topdown-v2.webp", 1.5, "object", 3.094),
   pew: asset("TempleStage", "Pew", "pew-topdown-v2.webp", 2, "object", 1024 / 453),
   desk: asset("Furniture", "Desk", "desk.webp", 1.3, "object", 1.73),
@@ -328,7 +338,10 @@ export const ASSETS = Object.freeze({
   statueMan: asset("TempleStage", "StatueMan", "statue-man-topdown-v2.webp", 0.65, "object", 1),
   statueWoman: asset("TempleStage", "StatueWoman", "statue-woman-topdown-v2.webp", 0.65, "object", 1),
   statueChild: asset("TempleStage", "StatueChild", "statue-child-topdown-v2.webp", 0.48, "object", 1),
+  statueDwarfGuardian: asset("TempleStage", "StatueDwarfGuardian", "statue-dwarf-guardian-topdown-v1.webp", 0.65, "object", 1),
+  statueDwarfSmith: asset("TempleStage", "StatueDwarfSmith", "statue-dwarf-smith-topdown-v1.webp", 0.65, "object", 1),
   standingColumn: asset("TempleStage", "StandingColumn", "standing-column.webp", 1, "object", 655 / 817),
+  brokenColumnStump: asset("TempleStage", "BrokenColumnStump", "broken-column-stump-v1.webp", 1, "object", 655 / 817),
   columnStoneTopdown: asset("TempleStage", "Stone column — ½ cell", "column-stone-topdown-v3.webp", 1, "object", 1, null, 0, "Choices.ColumnStoneTopdown"),
   columnWoodTopdown: asset("TempleStage", "Wooden column — ½ cell", "column-wood-topdown-v3.webp", 1, "object", 1, null, 0, "Choices.ColumnWoodTopdown"),
   ritualCircle: asset("TempleStage", "RitualCircle", "ritual-circle.webp", 1.8, "ground", 1024 / 1016),
@@ -375,6 +388,9 @@ export const ASSETS = Object.freeze({
   hayPile: asset("Outdoors", "HayPile", "hay-pile.webp", 1.2, "object", 1.082),
   hayWindrow: asset("Outdoors", "HayWindrow", "hay-windrow.webp", 1.6, "object", 3.697),
   hayCluster: asset("Outdoors", "HayCluster", "hay-cluster.webp", 1.4, "object", 1.54),
+  feedingTrough: asset("Outdoors", "Feeding trough", "feeding-trough-topdown-v1.webp", 1.6, "object", 1024 / 277, null, 0, "Choices.FeedingTrough"),
+  hayScatter: asset("Outdoors", "Irregular hay scatter", "hay-scatter-topdown-v1.webp", 1.4, "object", 1024 / 665, null, 0, "Choices.HayScatter"),
+  hayBaleRectangular: asset("Outdoors", "Rectangular hay bale", "hay-bale-rectangular-topdown-v1.webp", 1, "object", 1.6, null, 0, "Choices.HayBaleRectangular"),
   trapdoor: asset("Transitions", "Trapdoor", "trapdoor.webp", 0.8, "ground", 744 / 768),
   stairsUp: asset("Transitions", "StairsUp", "stairs-up.webp", 2, "ground", 444 / 1024),
   stairsDown: asset("Transitions", "StairsDown", "stairs-down.webp", 2, "ground", 410 / 1024),
@@ -499,7 +515,10 @@ function redirectLegacyAssetPath(source) {
   }
   if (!relative) return null;
   const replacement = LEGACY_ASSET_REDIRECTS[relative.toLowerCase()];
-  return replacement ? `modules/${MODULE_ID}/images/${replacement}` : null;
+  const redirected = baseTextureSource(
+    replacement ? `modules/${MODULE_ID}/images/${replacement}` : source,
+  );
+  return redirected !== source ? redirected : null;
 }
 
 function redirectLegacyPathProperty(data, path) {
@@ -531,8 +550,9 @@ function redirectLegacySetPaths(sets) {
 }
 
 async function migrateLegacySceneAssetPaths() {
-  if (!game.user?.isGM) return;
+  if (!game.user?.isGM) return false;
   let migrated = 0;
+  let activeSceneChanged = false;
   for (const scene of game.scenes ?? []) {
     const sceneUpdate = {};
     for (const path of ["background.src", "foreground"]) {
@@ -540,8 +560,9 @@ async function migrateLegacySceneAssetPaths() {
       if (replacement) foundry.utils.setProperty(sceneUpdate, path, resolvePresetTexture(replacement, undefined, scene));
     }
     if (Object.keys(sceneUpdate).length) {
-      await scene.update(sceneUpdate);
+      await scene.update(sceneUpdate, TEXTURE_MIGRATION_UPDATE_OPTIONS);
       migrated += Object.keys(sceneUpdate).length;
+      if (scene === globalThis.canvas?.scene) activeSceneChanged = true;
     }
     const updates = [];
     for (const tile of scene.tiles ?? []) {
@@ -550,9 +571,14 @@ async function migrateLegacySceneAssetPaths() {
       if (desired && desired !== tile.texture?.src) updates.push({ _id: tile.id, "texture.src": desired });
     }
     for (let offset = 0; offset < updates.length; offset += 100) {
-      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+      await scene.updateEmbeddedDocuments(
+        "Tile",
+        updates.slice(offset, offset + 100),
+        TEXTURE_MIGRATION_UPDATE_OPTIONS,
+      );
     }
     migrated += updates.length;
+    if (updates.length && scene === globalThis.canvas?.scene) activeSceneChanged = true;
   }
   const sets = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTING_SETS)?.sets ?? []);
   if (redirectLegacySetPaths(sets)) {
@@ -560,10 +586,12 @@ async function migrateLegacySceneAssetPaths() {
     migrated += 1;
   }
   if (migrated) console.info(`${MODULE_ID} | Redirected ${migrated} legacy scene asset path(s)`);
+  return activeSceneChanged;
 }
 
 async function synchronizeSceneAssetPresetPaths(targetScene = null) {
-  if (!game.user?.isGM) return;
+  if (!game.user?.isGM) return false;
+  let activeSceneChanged = false;
   const scenes = targetScene ? [targetScene] : Array.from(game.scenes ?? []);
   for (const scene of scenes) {
     const sceneUpdate = {};
@@ -572,7 +600,10 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
       const desired = resolvePresetTexture(source, undefined, scene);
       if (desired && desired !== source) foundry.utils.setProperty(sceneUpdate, path, desired);
     }
-    if (Object.keys(sceneUpdate).length) await scene.update(sceneUpdate);
+    if (Object.keys(sceneUpdate).length) {
+      await scene.update(sceneUpdate, TEXTURE_MIGRATION_UPDATE_OPTIONS);
+      if (scene === globalThis.canvas?.scene) activeSceneChanged = true;
+    }
     const updates = [];
     for (const tile of scene.tiles ?? []) {
       const flag = tile.flags?.[MODULE_ID]?.[FLAG_ROOT];
@@ -581,9 +612,15 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
       if (desired && desired !== tile.texture?.src) updates.push({ _id: tile.id, "texture.src": desired });
     }
     for (let offset = 0; offset < updates.length; offset += 100) {
-      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+      await scene.updateEmbeddedDocuments(
+        "Tile",
+        updates.slice(offset, offset + 100),
+        TEXTURE_MIGRATION_UPDATE_OPTIONS,
+      );
     }
+    if (updates.length && scene === globalThis.canvas?.scene) activeSceneChanged = true;
   }
+  return activeSceneChanged;
 }
 
 async function synchronizeRevisedAssetDimensions() {
@@ -702,15 +739,22 @@ async function synchronizeAssetDefaultSorts() {
 }
 
 Hooks.once("ready", async () => {
-  await migrateLegacySceneAssetPaths();
-  await synchronizeSceneAssetPresetPaths();
+  const migratedActiveScene = await migrateLegacySceneAssetPaths();
+  const synchronizedActiveScene = await synchronizeSceneAssetPresetPaths();
   await synchronizeRevisedAssetDimensions();
   await synchronizeAssetDefaultSorts();
+  await synchronizeDefaultPlayerLightSwitches();
+  if ((migratedActiveScene || synchronizedActiveScene) && globalThis.canvas?.ready) {
+    await globalThis.canvas.draw();
+  }
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, (_preset, scene) => {
   rerenderPicker();
-  void synchronizeSceneAssetPresetPaths(scene);
+  void synchronizeSceneAssetPresetPaths(scene).then((activeSceneChanged) => {
+    if (activeSceneChanged && globalThis.canvas?.ready) return globalThis.canvas.draw();
+    return null;
+  });
 });
 
 function getSets() {
@@ -1728,10 +1772,28 @@ async function synchronizeLinkedLightLevels(scene = canvas?.scene) {
   if (updates.length) await scene.updateEmbeddedDocuments("AmbientLight", updates);
 }
 
+async function synchronizeDefaultPlayerLightSwitches() {
+  if (!isPrimaryGM()) return;
+  for (const scene of game.scenes ?? []) {
+    const updates = [];
+    for (const light of scene.lights ?? []) {
+      const linkedAsset = light.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      if (!linkedAsset?.tileId || !DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS.has(linkedAsset.preset)) continue;
+      const current = light.getFlag?.(MODULE_ID, LIGHT_SWITCH_FLAG_KEY);
+      if (current !== undefined && current !== null) continue;
+      updates.push({ _id: light.id, [`flags.${MODULE_ID}.${LIGHT_SWITCH_FLAG_KEY}`]: true });
+    }
+    for (let offset = 0; offset < updates.length; offset += 100) {
+      await scene.updateEmbeddedDocuments("AmbientLight", updates.slice(offset, offset + 100));
+    }
+  }
+}
+
 export async function createLinkedLight(tile, presetKey, override = null) {
   const preset = override ?? lightSettings ?? LIGHT_PRESETS[presetKey];
   if (!preset || !tile?.parent) return;
   const center = tileCenter(tile);
+  const playerSwitch = DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS.has(presetKey);
   const [light] = await tile.parent.createEmbeddedDocuments("AmbientLight", [{
     name: `${tile.name} — ${localize("Light", "Light")}`,
     x: center.x,
@@ -1741,7 +1803,10 @@ export async function createLinkedLight(tile, presetKey, override = null) {
     walls: true,
     vision: false,
     config: { ...preset, darkness: { min: 0, max: 1 } },
-    flags: { [MODULE_ID]: { [FLAG_ROOT]: { tileId: tile.id, preset: presetKey } } },
+    flags: { [MODULE_ID]: {
+      [FLAG_ROOT]: { tileId: tile.id, preset: presetKey },
+      ...(playerSwitch ? { [LIGHT_SWITCH_FLAG_KEY]: true } : {}),
+    } },
   }]);
   if (light) await tile.update({ [`flags.${MODULE_ID}.${FLAG_ROOT}.lightId`]: light.id });
 }

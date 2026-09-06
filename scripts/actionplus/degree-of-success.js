@@ -3,22 +3,41 @@ import { registerActionPlusFeature } from "./actionplus.js";
 
 const FEATURE_ID = "degreeOfSuccess";
 const FLAG_KEY = "degreeOfSuccess";
+const IMMUNITY_FLAG = "degreeOfSuccessImmunity";
 const DEGREES = ["criticalSuccess", "success", "failure", "criticalFailure"];
 const RECIPIENTS = ["target", "source"];
+const DURATION_UNITS = ["unlimited", "rounds", "minutes", "hours", "days"];
 
 function localize(key) {
   return game.i18n.localize(`${I18N_PREFIX}.ActionPlus.DegreeOfSuccess.${key}`);
 }
 
+function defaultImmunity() {
+  return { enabled: false, durationValue: 1, durationUnit: "rounds", scope: "ability" };
+}
+
 function defaultRecipient() {
-  return { enabled: false, damage: "", effects: [] };
+  return { enabled: false, damage: "", effects: [], immunity: defaultImmunity() };
 }
 
 function defaultConfig() {
-  return Object.fromEntries(DEGREES.map((degree) => [degree, {
+  return {
+    ...Object.fromEntries(DEGREES.map((degree) => [degree, {
     target: defaultRecipient(),
     source: defaultRecipient(),
-  }]));
+    }])),
+    aura: { enabled: false, radius: 10, targets: "enemies", triggers: { enters: false, startTurn: false, endTurn: false } },
+  };
+}
+
+function normalizeImmunity(value) {
+  const durationValue = Number(value?.durationValue);
+  return {
+    enabled: value?.enabled === true,
+    durationValue: Number.isFinite(durationValue) && durationValue > 0 ? Math.trunc(durationValue) : 1,
+    durationUnit: DURATION_UNITS.includes(value?.durationUnit) ? value.durationUnit : "rounds",
+    scope: value?.scope === "source" ? "source" : "ability",
+  };
 }
 
 function normalizeEffect(effect) {
@@ -57,9 +76,21 @@ function normalizeConfig(value) {
         effects: (Array.isArray(source.effects) ? source.effects : [])
           .map(normalizeEffect)
           .filter((effect) => effect.uuid),
+        immunity: normalizeImmunity(source.immunity),
       };
     }
   }
+  const aura = value?.aura ?? {};
+  result.aura = {
+    enabled: aura.enabled === true,
+    radius: Math.max(1, Number(aura.radius) || 10),
+    targets: ["enemies", "allies", "all"].includes(aura.targets) ? aura.targets : "enemies",
+    triggers: {
+      enters: aura.triggers?.enters === true,
+      startTurn: aura.triggers?.startTurn === true,
+      endTurn: aura.triggers?.endTurn === true,
+    },
+  };
   return result;
 }
 
@@ -149,6 +180,12 @@ function renderControls({ item }) {
             <i class="fas fa-burst"></i> ${escapeHtml(localize("Damage"))}
             <input type="text" data-field="damage" value="${escapeHtml(data.damage)}" placeholder="3d6[fire]">
           </label>
+          <div class="tsu-dos-immunity">
+            <label><input type="checkbox" data-immunity-field="enabled" ${data.immunity.enabled ? "checked" : ""}> ${escapeHtml(localize("Immunity"))}</label>
+            <input type="number" min="1" step="1" data-immunity-field="durationValue" value="${data.immunity.durationValue}" aria-label="${escapeHtml(localize("Time"))}">
+            <select data-immunity-field="durationUnit">${DURATION_UNITS.map((unit) => `<option value="${unit}" ${data.immunity.durationUnit === unit ? "selected" : ""}>${escapeHtml(localize(`DurationUnits.${unit}`))}</option>`).join("")}</select>
+            <select data-immunity-field="scope"><option value="ability" ${data.immunity.scope === "ability" ? "selected" : ""}>${escapeHtml(localize("ImmunityAbility"))}</option><option value="source" ${data.immunity.scope === "source" ? "selected" : ""}>${escapeHtml(localize("ImmunitySource"))}</option></select>
+          </div>
           <div class="tsu-dos-effects">${effects}</div>
           <div class="tsu-dos-drop" data-drop-zone>${escapeHtml(localize("DropHint"))}</div>
         </section>`;
@@ -161,8 +198,20 @@ function renderControls({ item }) {
       </details>`;
   }).join("");
 
+  const aura = config.aura;
   return `<div class="tsu-degree-of-success" data-item-id="${item.id}">
     <p class="hint">${escapeHtml(localize("Hint"))}</p>
+    <fieldset class="tsu-dos-aura">
+      <legend><label><input type="checkbox" data-aura-field="enabled" ${aura.enabled ? "checked" : ""}> ${escapeHtml(localize("Aura"))}</label></legend>
+      <label>${escapeHtml(localize("AuraRadius"))} <input type="number" min="1" data-aura-field="radius" value="${aura.radius}"></label>
+      <label>${escapeHtml(localize("AuraTargets"))}
+        <select data-aura-field="targets"><option value="enemies" ${aura.targets === "enemies" ? "selected" : ""}>${escapeHtml(localize("AuraEnemies"))}</option><option value="allies" ${aura.targets === "allies" ? "selected" : ""}>${escapeHtml(localize("AuraAllies"))}</option><option value="all" ${aura.targets === "all" ? "selected" : ""}>${escapeHtml(localize("AuraAll"))}</option></select>
+      </label>
+      <span class="tsu-dos-aura-label">${escapeHtml(localize("AuraTriggers"))}</span>
+      <label><input type="checkbox" data-aura-trigger="enters" ${aura.triggers.enters ? "checked" : ""}> ${escapeHtml(localize("AuraEnters"))}</label>
+      <label><input type="checkbox" data-aura-trigger="startTurn" ${aura.triggers.startTurn ? "checked" : ""}> ${escapeHtml(localize("AuraStartTurn"))}</label>
+      <label><input type="checkbox" data-aura-trigger="endTurn" ${aura.triggers.endTurn ? "checked" : ""}> ${escapeHtml(localize("AuraEndTurn"))}</label>
+    </fieldset>
     ${degreeHtml}
   </div>`;
 }
@@ -187,6 +236,32 @@ function activateListeners({ html, item }) {
   }
   for (const input of panel.querySelectorAll('[data-field="damage"]')) {
     input.addEventListener("change", (event) => void saveField(event.currentTarget));
+  }
+  for (const field of panel.querySelectorAll("[data-immunity-field]")) {
+    field.addEventListener("change", async (event) => {
+      const element = event.currentTarget;
+      const section = element.closest(".tsu-dos-recipient");
+      const config = getConfig(item);
+      const immunity = config[section?.dataset.degree]?.[section?.dataset.recipient]?.immunity;
+      if (!immunity) return;
+      const key = element.dataset.immunityField;
+      if (key === "enabled") immunity.enabled = element.checked;
+      else if (key === "durationValue") immunity.durationValue = Math.max(1, Math.trunc(Number(element.value) || 1));
+      else if (key === "durationUnit") immunity.durationUnit = DURATION_UNITS.includes(element.value) ? element.value : "rounds";
+      else if (key === "scope") immunity.scope = element.value === "source" ? "source" : "ability";
+      await item.setFlag(MODULE_ID, FLAG_KEY, config);
+    });
+  }
+  for (const field of panel.querySelectorAll("[data-aura-field], [data-aura-trigger]")) {
+    field.addEventListener("change", async (event) => {
+      const element = event.currentTarget;
+      const config = getConfig(item);
+      if (element.dataset.auraTrigger) config.aura.triggers[element.dataset.auraTrigger] = element.checked;
+      else if (element.dataset.auraField === "enabled") config.aura.enabled = element.checked;
+      else if (element.dataset.auraField === "radius") config.aura.radius = Math.max(1, Number(element.value) || 10);
+      else if (element.dataset.auraField === "targets") config.aura.targets = element.value;
+      await item.setFlag(MODULE_ID, FLAG_KEY, config);
+    });
   }
   for (const field of panel.querySelectorAll("[data-effect-field]")) {
     field.addEventListener("change", async (event) => {
@@ -347,16 +422,22 @@ async function processRollMessage(message, overrides = {}) {
   const sourceActor = overrides.sourceActor ?? (isSave ? originActor : roller);
   const targetActor = overrides.targetActor ?? (isSave ? roller : explicitTarget);
   if (!sourceActor || !targetActor) return;
+  const sourceTokenUuid = overrides.sourceTokenUuid
+    ?? (typeof origin.token === "string" ? origin.token : origin.token?.uuid)
+    ?? item.actor?.getActiveTokens?.(true, true)?.[0]?.document?.uuid
+    ?? null;
+  if (hasDegreeImmunity(targetActor, item.uuid, sourceTokenUuid)) return;
 
   const degreeConfig = getConfig(item)[outcome];
-  await applyRecipient(degreeConfig.target, targetActor, sourceActor, item, outcome, "target");
-  await applyRecipient(degreeConfig.source, sourceActor, sourceActor, item, outcome, "source");
+  await applyRecipient(degreeConfig.target, targetActor, sourceActor, item, outcome, "target", sourceTokenUuid);
+  await applyRecipient(degreeConfig.source, sourceActor, sourceActor, item, outcome, "source", sourceTokenUuid);
 }
 
-async function applyRecipient(config, actor, speakerActor, item, outcome, recipient) {
+async function applyRecipient(config, actor, speakerActor, item, outcome, recipient, sourceTokenUuid) {
   if (!config?.enabled || !actor?.canUserModify?.(game.user, "update")) return;
   if (config.damage) await rollDamage(config.damage, actor, speakerActor, item, outcome, recipient);
   for (const effect of config.effects) await applyEffect(effect, actor);
+  if (config.immunity?.enabled) await applyDegreeImmunity(config.immunity, actor, item, sourceTokenUuid);
 }
 
 async function rollDamage(formula, actor, speakerActor, item, outcome, recipient) {
@@ -385,16 +466,39 @@ async function rollDamage(formula, actor, speakerActor, item, outcome, recipient
 async function applyEffect(reference, actor) {
   const source = await documentFromReference(reference.uuid);
   if (!source || !["condition", "effect"].includes(source.type)) return;
+  const durationUnit = reference.durationUnit ?? "unlimited";
+  const durationValue = Number(reference.durationValue);
+  if (source.type === "condition" && durationUnit !== "unlimited") {
+    const value = reference.value === "" || reference.value == null ? null : Math.max(1, Math.trunc(Number(reference.value) || 1));
+    const grant = { key: "GrantItem", uuid: source.uuid, onDeleteActions: { grantee: "restrict" } };
+    if (value) grant.alterations = [{ mode: "override", property: "badge-value", value }];
+    const wrapper = {
+      name: source.name,
+      type: "effect",
+      img: source.img,
+      system: {
+        description: { value: source.system?.description?.value ?? "" },
+        duration: { unit: durationUnit, value: Math.max(1, Math.trunc(durationValue) || 1), expiry: "turn-start", sustained: false },
+        level: { value: 1 }, rules: [grant], slug: null, tokenIcon: { show: true }, traits: { value: [] }, unidentified: false,
+      },
+    };
+    await actor.createEmbeddedDocuments("Item", [wrapper]);
+    return;
+  }
   const data = source.toObject();
   delete data._id;
   if (foundry.utils.hasProperty(data, "system.value.value")) {
-    const value = reference.value === "" || reference.value == null
-      ? null
-      : Math.max(1, Math.trunc(Number(reference.value) || 1));
-    foundry.utils.setProperty(data, "system.value.value", value);
+    const requested = reference.value === "" || reference.value == null ? null : Math.max(1, Math.trunc(Number(reference.value) || 1));
+    const existing = actor.getCondition?.(source.slug) ?? null;
+    const current = existing?.value ?? 0;
+    if (requested === null && existing) return;
+    if (requested !== null && current >= requested) return;
+    if (requested !== null && existing && !existing.isLocked) {
+      await game.pf2e.ConditionManager.updateConditionValue(existing.id, actor, requested);
+      return;
+    }
+    foundry.utils.setProperty(data, "system.value.value", requested);
   }
-  const durationUnit = reference.durationUnit ?? "unlimited";
-  const durationValue = Number(reference.durationValue);
   foundry.utils.setProperty(data, "system.duration.unit", durationUnit);
   foundry.utils.setProperty(data, "system.duration.value", durationUnit === "unlimited" || !Number.isFinite(durationValue)
     ? -1
@@ -402,3 +506,216 @@ async function applyEffect(reference, actor) {
   foundry.utils.setProperty(data, "system.duration.expiry", durationUnit === "unlimited" ? null : "turn-start");
   await actor.createEmbeddedDocuments("Item", [data]);
 }
+
+function immunityData(effect) {
+  return effect?.getFlag?.(MODULE_ID, IMMUNITY_FLAG) ?? null;
+}
+
+function hasDegreeImmunity(actor, actionUuid, sourceTokenUuid = null) {
+  return (actor?.itemTypes?.effect ?? []).some((effect) => {
+    const immunity = immunityData(effect);
+    return immunity?.actionUuid === actionUuid
+      && (immunity.scope !== "source" || immunity.sourceTokenUuid === sourceTokenUuid);
+  });
+}
+
+function getManualImmunityConfig(item) {
+  const config = getConfig(item);
+  for (const degree of DEGREES) {
+    const recipient = config[degree]?.target;
+    if (recipient?.enabled && recipient.immunity?.enabled) return recipient.immunity;
+  }
+  return null;
+}
+
+function manualImmunityActors(message) {
+  const controlled = (canvas.tokens?.controlled ?? []).map((token) => token.actor).filter(Boolean);
+  const targeted = [...(game.user?.targets ?? [])].map((token) => token.actor).filter(Boolean);
+  const messageTargets = game.toolbelt?.targetHelper?.getMessageTargets?.(message) ?? [];
+  const fromMessage = messageTargets.map((target) => target.actor ?? target.document?.actor).filter(Boolean);
+  const preferred = controlled.length ? controlled : targeted.length ? targeted : fromMessage;
+  return [...new Map(preferred.map((actor) => [actor.uuid, actor])).values()];
+}
+
+async function applyDegreeImmunity(config, actor, item, sourceTokenUuid) {
+  const scope = config.scope === "source" ? "source" : "ability";
+  const existing = (actor.itemTypes?.effect ?? []).find((effect) => {
+    const immunity = immunityData(effect);
+    return immunity?.actionUuid === item.uuid && immunity.scope === scope
+      && (scope !== "source" || immunity.sourceTokenUuid === sourceTokenUuid);
+  });
+  const duration = {
+    unit: config.durationUnit,
+    value: config.durationUnit === "unlimited" ? -1 : Math.max(1, Number(config.durationValue) || 1),
+    expiry: config.durationUnit === "unlimited" ? null : "turn-start",
+    sustained: false,
+  };
+  if (existing) {
+    await existing.update({ "system.duration": duration, "system.start.value": game.time.worldTime, "system.start.initiative": actor.combatant?.initiative ?? null });
+    return;
+  }
+  const source = {
+    name: `${localize("Immunity")}: ${item.name}`,
+    type: "effect",
+    img: item.img,
+    system: {
+      description: { value: localize(scope === "source" ? "ImmunitySource" : "ImmunityAbility") },
+      duration,
+      level: { value: 1 }, rules: [], slug: null, tokenIcon: { show: true }, traits: { value: [] }, unidentified: false,
+      start: { value: game.time.worldTime, initiative: actor.combatant?.initiative ?? null },
+    },
+    flags: { [MODULE_ID]: { [IMMUNITY_FLAG]: { actionUuid: item.uuid, scope, sourceTokenUuid: scope === "source" ? sourceTokenUuid : null } } },
+  };
+  await actor.createEmbeddedDocuments("Item", [source]);
+}
+
+function isAutomationCoordinator(userId = null) {
+  const activeGM = game.users?.activeGM;
+  return activeGM ? game.user.id === activeGM.id : userId ? game.user.id === userId : true;
+}
+
+function tokenCenter(token) {
+  const size = canvas.grid?.size ?? 100;
+  return {
+    x: Number(token.x) + Number(token.width ?? 1) * size / 2,
+    y: Number(token.y) + Number(token.height ?? 1) * size / 2,
+  };
+}
+
+function tokenDistance(source, target) {
+  const a = tokenCenter(source); const b = tokenCenter(target);
+  const pixels = Math.hypot(a.x - b.x, a.y - b.y);
+  return pixels / (canvas.grid?.size ?? 100) * (canvas.scene?.grid?.distance ?? 5);
+}
+
+function auraAcceptsTarget(sourceActor, targetActor, mode) {
+  if (!targetActor || sourceActor === targetActor || targetActor.isDead) return false;
+  if (mode === "all") return true;
+  const sameAlliance = sourceActor.alliance != null && sourceActor.alliance === targetActor.alliance;
+  return mode === "allies" ? sameAlliance : !sameAlliance;
+}
+
+function auraSources(scene = canvas.scene) {
+  const sources = [];
+  for (const token of scene?.tokens ?? []) {
+    const actor = token.actor; if (!actor) continue;
+    for (const item of actor.itemTypes?.action ?? []) {
+      const rawConfig = item.getFlag?.(MODULE_ID, FLAG_KEY);
+      if (!rawConfig) continue;
+      const config = normalizeConfig(rawConfig);
+      if (config.aura.enabled) sources.push({ token, actor, item, config: config.aura });
+    }
+  }
+  return sources;
+}
+
+function targetsInsideAura(source) {
+  return (canvas.scene?.tokens ?? []).filter((target) => target !== source.token
+    && auraAcceptsTarget(source.actor, target.actor, source.config.targets)
+    && tokenDistance(source.token, target) <= source.config.radius);
+}
+
+async function postAuraMessage(source, targets, trigger) {
+  if (!targets.length) return;
+  const effective = targets.filter((target) => !hasDegreeImmunity(target.actor, source.item.uuid, source.token.uuid));
+  if (!effective.length) return;
+  const draft = await source.item.toMessage(null, { create: false });
+  if (!draft) return;
+  const data = draft.toObject(); delete data._id;
+  data.speaker = ChatMessage.getSpeaker({ actor: source.actor, token: source.token.object });
+  data.content += `<div class="tsu-dos-aura-targets"><strong>${escapeHtml(localize(`AuraTrigger.${trigger}`))}</strong>: ${targets.map((target) => `${escapeHtml(target.name)}${hasDegreeImmunity(target.actor, source.item.uuid, source.token.uuid) ? ` <span class="tsu-dos-immune">${escapeHtml(localize("Immune"))}</span>` : ""}`).join(", ")}</div>`;
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.degreeOfSuccessAura`, { trigger, sourceTokenUuid: source.token.uuid });
+  game.toolbelt?.targetHelper?.setMessageFlagTargets?.(data, targets.map((target) => target.uuid));
+  await ChatMessage.create(data);
+}
+
+const auraMembership = new Map();
+
+function auraKey(source) {
+  return `${canvas.scene?.id}:${source.token.id}:${source.item.uuid}`;
+}
+
+function seedAuraMembership() {
+  auraMembership.clear();
+  for (const source of auraSources()) auraMembership.set(auraKey(source), new Set(targetsInsideAura(source).map((target) => target.id)));
+}
+
+Hooks.on("canvasReady", seedAuraMembership);
+for (const hook of ["createItem", "updateItem", "deleteItem"]) {
+  Hooks.on(hook, (item) => {
+    if (item?.type === "action" && item.actor?.getActiveTokens?.().length) seedAuraMembership();
+  });
+}
+
+Hooks.on("updateToken", (token, changed, _options, userId) => {
+  if (!("x" in changed || "y" in changed || "elevation" in changed) || token.parent !== canvas.scene || !isAutomationCoordinator(userId)) return;
+  void (async () => {
+    for (const source of auraSources()) {
+      if (!source.config.triggers.enters) continue;
+      const key = auraKey(source);
+      const currentTargets = targetsInsideAura(source);
+      const current = new Set(currentTargets.map((target) => target.id));
+      const previous = auraMembership.get(key) ?? current;
+      auraMembership.set(key, current);
+      const entered = currentTargets.filter((target) => !previous.has(target.id));
+      if (entered.length) await postAuraMessage(source, entered, "enters");
+    }
+  })().catch((error) => console.error(`${MODULE_ID} | Degree aura movement failed`, error));
+});
+
+async function handleAuraTurn(combatant, trigger) {
+  if (!combatant?.token || !isAutomationCoordinator()) return;
+  for (const source of auraSources(combatant.token.parent)) {
+    if (!source.config.triggers[trigger] || source.token === combatant.token) continue;
+    if (targetsInsideAura(source).some((target) => target === combatant.token)) await postAuraMessage(source, [combatant.token], trigger);
+  }
+}
+
+Hooks.on("pf2e.startTurn", (combatant) => void handleAuraTurn(combatant, "startTurn").catch((error) => console.error(`${MODULE_ID} | Degree aura turn-start failed`, error)));
+Hooks.on("pf2e.endTurn", (combatant) => void handleAuraTurn(combatant, "endTurn").catch((error) => console.error(`${MODULE_ID} | Degree aura turn-end failed`, error)));
+
+Hooks.on("renderChatMessageHTML", (message, html) => {
+  requestAnimationFrame(() => void (async () => {
+    const item = await resolveAutomation(message); if (!item) return;
+    const context = getContext(message);
+    const origin = context.origin ?? message.flags?.pf2e?.origin ?? {};
+    const speakerToken = message.speaker?.token ? canvas.tokens?.get(message.speaker.token)?.document?.uuid : null;
+    const sourceTokenUuid = message.getFlag?.(MODULE_ID, "degreeOfSuccessAura")?.sourceTokenUuid
+      ?? (typeof origin.token === "string" ? origin.token : origin.token?.uuid)
+      ?? speakerToken
+      ?? null;
+    const manualImmunity = getManualImmunityConfig(item);
+    const messageContent = html.querySelector(".message-content") ?? html.querySelector(".card-content") ?? html;
+    if (manualImmunity && !message.getFlag?.(MODULE_ID, "degreeOfSuccessDamage") && !messageContent.querySelector("[data-tsu-grant-immunity]")) {
+      messageContent.insertAdjacentHTML("beforeend", `<div class="tsu-dos-manual-immunity"><button type="button" data-tsu-grant-immunity><i class="fas fa-shield-halved"></i> ${escapeHtml(localize("ManualImmunity"))}</button></div>`);
+      messageContent.querySelector("[data-tsu-grant-immunity]")?.addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const actors = manualImmunityActors(message).filter((actor) => actor.canUserModify?.(game.user, "update"));
+        if (!actors.length) {
+          ui.notifications.warn(localize("ManualImmunityNoTargets"));
+          return;
+        }
+        button.disabled = true;
+        try {
+          for (const actor of actors) await applyDegreeImmunity(manualImmunity, actor, item, sourceTokenUuid);
+          ui.notifications.info(game.i18n.format(`${I18N_PREFIX}.ActionPlus.DegreeOfSuccess.ManualImmunityGranted`, { count: actors.length }));
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+    if (!game.toolbelt?.targetHelper?.getMessageTargets) return;
+    const targets = game.toolbelt.targetHelper.getMessageTargets(message) ?? [];
+    const unused = [...targets];
+    for (const row of html.querySelectorAll(".pf2e-toolbelt-target-targetRows .target-row")) {
+      const name = row.querySelector(".target-header .name")?.textContent?.trim();
+      const index = unused.findIndex((target) => target.name === name);
+      const target = index >= 0 ? unused.splice(index, 1)[0] : null;
+      if (!target?.actor || !hasDegreeImmunity(target.actor, item.uuid, sourceTokenUuid)) continue;
+      row.classList.add("tsu-dos-is-immune");
+      const controls = row.querySelector(".target-header .controls");
+      controls?.querySelector('[data-action="roll-save"]')?.setAttribute("hidden", "hidden");
+      if (controls && !controls.querySelector(".tsu-dos-immune")) controls.insertAdjacentHTML("afterbegin", `<span class="tsu-dos-immune">${escapeHtml(localize("Immune"))}</span>`);
+    }
+  })().catch((error) => console.error(`${MODULE_ID} | Immunity badge rendering failed`, error)));
+});

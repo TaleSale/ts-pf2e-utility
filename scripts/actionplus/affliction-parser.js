@@ -184,30 +184,36 @@ function parseConditions(stageText) {
   return conditions;
 }
 
-function splitStages(raw, text) {
-  const markers = Array.from(text.matchAll(/(?:^|\n|[.;])\s*(?:stage|стадия)\s*(\d+)\s*:?/giu));
+function splitStages(text) {
+  const markers = Array.from(text.matchAll(/(?:^|\n|[.;])\s*(?:stage|стадия)\s*(\d+)\s*:?/giu))
+    .filter((marker) => Number.isInteger(Number(marker[1])) && Number(marker[1]) > 0);
   if (!markers.length) return [];
-  return markers.map((marker, index) => {
+  const candidates = markers.map((marker, index) => {
     const start = marker.index + marker[0].length;
     const end = markers[index + 1]?.index ?? text.length;
     const stageText = text.slice(start, end).trim().replace(/^[—–\-:;,.\s]+|[\s]+$/g, "");
-    const rawIndex = raw.toLowerCase().indexOf(stageText.slice(0, Math.min(stageText.length, 24)).toLowerCase());
-    const stageRaw = rawIndex >= 0 ? raw.slice(rawIndex, rawIndex + Math.max(stageText.length * 3, 200)) : stageText;
     return {
       number: Number(marker[1]),
       text: stageText,
       duration: parseDuration(stageText),
-      damage: parseDamage(stageRaw, stageText),
+      damage: parseDamage(stageText, stageText),
       conditions: parseConditions(stageText),
       effects: [],
     };
-  }).sort((left, right) => left.number - right.number);
+  });
+  const unique = new Map();
+  const score = (stage) => (stage.duration ? 1000 : 0) + stage.damage.length * 500 + stage.conditions.length * 250 + Math.min(stage.text.length, 200);
+  for (const stage of candidates) {
+    const current = unique.get(stage.number);
+    if (!current || score(stage) > score(current)) unique.set(stage.number, stage);
+  }
+  return [...unique.values()].sort((left, right) => left.number - right.number);
 }
 
 export function parseAfflictionDescription(rawDescription, { name = "", img = "", traits = [] } = {}) {
   const raw = String(rawDescription ?? "");
   const text = htmlToAfflictionText(raw);
-  const stages = splitStages(raw, text);
+  const stages = splitStages(text);
   return {
     name: String(name ?? "").trim(),
     img: String(img ?? "").trim(),

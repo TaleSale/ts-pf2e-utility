@@ -1,4 +1,4 @@
-import { escapeHtml, I18N_PREFIX, MODULE_ID } from "../core.js";
+import { escapeHtml, I18N_PREFIX, MODULE_ID, SOCKET_CHANNEL } from "../core.js";
 import { isActionPlusFeatureEnabled, isSupportedActionPlusItem, registerActionPlusFeature } from "./actionplus.js";
 import {
   durationUnitSeconds,
@@ -16,6 +16,8 @@ const MANAGED_FLAG = "afflictionManaged";
 const TRANSACTIONS_FLAG = "afflictionTransactions";
 const CYCLE_OPTION_PREFIX = `${MODULE_ID}:affliction-cycle:`;
 const PERIODIC_OPTION_PREFIX = `${MODULE_ID}:affliction-instance:`;
+const ACTION_OPTION_PREFIX = `${MODULE_ID}:affliction-action:`;
+const SOCKET_ACTION = "affliction.processToolbeltSave";
 const CONFIG_VERSION = 1;
 const MAX_TRANSACTIONS = 20;
 const OUTCOMES = ["criticalFailure", "failure", "success", "criticalSuccess"];
@@ -406,7 +408,11 @@ async function resolveAction(message) {
   const origin = context.origin ?? message?.flags?.pf2e?.origin ?? {};
   const toolbelt = message?.flags?.["pf2e-toolbelt"]?.targetHelper ?? {};
   const actors = [message?.actor, actorFromReference(origin.actor ?? origin.actorUuid), actorFromReference(message?.speaker?.actor)].filter(Boolean);
-  for (const candidate of [message?.item, origin.item, origin.itemUuid, context.item, context.itemUuid, toolbelt.item]) {
+  const actionOption = (Array.isArray(context.options) ? context.options : [])
+    .find((option) => String(option).startsWith(ACTION_OPTION_PREFIX));
+  const actionUuid = actionOption?.slice(ACTION_OPTION_PREFIX.length)
+    ?? message?.getFlag?.(MODULE_ID, "afflictionExposure")?.actionUuid;
+  for (const candidate of [message?.item, origin.item, origin.itemUuid, context.item, context.itemUuid, toolbelt.item, actionUuid]) {
     const rawId = typeof candidate === "string" && !candidate.includes(".") ? candidate : null;
     const item = (rawId ? actors.map((actor) => actor.items?.get(rawId)).find(Boolean) : null) ?? await documentFromReference(candidate);
     if (item?.type === "action" && item.getFlag?.(MODULE_ID, DEFINITION_FLAG)) return item;
@@ -420,6 +426,23 @@ function getCycleOption(context) {
   return (Array.isArray(context?.options) ? context.options : []).find((option) => String(option).startsWith(CYCLE_OPTION_PREFIX))?.slice(CYCLE_OPTION_PREFIX.length) ?? null;
 }
 
+function appendActionCardContent(content, addition) {
+  const template = document.createElement("template");
+  template.innerHTML = String(content ?? "").trim();
+  const card = template.content.querySelector(".pf2e.chat-card, .chat-card");
+  if (!card) return `${content ?? ""}${addition}`;
+  let cardContent = card.querySelector(":scope > .card-content");
+  if (!cardContent) {
+    cardContent = document.createElement("div");
+    cardContent.className = "card-content";
+    const footer = card.querySelector(":scope > .card-footer");
+    if (footer) footer.before(cardContent);
+    else card.append(cardContent);
+  }
+  cardContent.insertAdjacentHTML("beforeend", addition);
+  return template.innerHTML;
+}
+
 Hooks.on("preCreateChatMessage", (message) => {
   const context = messageContext(message);
   if (context?.type !== "saving-throw" || getCycleOption(context)) return;
@@ -428,9 +451,53 @@ Hooks.on("preCreateChatMessage", (message) => {
   const rawId = typeof origin?.item === "string" && !origin.item.includes(".") ? origin.item : null;
   const item = rawId ? actor?.items?.get(rawId) : message.item;
   if (item?.type !== "action" || !item.getFlag?.(MODULE_ID, DEFINITION_FLAG)) return;
-  const options = Array.from(new Set([...(context.options ?? []), `${CYCLE_OPTION_PREFIX}${uid()}`, "item:trait:poison"]));
+  const options = Array.from(new Set([...(context.options ?? []), `${CYCLE_OPTION_PREFIX}${uid()}`, `${ACTION_OPTION_PREFIX}${item.uuid}`, "item:trait:poison"]));
   message.updateSource({ "flags.pf2e.context.options": options });
 });
+
+async function prepareExposureMessage(message) {
+  if (
+    !message?.isAuthor
+    || message.isRoll
+    || message.getFlag?.(MODULE_ID, "afflictionExposure")
+    || message.getFlag?.(MODULE_ID, "afflictionSave")
+  ) return;
+  const action = await resolveAction(message);
+  if (!action || !isActionPlusFeatureEnabled(action, FEATURE_ID)) return;
+  const definition = resolvedDefinition(getConfig(action));
+  if (validateAfflictionDefinition(definition).length) {
+    ui.notifications.warn(localize("InvalidUse"));
+    return;
+  }
+
+  const cycleId = `exposure:${message.id}:${uid()}`;
+  const updates = {
+    [`flags.${MODULE_ID}.afflictionExposure`]: { actionUuid: action.uuid, cycleId },
+  };
+  const rawDescription = String(action.system?.description?.value ?? "");
+  if (!/@Check\s*\[/i.test(rawDescription)) {
+    const check = `@Check[${definition.save.type}|dc:${definition.save.dc}|options:${CYCLE_OPTION_PREFIX}${cycleId},${ACTION_OPTION_PREFIX}${action.uuid},item:trait:poison]{${localize("InitialSave")}}`;
+    const enriched = await TextEditor.enrichHTML(`<div class="tsu-affliction-initial-save"><strong>${escapeHtml(definition.name)}</strong><span class="tsu-affliction-save-separator"> — </span>${check}</div>`, { async: true, relativeTo: action });
+    updates.content = appendActionCardContent(message.content, enriched);
+  }
+
+  if (game.toolbelt?.targetHelper) {
+    const existingTargets = game.toolbelt.targetHelper.getMessageTargets?.(message) ?? [];
+    const targets = existingTargets.length ? existingTargets : [...(game.user.targets ?? [])];
+    const targetUuids = targets.map((target) => target.document?.uuid ?? target.uuid).filter(Boolean);
+    const helper = clone(message.flags?.["pf2e-toolbelt"]?.targetHelper ?? {});
+    Object.assign(helper, {
+      type: "action",
+      author: action.actor?.uuid ?? null,
+      item: action.uuid,
+      options: Array.from(new Set([...(helper.options ?? []), `${CYCLE_OPTION_PREFIX}${cycleId}`, `${ACTION_OPTION_PREFIX}${action.uuid}`, "item:trait:poison"])),
+      saveVariants: { null: { basic: false, dc: definition.save.dc, statistic: definition.save.type, saves: {} } },
+      targets: targetUuids,
+    });
+    updates["flags.pf2e-toolbelt.targetHelper"] = helper;
+  }
+  await message.update(updates);
+}
 
 function instanceFromEffect(effect) {
   const value = effect?.getFlag?.(MODULE_ID, INSTANCE_FLAG);
@@ -475,7 +542,10 @@ function effectBadge(definition, instance) {
 function instanceDescription(instance) {
   if (instance.phase === "onset") return `<p>${escapeHtml(localize("OnsetActive"))}</p>`;
   const stage = instance.definition.stages[instance.stage - 1];
-  return `<p><strong>${escapeHtml(localize("Stage").replace("{stage}", String(instance.stage)))}</strong></p><p>${escapeHtml(stage?.text ?? "")}</p>`;
+  const timer = instance.awaitingSave
+    ? localize("AwaitingSave")
+    : localize("NextSaveTurns").replace("{turns}", String(Math.max(0, Number(instance.remainingStageTurns) || 0)));
+  return `<p><strong>${escapeHtml(localize("Stage").replace("{stage}", String(instance.stage)))}</strong></p><p>${escapeHtml(stage?.text ?? "")}</p><p><em>${escapeHtml(timer)}</em></p>`;
 }
 
 function rootEffectSource(instance) {
@@ -517,8 +587,6 @@ async function applyStageItems(actor, effect, instance) {
     const source = base.toObject(); delete source._id;
     if (foundry.utils.hasProperty(source, "system.value.value")) foundry.utils.setProperty(source, "system.value.value", condition.value);
     foundry.utils.setProperty(source, `flags.${MODULE_ID}.${MANAGED_FLAG}`, { instanceId: instance.id, revision: instance.revision });
-    foundry.utils.setProperty(source, "flags.pf2e.grantedBy.id", effect.id);
-    if (condition.linked) foundry.utils.setProperty(source, "system.references.parent.id", effect.id);
     sources.push(source);
   }
   for (const reference of stage.effects) {
@@ -550,6 +618,19 @@ async function applyStageDamage(actor, effect, instance) {
   return { messages: [rollMessage?.id, appliedMessage?.id].filter(Boolean), appliedDamage: clone(appliedMessage?.flags?.pf2e?.appliedDamage ?? null) };
 }
 
+async function postStageDescription(actor, instance) {
+  const stage = instance.definition.stages[instance.stage - 1];
+  const stageLabel = localize("Stage").replace("{stage}", String(instance.stage));
+  const description = stage?.text ? await TextEditor.enrichHTML(stage.text, { async: true }) : "";
+  const content = `<div class="tsu-affliction-stage-card"><strong>${escapeHtml(actor.name)} ${escapeHtml(localize("Receives"))} ${escapeHtml(instance.definition.name)} — ${escapeHtml(stageLabel)}</strong>${description ? `<div>${description}</div>` : ""}</div>`;
+  const message = await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content,
+    flags: { [MODULE_ID]: { afflictionStage: { instanceId: instance.id, revision: instance.revision } } },
+  });
+  return message?.id ?? null;
+}
+
 async function enterStage(actor, effect, instance, { damage = true } = {}) {
   instance.phase = "stage"; instance.stage = Math.clamp(instance.stage, 1, instance.definition.stages.length);
   instance.remainingStageTurns = await durationTurns(instance.definition.stages[instance.stage - 1]?.duration);
@@ -557,7 +638,9 @@ async function enterStage(actor, effect, instance, { damage = true } = {}) {
   await deleteManagedChildren(actor, instance.id);
   await updateRootEffect(effect, instance);
   await applyStageItems(actor, effect, instance);
-  return damage ? applyStageDamage(actor, effect, instance) : { messages: [], appliedDamage: null };
+  const descriptionMessage = await postStageDescription(actor, instance);
+  const consequence = damage ? await applyStageDamage(actor, effect, instance) : { messages: [], appliedDamage: null };
+  return { ...consequence, messages: [descriptionMessage, ...(consequence.messages ?? [])].filter(Boolean) };
 }
 
 function getTransactions(actor) {
@@ -598,7 +681,7 @@ async function buildInitialInstance(definition, actionUuid, targetActor, targetS
     stage: hasOnset ? 0 : Math.clamp(targetStage, 1, definition.stages.length), pendingStage: Math.clamp(targetStage, 1, definition.stages.length),
     remainingOnsetTurns: hasOnset ? await durationTurns(definition.onset) : null,
     remainingStageTurns: null, remainingMaxTurns: hasOnset ? null : await durationTurns(definition.maxDuration),
-    virulentSuccesses: 0, revision: 0, awaitingSave: false, pendingCycleId: null,
+    virulentSuccesses: 0, revision: 0, awaitingSave: false, pendingCycleId: null, pendingMessageId: null,
     skipEndTurnKey: targetActor.combatant?.id === game.combat?.combatant?.id ? combatTurnKey() : null,
   };
   return instance;
@@ -607,7 +690,20 @@ async function buildInitialInstance(definition, actionUuid, targetActor, targetS
 async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, kind = "exposure", instanceId = null }) {
   let transactions = getTransactions(actor);
   let transaction = transactions.find((entry) => entry.cycleId === cycleId);
-  if (transaction?.outcome === outcome) return;
+  if (transaction?.outcome === outcome) {
+    if (kind === "periodic") {
+      const current = findInstanceEffect(actor, { instanceId, actionUuid });
+      const currentInstance = instanceFromEffect(current);
+      if (current && currentInstance?.awaitingSave && currentInstance.pendingCycleId === cycleId) {
+        currentInstance.awaitingSave = false;
+        currentInstance.pendingCycleId = null;
+        currentInstance.pendingMessageId = null;
+        currentInstance.revision += 1;
+        await updateRootEffect(current, currentInstance);
+      }
+    }
+    return;
+  }
   if (transaction) {
     const latestForAction = transactions.findLast((entry) => entry.actionUuid === transaction.actionUuid);
     if (latestForAction?.cycleId !== transaction.cycleId) {
@@ -657,7 +753,7 @@ async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, k
       }
     }
   } else {
-    instance.awaitingSave = false; instance.pendingCycleId = null;
+    instance.awaitingSave = false; instance.pendingCycleId = null; instance.pendingMessageId = null;
     const transition = periodicTransition({
       stage: instance.stage, outcome, maxStage: instance.definition.stages.length,
       virulent: instance.definition.virulent, virulentSuccesses: instance.virulentSuccesses,
@@ -680,7 +776,29 @@ function shouldProcessStandardMessage(message) {
   return actor?.primaryUpdater ? game.user === actor.primaryUpdater : message.isAuthor;
 }
 
+const actorMutationQueues = new Map();
+
+async function enqueueActorMutation(actor, operation) {
+  if (!actor) return;
+  const key = actor.uuid;
+  const previous = actorMutationQueues.get(key) ?? Promise.resolve();
+  const current = previous
+    .catch((error) => console.error(`${MODULE_ID} | Affliction queue recovered`, error))
+    .then(operation);
+  actorMutationQueues.set(key, current);
+  try {
+    return await current;
+  } finally {
+    if (actorMutationQueues.get(key) === current) actorMutationQueues.delete(key);
+  }
+}
+
 async function processRoll(message, overrides = {}) {
+  const actor = overrides.targetActor ?? message.actor ?? actorFromReference(message.speaker?.actor);
+  return enqueueActorMutation(actor, () => processRollNow(message, overrides));
+}
+
+async function processRollNow(message, overrides = {}) {
   const outcome = normalizeOutcome(overrides.outcome ?? messageContext(message).outcome);
   const targetActor = overrides.targetActor ?? message.actor ?? actorFromReference(message.speaker?.actor);
   const mayCoordinate = overrides.localToolbelt
@@ -709,45 +827,217 @@ async function processRoll(message, overrides = {}) {
 }
 
 Hooks.on("createChatMessage", (message) => {
+  if (!message?.isRoll) void prepareExposureMessage(message).catch((error) => console.error(`${MODULE_ID} | Affliction exposure card failed`, error));
   if (shouldProcessStandardMessage(message)) void processRoll(message).catch((error) => console.error(`${MODULE_ID} | Affliction roll failed`, error));
 });
 
+function toolbeltTargetData(target) {
+  const token = target?.documentName === "Token"
+    ? target
+    : target?.uuid ? fromUuidSync?.(target.uuid) : null;
+  const actor = token?.actor ?? null;
+  return actor ? { actor, tokenUuid: token.uuid } : null;
+}
+
+async function processToolbeltSave({ message, rollMessage = null, target, outcome, reroll = false }) {
+  const targetData = toolbeltTargetData(target);
+  if (!message || !targetData || !outcome) return;
+  const cycleId = `toolbelt:${message.id}:${targetData.tokenUuid}`;
+  if (game.user === targetData.actor.primaryUpdater) {
+    await processRoll(rollMessage ?? message, {
+      automationMessage: message,
+      outcome,
+      targetActor: targetData.actor,
+      cycleId,
+      localToolbelt: true,
+    });
+    return;
+  }
+  game.socket?.emit(SOCKET_CHANNEL, {
+    moduleId: MODULE_ID,
+    action: SOCKET_ACTION,
+    senderId: game.user.id,
+    payload: { messageId: message.id, targetTokenUuid: targetData.tokenUuid, outcome, cycleId, reroll },
+  });
+}
+
 Hooks.on("pf2e-toolbelt.rollSave", ({ message, rollMessage, target, data } = {}) => {
-  if (!message || !rollMessage || !target?.actor || !target.actor.canUserModify?.(game.user, "update")) return;
-  const cycleId = `toolbelt:${message.id}:${target.document?.uuid ?? target.id}`;
-  void processRoll(rollMessage, { automationMessage: message, outcome: data?.success, targetActor: target.actor, cycleId, localToolbelt: true }).catch((error) => console.error(`${MODULE_ID} | Toolbelt affliction roll failed`, error));
+  void processToolbeltSave({ message, rollMessage, target, outcome: data?.success })
+    .catch((error) => console.error(`${MODULE_ID} | Toolbelt affliction roll failed`, error));
 });
 
 Hooks.on("pf2e-toolbelt.rerollSave", ({ message, target, data } = {}) => {
-  if (!message || !target?.actor || !target.actor.canUserModify?.(game.user, "update")) return;
-  const cycleId = `toolbelt:${message.id}:${target.document?.uuid ?? target.id}`;
-  void processRoll(message, { automationMessage: message, outcome: data?.success, targetActor: target.actor, cycleId, localToolbelt: true }).catch((error) => console.error(`${MODULE_ID} | Toolbelt affliction reroll failed`, error));
+  void processToolbeltSave({ message, target, outcome: data?.success, reroll: true })
+    .catch((error) => console.error(`${MODULE_ID} | Toolbelt affliction reroll failed`, error));
+});
+
+function storedToolbeltOutcome(message, targetId) {
+  const variants = message?.flags?.["pf2e-toolbelt"]?.targetHelper?.saveVariants ?? {};
+  for (const variant of Object.values(variants)) {
+    const outcome = variant?.saves?.[targetId]?.success;
+    if (outcome) return outcome;
+  }
+  return null;
+}
+
+async function processStoredToolbeltResults(message) {
+  const targets = game.toolbelt?.targetHelper?.getMessageTargets?.(message) ?? [];
+  for (const target of targets) {
+    const targetData = toolbeltTargetData(target);
+    const outcome = storedToolbeltOutcome(message, target.id);
+    if (!targetData || !outcome || game.user !== targetData.actor.primaryUpdater) continue;
+    await processRoll(message, {
+      automationMessage: message,
+      outcome,
+      targetActor: targetData.actor,
+      cycleId: `toolbelt:${message.id}:${targetData.tokenUuid}`,
+      localToolbelt: true,
+    });
+  }
+}
+
+Hooks.on("updateChatMessage", (message, changed) => {
+  if (!message.getFlag?.(MODULE_ID, "afflictionSave") && !message.getFlag?.(MODULE_ID, "afflictionExposure")) return;
+  const toolbeltChanged = foundry.utils.hasProperty(changed, "flags.pf2e-toolbelt")
+    || foundry.utils.hasProperty(changed, "flags.pf2e-toolbelt.targetHelper")
+    || foundry.utils.hasProperty(changed, "flags.pf2e-toolbelt.targetHelper.saveVariants")
+    || Object.keys(changed ?? {}).some((key) => key.startsWith("flags.pf2e-toolbelt.targetHelper.saveVariants"));
+  if (!toolbeltChanged) return;
+  void processStoredToolbeltResults(message)
+    .catch((error) => console.error(`${MODULE_ID} | Stored Toolbelt affliction result failed`, error));
+});
+
+Hooks.once("ready", () => {
+  game.socket?.on(SOCKET_CHANNEL, (request) => {
+    if (request?.moduleId !== MODULE_ID || request.action !== SOCKET_ACTION || request.senderId === game.user.id) return;
+    void (async () => {
+      const message = game.messages?.get(request.payload?.messageId);
+      const token = request.payload?.targetTokenUuid ? await fromUuid(request.payload.targetTokenUuid).catch(() => null) : null;
+      const actor = token?.documentName === "Token" ? token.actor : null;
+      if (!message || !actor || game.user !== actor.primaryUpdater) return;
+      await processRoll(message, {
+        automationMessage: message,
+        outcome: request.payload.outcome,
+        targetActor: actor,
+        cycleId: request.payload.cycleId,
+        localToolbelt: true,
+      });
+    })().catch((error) => console.error(`${MODULE_ID} | Socket affliction save failed`, error));
+  });
 });
 
 Hooks.on("pf2e.reroll", () => { /* The replacement message preserves the cycle roll option and is handled by createChatMessage. */ });
 
 async function postPeriodicSave(combatant, effect, instance) {
   const cycleId = `periodic:${instance.id}:${uid()}`;
-  instance.awaitingSave = true; instance.pendingCycleId = cycleId; instance.revision += 1;
-  await updateRootEffect(effect, instance);
   const label = `${instance.definition.name} — ${localize("Stage").replace("{stage}", String(instance.stage))}`;
   const check = `@Check[${instance.definition.save.type}|dc:${instance.definition.save.dc}|options:${PERIODIC_OPTION_PREFIX}${instance.id},${CYCLE_OPTION_PREFIX}${cycleId},item:trait:poison]{${localize("RollSave")}}`;
-  const enriched = await TextEditor.enrichHTML(`<div class="tsu-affliction-save-card"><strong>${escapeHtml(label)}</strong><div>${check}</div></div>`, { async: true });
+  const targetUuid = combatant.token?.uuid;
+  const helper = targetUuid && game.toolbelt?.targetHelper ? {
+    type: "check",
+    author: combatant.actor?.uuid ?? null,
+    item: instance.actionUuid,
+    options: [`${PERIODIC_OPTION_PREFIX}${instance.id}`, `${CYCLE_OPTION_PREFIX}${cycleId}`, "item:trait:poison"],
+    saveVariants: { null: { basic: false, dc: instance.definition.save.dc, statistic: instance.definition.save.type, saves: {} } },
+    targets: [targetUuid],
+  } : null;
   const updates = {
     speaker: ChatMessage.getSpeaker({ actor: combatant.actor, token: combatant.token?.object }),
-    content: enriched,
-    flags: { [MODULE_ID]: { afflictionSave: { instanceId: instance.id, cycleId, actionUuid: instance.actionUuid } } },
+    content: check,
+    flavor: escapeHtml(label),
+    flags: {
+      [MODULE_ID]: { afflictionSave: { instanceId: instance.id, cycleId, actionUuid: instance.actionUuid } },
+      ...(helper ? { "pf2e-toolbelt": { targetHelper: helper } } : {}),
+    },
   };
-  const targetUuid = combatant.token?.uuid;
-  if (targetUuid && game.toolbelt?.targetHelper?.setMessageFlagTargets) game.toolbelt.targetHelper.setMessageFlagTargets(updates, [targetUuid]);
-  await ChatMessage.create(updates);
+  const message = await ChatMessage.create(updates);
+  instance.awaitingSave = true;
+  instance.pendingCycleId = cycleId;
+  instance.pendingMessageId = message.id;
+  instance.revision += 1;
+  await updateRootEffect(effect, instance);
+}
+
+function findPendingSaveMessage(instance) {
+  const direct = instance.pendingMessageId ? game.messages?.get(instance.pendingMessageId) : null;
+  if (direct) return direct;
+  const messages = game.messages?.contents ?? [];
+  for (let index = messages.length - 1, checked = 0; index >= 0 && checked < 100; index -= 1, checked += 1) {
+    const message = messages[index];
+    const flag = message.getFlag?.(MODULE_ID, "afflictionSave");
+    if (flag?.instanceId === instance.id && (!instance.pendingCycleId || flag.cycleId === instance.pendingCycleId)) return message;
+  }
+  return null;
+}
+
+function findCompletedPeriodicRoll(actor, instance) {
+  const messages = game.messages?.contents ?? [];
+  for (let index = messages.length - 1, checked = 0; index >= 0 && checked < 100; index -= 1, checked += 1) {
+    const message = messages[index];
+    if (!message?.isRoll || (message.actor ?? actorFromReference(message.speaker?.actor))?.uuid !== actor.uuid) continue;
+    const context = messageContext(message);
+    const options = Array.isArray(context.options) ? context.options : [];
+    const matchesInstance = options.includes(`${PERIODIC_OPTION_PREFIX}${instance.id}`);
+    const matchesCycle = !instance.pendingCycleId || getCycleOption(context) === instance.pendingCycleId;
+    if (matchesInstance && matchesCycle && normalizeOutcome(context.outcome)) return message;
+  }
+  return null;
+}
+
+async function recoverPendingSave(actor, effect, instance) {
+  const message = findPendingSaveMessage(instance);
+  if (message) {
+    if (instance.pendingMessageId !== message.id) {
+      instance.pendingMessageId = message.id;
+      instance.revision += 1;
+      await updateRootEffect(effect, instance);
+    }
+    const target = game.toolbelt?.targetHelper?.getMessageTargets?.(message)
+      ?.find((candidate) => toolbeltTargetData(candidate)?.actor === actor);
+    const outcome = target ? storedToolbeltOutcome(message, target.id) : null;
+    if (target && outcome) {
+      await processRollNow(message, {
+        automationMessage: message,
+        outcome,
+        targetActor: actor,
+        cycleId: `toolbelt:${message.id}:${target.uuid}`,
+        localToolbelt: true,
+      });
+      return "resolved";
+    }
+    const standardRoll = findCompletedPeriodicRoll(actor, instance);
+    if (standardRoll) {
+      await processRollNow(standardRoll, { targetActor: actor });
+      return "resolved";
+    }
+    return "waiting";
+  }
+
+  const standardRoll = findCompletedPeriodicRoll(actor, instance);
+  if (standardRoll) {
+    await processRollNow(standardRoll, { targetActor: actor });
+    return "resolved";
+  }
+
+  // Old/broken pending state without a live card must never freeze the poison.
+  instance.awaitingSave = false;
+  instance.pendingCycleId = null;
+  instance.pendingMessageId = null;
+  instance.remainingStageTurns = 0;
+  instance.revision += 1;
+  await updateRootEffect(effect, instance);
+  return "retry";
 }
 
 async function handleEndTurn(combatant) {
   const actor = combatant?.actor; if (!actor || game.user !== actor.primaryUpdater) return;
   const effects = (actor.itemTypes?.effect ?? []).filter((effect) => instanceFromEffect(effect));
   for (const effect of effects) {
-    const instance = instanceFromEffect(effect); if (!instance || instance.awaitingSave) continue;
+    const instance = instanceFromEffect(effect); if (!instance) continue;
+    if (instance.awaitingSave) {
+      const recovered = await recoverPendingSave(actor, effect, instance);
+      if (recovered !== "retry") continue;
+    }
     const key = combatTurnKey();
     if (instance.skipEndTurnKey === key) { instance.skipEndTurnKey = null; await updateRootEffect(effect, instance); continue; }
     if (instance.phase === "stage" && Number.isFinite(instance.remainingMaxTurns)) {
@@ -769,7 +1059,11 @@ async function handleEndTurn(combatant) {
   }
 }
 
-Hooks.on("pf2e.endTurn", (combatant) => { void handleEndTurn(combatant).catch((error) => console.error(`${MODULE_ID} | Affliction turn processing failed`, error)); });
+Hooks.on("pf2e.endTurn", (combatant) => {
+  const actor = combatant?.actor;
+  void enqueueActorMutation(actor, () => handleEndTurn(combatant))
+    .catch((error) => console.error(`${MODULE_ID} | Affliction turn processing failed`, error));
+});
 
 Hooks.on("deleteItem", (item) => {
   const instance = instanceFromEffect(item); if (!instance || !item.actor || game.user !== item.actor.primaryUpdater) return;

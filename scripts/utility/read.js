@@ -3,6 +3,12 @@ import { MODULE_ID } from "../core.js";
 const SETTING_ENABLE_READ = "enableJournalRead";
 const READ_BODY_CLASS = "tsu-journal-read-enabled";
 const READ_BLOCK_PATTERN = /<section\s+class=(["'])read\1>([\s\S]*?)<\/section>/gi;
+const READ_SHEET_SELECTOR = ".journal-sheet, .item.sheet, .actor.sheet.hazard";
+const READ_CONTENT_SELECTOR = [
+  ".journal-page-content",
+  ".item.sheet .editor-content",
+  ".actor.sheet.hazard .hazard-editor .editor-content",
+].join(", ");
 
 function isReadEnabled() {
   return Boolean(game.settings.get(MODULE_ID, SETTING_ENABLE_READ));
@@ -12,22 +18,24 @@ function updateReadBodyClass(enabled = isReadEnabled()) {
   document.body.classList.toggle(READ_BODY_CLASS, Boolean(enabled));
 }
 
-function isJournalApp(app) {
+function isReadApp(app) {
   const documentName = app?.document?.documentName ?? "";
   if (documentName === "JournalEntry" || documentName === "JournalEntryPage") return true;
+  if (documentName === "Item") return true;
+  if (documentName === "Actor" && app?.document?.type === "hazard") return true;
 
   const constructorName = app?.constructor?.name ?? "";
   if (constructorName.includes("Journal")) return true;
 
   const element = app?.element?.[0] ?? app?.element ?? null;
-  return Boolean(element?.classList?.contains?.("journal-sheet"));
+  return Boolean(element?.matches?.(READ_SHEET_SELECTOR));
 }
 
-async function rerenderOpenJournalSheets() {
+async function rerenderOpenReadSheets() {
   const seen = new Set();
 
   const rerender = async (app) => {
-    if (!app || seen.has(app) || !isJournalApp(app)) return;
+    if (!app || seen.has(app) || !isReadApp(app)) return;
     seen.add(app);
     if (typeof app.render === "function") await app.render(false);
   };
@@ -124,8 +132,9 @@ function replaceReadTextNode(node, enabled = isReadEnabled()) {
 function unwrapReadSections(root) {
   if (!(root instanceof HTMLElement)) return;
 
-  for (const section of root.querySelectorAll(".journal-page-content .read")) {
+  for (const section of root.querySelectorAll(".read")) {
     if (!(section instanceof HTMLElement)) continue;
+    if (!section.closest(READ_CONTENT_SELECTOR)) continue;
     const fragment = section.ownerDocument.createDocumentFragment();
     while (section.firstChild) fragment.append(section.firstChild);
     section.replaceWith(fragment);
@@ -157,10 +166,12 @@ function hydrateReadMarkup(root) {
   if (root.closest?.(".ProseMirror, [contenteditable='true'], .application.sheet.journal-sheet.journal-entry-page.text")) return;
   const enabled = isReadEnabled();
   if (!enabled) unwrapReadSections(root);
-  const candidates = root.querySelectorAll(".journal-page-content");
+  const candidates = root.querySelectorAll(READ_CONTENT_SELECTOR);
 
   for (const content of candidates) {
     if (!(content instanceof HTMLElement)) continue;
+    if (content.matches(".ProseMirror, [contenteditable='true']")) continue;
+    if (content.closest(".ProseMirror, [contenteditable='true']")) continue;
 
     const walker = content.ownerDocument.createTreeWalker(content, NodeFilter.SHOW_TEXT);
     const textNodes = [];
@@ -180,15 +191,14 @@ function hydrateReadMarkup(root) {
 
   if (!enabled) return;
 
-  for (const section of root.querySelectorAll(".journal-page-content .read")) {
+  for (const section of root.querySelectorAll(".read")) {
+    if (!section.closest(READ_CONTENT_SELECTOR)) continue;
     ensureReadActionTarget(section);
   }
 }
 
 function isEditableReadContext(target, section) {
-  const editableRoot = target.closest?.(
-    ".ProseMirror, [contenteditable='true'], .editor-content",
-  );
+  const editableRoot = target.closest?.(".ProseMirror, [contenteditable='true']");
   return Boolean(editableRoot);
 }
 
@@ -199,7 +209,8 @@ function getReadActionSectionFromPoint(event) {
     if (!(element instanceof Element)) continue;
     const section = element.closest(".read");
     if (!(section instanceof HTMLElement)) continue;
-    if (!section.closest(".journal-sheet")) continue;
+    if (!section.closest(READ_CONTENT_SELECTOR)) continue;
+    if (!section.closest(READ_SHEET_SELECTOR)) continue;
 
     const bounds = section.getBoundingClientRect();
     const left = bounds.right - 8;
@@ -231,7 +242,8 @@ async function sendReadSectionToChat(section) {
 async function onReadActionTargetClick(event, section) {
   if (!game.ready || !game.settings.get(MODULE_ID, SETTING_ENABLE_READ)) return;
   if (!(section instanceof HTMLElement)) return;
-  if (!section.closest(".journal-sheet")) return;
+  if (!section.closest(READ_CONTENT_SELECTOR)) return;
+  if (!section.closest(READ_SHEET_SELECTOR)) return;
   const target = event.target instanceof Element ? event.target : section;
   if (isEditableReadContext(target, section)) return;
 
@@ -251,7 +263,7 @@ Hooks.once("init", () => {
     type: Boolean,
     onChange: (enabled) => {
       updateReadBodyClass(enabled);
-      void rerenderOpenJournalSheets();
+      void rerenderOpenReadSheets();
     },
   });
 });
@@ -265,18 +277,23 @@ Hooks.once("ready", () => {
     void onReadActionTargetClick(event, section);
   }, true);
 
-  const hydrateRenderedJournal = (_app, element) => {
+  const hydrateRenderedSheet = (_app, element) => {
     const root = element instanceof HTMLElement ? element : element?.[0];
     if (!root) return;
     hydrateReadMarkup(root);
     globalThis.requestAnimationFrame?.(() => hydrateReadMarkup(root));
   };
 
-  Hooks.on("renderJournalSheet", hydrateRenderedJournal);
-  Hooks.on("renderJournalEntrySheet", hydrateRenderedJournal);
-  Hooks.on("renderJournalEntryPageSheet", hydrateRenderedJournal);
+  Hooks.on("renderJournalSheet", hydrateRenderedSheet);
+  Hooks.on("renderJournalEntrySheet", hydrateRenderedSheet);
+  Hooks.on("renderJournalEntryPageSheet", hydrateRenderedSheet);
+  Hooks.on("renderItemSheet", hydrateRenderedSheet);
+  Hooks.on("renderActorSheet", (app, element) => {
+    if (app?.actor?.type !== "hazard" && app?.document?.type !== "hazard") return;
+    hydrateRenderedSheet(app, element);
+  });
 
-  for (const sheet of document.querySelectorAll(".journal-sheet")) {
+  for (const sheet of document.querySelectorAll(READ_SHEET_SELECTOR)) {
     if (sheet instanceof HTMLElement) hydrateReadMarkup(sheet);
   }
 });

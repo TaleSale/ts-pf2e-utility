@@ -49,3 +49,17 @@ test("reports incomplete definitions", () => {
   const result = parseAfflictionDescription("Stage 1: sickened 1");
   assert.deepEqual(validateAfflictionDefinition(result), ["save", "stageDuration:1"]);
 });
+
+test("ignores a duplicated rendered stage block and keeps damage inside its stage", () => {
+  const result = parseAfflictionDescription(`
+    Fortitude DC 20; Maximum Duration 3 rounds.
+    Stage 1: @Damage[1d6[poison]] (1 round).
+    Stage 2: @Damage[2d6[poison]] (1 round).
+    Stage 3: @Damage[3d6[poison]] (1 round).
+    Stage 1: @Damage[1d6[poison]] (1 round).
+    Stage 2: @Damage[2d6[poison]] (1 round).
+    Stage 3: @Damage[3d6[poison]] (1 round).
+  `);
+  assert.equal(result.stages.length, 3);
+  assert.deepEqual(result.stages.map((stage) => stage.damage.map((entry) => entry.formula)), [["1d6"], ["2d6"], ["3d6"]]);
+});

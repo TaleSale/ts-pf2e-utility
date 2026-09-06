@@ -2,7 +2,7 @@ import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20260902-auto-floor-visibility-v45";
+} from "../utility/texture-presets.js?v=20260906-shadow-overlay-v66";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";
@@ -406,7 +406,7 @@ function createDefaultMementos() {
 
 function createDefaultData() {
   return {
-    version: 26,
+    version: 27,
     inventory: [],
     sideQuests: [],
     investigations: [],
@@ -587,6 +587,7 @@ function normalizeSideQuests(entries) {
         text,
         authorId: normalizeText(rawNote.authorId, 120),
         authorName: normalizeText(rawNote.authorName, 120) || "Неизвестный игрок",
+        authorNameOverride: normalizeText(rawNote.authorNameOverride, 120),
         createdAt: Math.max(0, Number(rawNote.createdAt) || 0),
       }];
     });
@@ -862,11 +863,17 @@ function normalizeData(raw) {
         : servant
     ));
   }
-  data.version = 26;
+  data.version = 27;
   data.inventory = stackInventoryEntries(data.inventory);
   if (storedVersion < 19) data.investigations = [];
   if (storedVersion < 20) data.mementos = normalizeArray(data.mementos).map((memento) => ({ regionUuids: "", ...memento }));
   if (storedVersion < 21) data.accessBlocks = createDefaultData().accessBlocks;
+  if (storedVersion < 27) {
+    data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
+      ...quest,
+      notes: normalizeArray(quest?.notes).map((note) => ({ authorNameOverride: "", ...note })),
+    }));
+  }
   if (storedVersion < 8) data.sideQuests = normalizeArray(raw?.sideQuests);
   if (storedVersion < 9) {
     data.sideQuests = normalizeArray(data.sideQuests).map((quest) => ({
@@ -3253,16 +3260,26 @@ function emitSideQuestFailed(questId, failed) {
 }
 
 async function promptSideQuestNote() {
+  const defaultAuthorName = defaultSideQuestNoteAuthorName();
   return Dialog.prompt({
     title: "Добавить заметку",
-    content: `<form class="bh-sidequest-dialog"><div class="form-group"><label>Заметка</label><div class="form-fields"><textarea name="note" rows="6" maxlength="4000" autofocus></textarea></div></div></form>`,
+    content: `<form class="bh-sidequest-dialog"><div class="form-group"><label>От имени</label><div class="form-fields"><input type="text" name="authorName" maxlength="120" value="${escapeHtml(defaultAuthorName)}"></div></div><div class="form-group"><label>Заметка</label><div class="form-fields"><textarea name="note" rows="6" maxlength="4000" autofocus></textarea></div></div></form>`,
     label: "Добавить",
-    callback: (html) => normalizeText(dialogRoot(html)?.querySelector?.('[name="note"]')?.value, 4000),
+    callback: (html) => {
+      const root = dialogRoot(html);
+      const text = normalizeText(root?.querySelector?.('[name="note"]')?.value, 4000);
+      if (!text) return null;
+      const enteredAuthorName = normalizeText(root?.querySelector?.('[name="authorName"]')?.value, 120);
+      return {
+        text,
+        authorNameOverride: enteredAuthorName && enteredAuthorName !== defaultAuthorName ? enteredAuthorName : "",
+      };
+    },
     rejectClose: false,
   });
 }
 
-async function addSideQuestNote(questId, text, userId = game.user?.id) {
+async function addSideQuestNote(questId, text, userId = game.user?.id, authorNameOverride = "") {
   if (!isPrimaryGM()) return;
   const noteText = normalizeText(text, 4000);
   if (!noteText) return;
@@ -3276,23 +3293,32 @@ async function addSideQuestNote(questId, text, userId = game.user?.id) {
     text: noteText,
     authorId: user.id,
     authorName: normalizeText(user.character?.name, 120) || normalizeText(user.name, 120) || "Неизвестный игрок",
+    authorNameOverride: normalizeText(authorNameOverride, 120),
     createdAt: Date.now(),
   });
   await saveData(data);
 }
 
-function emitSideQuestNote(questId, text) {
+function emitSideQuestNote(questId, text, authorNameOverride = "") {
   game.socket?.emit?.(SOCKET_CHANNEL, {
     type: "bastardhall-sidequest-note",
     questId,
     text: normalizeText(text, 4000),
+    authorNameOverride: normalizeText(authorNameOverride, 120),
     senderId: game.user?.id,
   });
 }
 
+function defaultSideQuestNoteAuthorName(user = game.user) {
+  return normalizeText(user?.character?.name, 120)
+    || normalizeText(user?.name, 120)
+    || "Неизвестный игрок";
+}
+
 function sideQuestNoteAuthorName(note) {
   const user = game.users?.get(note?.authorId);
-  return normalizeText(user?.character?.name, 120)
+  return normalizeText(note?.authorNameOverride, 120)
+    || normalizeText(user?.character?.name, 120)
     || normalizeText(user?.name, 120)
     || normalizeText(note?.authorName, 120)
     || "Неизвестный игрок";
@@ -4669,11 +4695,11 @@ export class BastardhallSheet extends FormApplication {
       const questId = noteButton.dataset.questId;
       noteButton.disabled = true;
       try {
-        const text = await promptSideQuestNote();
-        if (!text) return;
-        if (isPrimaryGM()) await addSideQuestNote(questId, text);
+        const draft = await promptSideQuestNote();
+        if (!draft?.text) return;
+        if (isPrimaryGM()) await addSideQuestNote(questId, draft.text, game.user?.id, draft.authorNameOverride);
         else {
-          emitSideQuestNote(questId, text);
+          emitSideQuestNote(questId, draft.text, draft.authorNameOverride);
         }
       } finally {
         noteButton.disabled = false;
@@ -5151,7 +5177,7 @@ Hooks.once("ready", async () => {
         return;
       }
       if (message?.type === "bastardhall-sidequest-note" && message.questId && message.text) {
-        await addSideQuestNote(message.questId, message.text, message.senderId);
+        await addSideQuestNote(message.questId, message.text, message.senderId, message.authorNameOverride);
         return;
       }
       if (message?.type === "bastardhall-sidequest-note-delete" && message.questId && message.noteId) {

@@ -529,6 +529,10 @@
             {{else}}
               <p class="bh-empty">Описание не добавлено.</p>
             {{/if}}
+            <label class="bh-sidequest-note-author">
+              <span>От имени</span>
+              <input type="text" data-side-quest-note-author maxlength="120" value="{{sideQuestNoteDefaultAuthorName}}" aria-label="От чьего имени добавить заметку">
+            </label>
             <div class="bh-sidequest-notes-heading"><h3>Заметки</h3><span>{{selectedSideQuest.noteCount}}</span></div>
             <div class="bh-sidequest-notes">
               {{#each selectedSideQuest.notes}}

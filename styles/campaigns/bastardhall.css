@@ -1075,6 +1075,9 @@ form.tsu-bastardhall-window > .window-header .header-control {
 .bh-sidequest-note-button > i { line-height: 1; margin: 0; }
 .bh-sidequest-note-button:hover { background: var(--bh-teal); color: #fff; }
 .bh-sidequest-description { background: rgba(255, 255, 255, .3); border-left: 3px solid var(--bh-teal); line-height: 1.45; margin: 10px 0; padding: 9px 11px; white-space: pre-wrap; }
+.bh-sidequest-note-author { align-items: center; display: grid; gap: 8px; grid-template-columns: max-content minmax(0, 1fr); margin: 12px 0 7px; }
+.bh-sidequest-note-author > span { color: var(--bh-teal-dark); font-size: 12px; font-weight: 700; }
+.bh-sidequest-note-author > input { margin: 0; min-width: 0; width: 100%; }
 .bh-sidequest-notes-heading { align-items: center; display: flex; gap: 7px; margin: 12px 0 7px; }
 .bh-sidequest-notes-heading h3 { border: 0; color: var(--bh-teal-dark); font-size: 15px; margin: 0; }
 .bh-sidequest-notes-heading span { background: var(--bh-teal); border-radius: 10px; color: #fff; font-size: 10px; min-width: 20px; padding: 2px 6px; text-align: center; }
