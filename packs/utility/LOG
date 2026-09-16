@@ -1,8 +1,25 @@
-2026/09/08-09:05:03.336 2630 Recovering log #582
-2026/09/08-09:05:03.449 2630 Delete type=0 #582
-2026/09/08-09:05:03.450 2630 Delete type=3 #580
-2026/09/08-18:20:04.839 a04 Level-0 table #587: started
-2026/09/08-18:20:04.843 a04 Level-0 table #587: 0 bytes OK
-2026/09/08-18:20:04.938 a04 Delete type=0 #585
-2026/09/08-18:20:05.114 a04 Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
-2026/09/08-18:20:05.311 a04 Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/16-11:28:09.062 3e6c Recovering log #270
+2026/09/16-11:28:09.062 3e6c Recovering log #631
+2026/09/16-11:28:09.210 3e6c Delete type=2 #108
+2026/09/16-11:28:09.210 3e6c Delete type=2 #188
+2026/09/16-11:28:09.211 3e6c Delete type=0 #270
+2026/09/16-11:28:09.211 3e6c Delete type=0 #631
+2026/09/16-11:28:09.211 3e6c Delete type=3 #269
+2026/09/16-13:00:35.534 2b1c Level-0 table #634: started
+2026/09/16-13:00:35.534 2b1c Level-0 table #634: 0 bytes OK
+2026/09/16-13:00:35.575 2b1c Delete type=0 #632
+2026/09/16-13:00:35.650 2b1c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at '!macros!UtHorrorToggle010' @ 33 : 1
+2026/09/16-13:00:35.650 2b1c Compacting 1@0 + 0@1 files
+2026/09/16-13:00:35.743 2b1c Generated table #635@0: 2 keys, 757 bytes
+2026/09/16-13:00:35.743 2b1c Compacted 1@0 + 0@1 files => 757 bytes
+2026/09/16-13:00:35.808 2b1c compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/09/16-13:00:35.808 2b1c Delete type=2 #263
+2026/09/16-13:00:35.809 2b1c Manual compaction at level-0 from '!macros!UtHorrorToggle010' @ 33 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/16-13:00:35.809 2b1c Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at '!macros!UtHorrorToggle010' @ 33 : 1
+2026/09/16-13:00:35.809 2b1c Compacting 1@1 + 1@2 files
+2026/09/16-13:00:35.949 2b1c Generated table #636@1: 11 keys, 2901 bytes
+2026/09/16-13:00:35.949 2b1c Compacted 1@1 + 1@2 files => 2901 bytes
+2026/09/16-13:00:35.991 2b1c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/09/16-13:00:35.992 2b1c Delete type=2 #227
+2026/09/16-13:00:35.992 2b1c Delete type=2 #635
+2026/09/16-13:00:36.075 2b1c Manual compaction at level-1 from '!macros!UtHorrorToggle010' @ 33 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)

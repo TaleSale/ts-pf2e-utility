@@ -2,7 +2,7 @@ import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20260906-shadow-overlay-v66";
+} from "../utility/texture-presets.js?v=20260915-prison-topdown-v100";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";

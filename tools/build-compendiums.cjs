@@ -37,6 +37,9 @@ const PACK_CONFIGS = Object.freeze([
       "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
       "pack-src/utility/Damage_UtDamage0000001.json",
       "pack-src/utility/Open_Bastardhall_Sheet_UtBastSheet00001.json",
+      "pack-src/utility/Force_Client_Refresh_UtForceRefresh01.json",
+      "pack-src/utility/Toggle_Horror_Mode_UtHorrorToggle01.json",
+      "pack-src/utility/Horror_Mode_Panel_UtHorrorPanel001.json",
     ]),
   },
   {

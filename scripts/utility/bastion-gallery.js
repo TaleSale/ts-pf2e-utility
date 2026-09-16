@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20260906-shadow-overlay-v66";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260906-shadow-overlay-v66";
+import { ASSETS } from "./scene-assets.js?v=20260915-prison-topdown-v100";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260915-prison-topdown-v100";
 
 const GALLERY_FLAG = "bastionGallery";
 
@@ -11,10 +11,13 @@ const FLOOR_STYLES = Object.freeze([
   ["flagstone-grey", "Grey flagstone"],
   ["brick-red", "Red brick"], ["wood-walnut", "Walnut boards"], ["wood-alder", "Alder boards"],
   ["wood-continuous", "Continuous wood grain"],
-  ["wood-outdoor", "Outdoor boards"], ["grass-meadow", "Meadow grass"], ["swamp", "Swamp"], ["path-dirt", "Dirt path"],
+  ["wood-outdoor", "Outdoor boards"], ["grass-meadow", "Meadow grass"], ["grass-rocky", "Rocky grass"], ["swamp", "Swamp"], ["path-dirt", "Dirt path"],
   ["path-cobblestone", "Cobblestone path"], ["carpet-red", "Red carpet"],
   ["carpet-blue", "Blue carpet"], ["carpet-red-ornate", "Ornate red carpet"],
   ["carpet-blue-heraldic", "Heraldic blue carpet"], ["carpet-green-gold", "Green-gold carpet"],
+  ["floor-ornament-geometric", "Geometric flagstone ornament"],
+  ["floor-ornament-knotwork", "Knotwork flagstone ornament"],
+  ["floor-ornament-diamond", "Diamond flagstone ornament"],
   ["garden-cabbage", "Cabbage garden"], ["garden-carrot", "Carrot garden"],
   ["garden-rice", "Rice garden"], ["garden-herbs", "Herb garden"],
   ["forest-deciduous", "Deciduous forest"], ["forest-pine", "Pine forest"],

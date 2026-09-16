@@ -65,6 +65,9 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
       "pack-src/utility/Quick_Effects_UtQuickFx00001.json",
       "pack-src/utility/SVG_Walls_And_Doors_UtSvgWalls00001.json",
       "pack-src/utility/Open_Bastardhall_Sheet_UtBastSheet00001.json",
+      "pack-src/utility/Force_Client_Refresh_UtForceRefresh01.json",
+      "pack-src/utility/Toggle_Horror_Mode_UtHorrorToggle01.json",
+      "pack-src/utility/Horror_Mode_Panel_UtHorrorPanel001.json",
     ]),
     iconUpdates: Object.freeze({
       UtActSync0000001: "icons/svg/upgrade.svg",
@@ -73,6 +76,7 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
       UtTokAdj000001: "icons/svg/aura.svg",
       UtQuickFx00001: "systems/pf2e/icons/default-icons/effect.svg",
       UtSvgWalls00001: "icons/svg/wall-direction.svg",
+      UtForceRefresh01: "icons/svg/upgrade.svg",
     }),
   },
   {
@@ -1035,6 +1039,7 @@ export function initializeModuleRuntime() {
     localizeSectionHeader("enableSpellAtWill", `===${t("Settings.Sections.Spells", "Spells")}===`);
     localizeSectionHeader("defaultJournalStyle", `===${t("Settings.Sections.Journals", "Journals")}===`);
     localizeSectionHeader("enableBastardhallSheet", `===${t("Settings.Sections.Campaigns", "Campaigns")}===`);
+    localizeSectionHeader("enableHorrorMode", `===${t("Settings.Sections.VariantRules", "Variant Rules")}===`);
     localizeSectionHeader("enableTempHealing", `===${t("Settings.Sections.Other", "Other")}===`);
 
     const campaignGroup = root.querySelector(`[name="${MODULE_ID}.enableBastardhallSheet"]`)?.closest(".form-group");

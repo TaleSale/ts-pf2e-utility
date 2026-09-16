@@ -1,0 +1,122 @@
+[
+  {
+    "key": "PrisonFloorCage",
+    "slug": "floor-cage",
+    "ru": "Напольная клетка",
+    "size": 2,
+    "file": "prison-floor-cage-topdown-v1.webp",
+    "aspect": 1.0088669950738915,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-010bed43-a3de-40b1-ba9d-607692ae321c.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-afe93e96-f9e8-4568-81be-b05d213c0f63.png"
+  },
+  {
+    "key": "PrisonHangingCage",
+    "slug": "hanging-cage",
+    "ru": "Подвесная клетка",
+    "size": 1.5,
+    "file": "prison-hanging-cage-topdown-v1.webp",
+    "aspect": 0.990234375,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-64924283-c5d7-458d-bc46-6992937c053f.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-50854681-7b3f-462a-b995-818ea7eff383.png"
+  },
+  {
+    "key": "PrisonFairyTableCage",
+    "slug": "fairy-table-cage",
+    "ru": "Настольная клетка для фей",
+    "size": 0.3,
+    "file": "prison-fairy-table-cage-topdown-v1.webp",
+    "aspect": 1.0270812437311936,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-bb6709b5-afaf-4592-bd88-0ab1838b2451.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-68b50c45-6bee-413e-a725-971a2f86aec4.png"
+  },
+  {
+    "key": "PrisonFairyHangingCage",
+    "slug": "fairy-hanging-cage",
+    "ru": "Подвесная клетка для фей",
+    "size": 0.4,
+    "file": "prison-fairy-hanging-cage-topdown-v1.webp",
+    "aspect": 0.9951171875,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-834b5435-271f-4e2c-ac60-fd14f31de6c7.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-d9f8dd7e-6bb4-4bfa-b100-face134bc39e.png"
+  },
+  {
+    "key": "PrisonIronMaiden",
+    "slug": "iron-maiden",
+    "ru": "Железная дева",
+    "size": 0.8,
+    "file": "prison-iron-maiden-topdown-v2.webp",
+    "aspect": 1.3544973544973544,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-bf9914c1-acb9-45cd-a2ba-2e2410006ecc.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-2e1d8ce4-1a77-4ea2-91e6-a76a1aab33bf.png"
+  },
+  {
+    "key": "PrisonRestraintTable",
+    "slug": "restraint-table",
+    "ru": "Стол с оковами и ремнями",
+    "size": 2,
+    "file": "prison-restraint-table-topdown-v1.webp",
+    "aspect": 0.4091796875,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-53ed4059-bf9c-4163-9058-9cdb3f8456f1.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-4f2918ee-5c36-45ba-abcd-43524ac66039.png"
+  },
+  {
+    "key": "PrisonCeilingChain",
+    "slug": "ceiling-chain",
+    "ru": "Потолочная цепь",
+    "size": 0.25,
+    "file": "prison-ceiling-chain-topdown-v2.webp",
+    "aspect": 1.490538573508006,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-a46a85bb-4442-4154-9e22-b6e8850cbef9.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-a0df2b72-8a6e-4e1e-9727-dd3fc06d35cc.png"
+  },
+  {
+    "key": "PrisonWallManacles",
+    "slug": "wall-manacles",
+    "ru": "Настенные цепи с кандалами",
+    "size": 1,
+    "file": "prison-wall-manacles-topdown-v2.webp",
+    "aspect": 5.361256544502618,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-bd45a78b-7613-43dd-b926-2e543506804e.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-55a20fc6-da06-4110-a070-10f115adc94d.png"
+  },
+  {
+    "key": "PrisonStocks",
+    "slug": "stocks",
+    "ru": "Ножные колодки",
+    "size": 1,
+    "file": "prison-stocks-topdown-v2.webp",
+    "aspect": 4.0,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-df6aaac5-9eb1-4646-845a-61e171ca512f.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-3a158bfa-77e5-477f-8572-6a4677921dd3.png"
+  },
+  {
+    "key": "PrisonRestraintChair",
+    "slug": "restraint-chair",
+    "ru": "Кресло с оковами",
+    "size": 0.8,
+    "file": "prison-restraint-chair-topdown-v1.webp",
+    "aspect": 1.3128205128205128,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-dd677c45-d31b-4e3d-8f5e-e35eed55a387.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-d91dd54b-92b1-4c4d-b690-edee12820a0c.png"
+  },
+  {
+    "key": "PrisonInstrumentTable",
+    "slug": "instrument-table",
+    "ru": "Столик с инструментами",
+    "size": 1,
+    "file": "prison-instrument-table-topdown-v1.webp",
+    "aspect": 1.6516129032258065,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-bc463f62-654d-48b5-9d17-1964feae54b2.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-ce15d146-c179-4599-b188-e4a5dddf265e.png"
+  },
+  {
+    "key": "PrisonBrazierPokers",
+    "slug": "brazier-pokers",
+    "ru": "Жаровня с кочергами",
+    "size": 0.8,
+    "file": "prison-brazier-pokers-topdown-v1.webp",
+    "aspect": 1.1191256830601093,
+    "source": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-5bd3a024-0bae-47fe-9f07-3d3f1e623a00.png",
+    "darkSource": "C:\\Users\\Valkker\\.codex\\generated_images\\01a0a1d8-bb36-78a1-b73d-2bb205fb5170\\exec-cef37a20-5496-4b0d-a1de-fecfdeb02054.png"
+  }
+]

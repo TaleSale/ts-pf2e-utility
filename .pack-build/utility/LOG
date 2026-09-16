@@ -1,15 +1,5 @@
-2026/08/26-10:59:59.437 bb60 Recovering log #181
-2026/08/26-10:59:59.448 bb60 Delete type=0 #181
-2026/08/26-10:59:59.448 bb60 Delete type=3 #179
-2026/08/26-10:59:59.458 a330 Level-0 table #187: started
-2026/08/26-10:59:59.465 a330 Level-0 table #187: 196 bytes OK
-2026/08/26-10:59:59.470 a330 Delete type=0 #185
-2026/08/26-10:59:59.471 a330 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
-2026/08/26-10:59:59.471 a330 Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at '!macros!UtAfflict00001' @ 23 : 0
-2026/08/26-10:59:59.471 a330 Compacting 1@1 + 1@2 files
-2026/08/26-10:59:59.495 a330 Generated table #188@1: 5 keys, 1434 bytes
-2026/08/26-10:59:59.495 a330 Compacted 1@1 + 1@2 files => 1434 bytes
-2026/08/26-10:59:59.500 a330 compacted to: files[ 0 0 2 0 0 0 0 ]
-2026/08/26-10:59:59.500 a330 Delete type=2 #183
-2026/08/26-10:59:59.500 a330 Delete type=2 #187
-2026/08/26-10:59:59.500 a330 Manual compaction at level-1 from '!macros!UtAfflict00001' @ 23 : 0 .. '~' @ 0 : 0; will stop at (end)
+2026/09/14-00:25:25.042 6540 Delete type=3 #1
+2026/09/14-00:25:25.045 6bc0 Level-0 table #5: started
+2026/09/14-00:25:25.045 6bc0 Level-0 table #5: 2899 bytes OK
+2026/09/14-00:25:25.055 6bc0 Delete type=0 #3
+2026/09/14-00:25:25.055 6bc0 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)

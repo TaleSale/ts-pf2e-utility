@@ -5122,7 +5122,8 @@
 .tsu-asset-light-settings input { width:100%; min-width:0; height:28px; }
 .tsu-asset-light-settings input[type="color"] { padding:2px; }
 
-#tsu-light-switch {
+#tsu-light-switch,
+#tsu-light-holder-action {
   position: absolute;
   z-index: 6;
   display: flex;
@@ -5137,10 +5138,14 @@
   color: var(--color-text-light-highlight, #eee);
   pointer-events: all;
 }
-#tsu-light-switch:hover { box-shadow: 0 0 8px var(--color-shadow-highlight); }
-#tsu-light-switch i { font-size: 25px; }
+#tsu-light-switch:hover,
+#tsu-light-holder-action:hover { box-shadow: 0 0 8px var(--color-shadow-highlight); }
+#tsu-light-switch i,
+#tsu-light-holder-action i { font-size: 25px; }
 #tsu-light-switch.on i { color: #fff; opacity: 1; }
 #tsu-light-switch.off i { color: #fff; opacity: .35; }
+#tsu-light-holder-action.empty i { color: #9bd0ff; }
+#tsu-light-holder-action.occupied i { color: #ffd17a; }
 .tsu-asset-help { margin:7px 1px 8px; opacity:.68; font-size:10px; line-height:1.35; }
 .tsu-asset-set-grid button { overflow:hidden; }
 .tsu-set-thumbs { position:static!important; display:grid!important; grid-template-columns:1fr 1fr; width:100%; height:58px; padding:0!important; background:none!important; opacity:1!important; transform:none!important; }
@@ -5280,4 +5285,36 @@ ul[data-option-toggles] > li.ts-automation-toggle-row > .ts-automation-lock > i 
   flex-direction: column;
   grid-area: img;
   min-width: 0;
+}
+
+/* Keep the Horror panel readable even with all GM actions visible. */
+.application.dialog.tsu-horror-panel {
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+}
+.application.dialog.tsu-horror-panel .dialog-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.application.dialog.tsu-horror-panel select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.application.dialog.tsu-horror-panel .dialog-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.application.dialog.tsu-horror-panel .dialog-buttons button {
+  min-width: 0;
+  height: auto;
+  min-height: 38px;
+  padding: 8px 10px;
+  white-space: normal;
+  line-height: 1.3;
+}
+.application.dialog.tsu-horror-panel .dialog-buttons button:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }

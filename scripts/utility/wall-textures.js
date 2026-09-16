@@ -1,5 +1,5 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260906-shadow-overlay-v66";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260915-prison-topdown-v100";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
@@ -1291,10 +1291,15 @@ Hooks.on("renderWallConfig", async (app, element) => {
   scheduleApplicationAutoHeight(app);
 });
 
-function getTextureContainer(border = false) {
+function wallTextureContainerName(border, level) {
+  const baseName = border ? BORDER_TEXTURE_CONTAINER : WALL_TEXTURE_CONTAINER;
+  return level?.id ? `${baseName}:${level.id}` : baseName;
+}
+
+function getTextureContainer(border = false, level = canvas?.level) {
   const parent = canvas?.primary ?? canvas?.stage;
   if (!parent) return null;
-  const name = border ? BORDER_TEXTURE_CONTAINER : WALL_TEXTURE_CONTAINER;
+  const name = wallTextureContainerName(border, level);
 
   let container = parent.children?.find((child) => child?.name === name);
   if (!container) {
@@ -1307,12 +1312,14 @@ function getTextureContainer(border = false) {
   }
   if (parent === canvas?.primary) {
     const sortLayers = canvas.primary.constructor?.SORT_LAYERS ?? {};
-    // PrimaryCanvasGroup compares elevation and sortLayer before zIndex.
-    // Decorative borders sit below forest canopies; blocking walls sit above them.
-    container.elevation = Number(canvas?.level?.elevation?.base ?? 0);
-    container.sortLayer = Number(sortLayers.TILES ?? 500) + (border ? 1 : 3);
-    container.sort = 0;
-    container.zIndex = 0;
+    const viewedForeground = level?.isView ? canvas.primary.foreground : null;
+    // Render each Level's walls immediately below that Level's foreground. A
+    // higher Level background at the same elevation then covers only the wall
+    // portions beneath its opaque floor, leaving exposed lower walls visible.
+    container.elevation = Number(viewedForeground?.elevation ?? level?.elevation?.top ?? 0);
+    container.sortLayer = Number(viewedForeground?.sortLayer ?? sortLayers.SCENE ?? 0);
+    container.sort = Number(viewedForeground?.sort ?? 0) - 1;
+    container.zIndex = border ? -2 : -1;
     parent.sortDirty = true;
   } else {
     container.zIndex = border ? 10000 : 10002;
@@ -1322,9 +1329,12 @@ function getTextureContainer(border = false) {
 
 function clearWallTextureContainer() {
   const parent = canvas?.primary ?? canvas?.stage;
-  for (const name of [WALL_TEXTURE_CONTAINER, BORDER_TEXTURE_CONTAINER]) {
-    const container = parent?.children?.find((child) => child?.name === name);
-    if (container) container.destroy({ children: true });
+  if (!parent) return;
+  for (const container of [...(parent.children ?? [])]) {
+    const name = container?.name ?? "";
+    if (![WALL_TEXTURE_CONTAINER, BORDER_TEXTURE_CONTAINER]
+      .some((baseName) => name === baseName || name.startsWith(`${baseName}:`))) continue;
+    container.destroy({ children: true });
   }
 }
 
@@ -1632,9 +1642,12 @@ function getAdjacentWallStyle(windowWall) {
   return getStyleDefinition(flags.style || DEFAULT_STYLE, textured);
 }
 
-function getTexturedWalls() {
-  return (canvas.walls?.placeables ?? [])
-    .map((placeable) => placeable.document)
+function getTexturedWalls(level = canvas?.level) {
+  const sceneWalls = canvas?.scene?.walls?.contents ?? Array.from(canvas?.scene?.walls ?? []);
+  const walls = level && sceneWalls.length
+    ? sceneWalls.filter((wall) => wall.includedInLevel?.(level) !== false)
+    : (canvas?.walls?.placeables ?? []).map((placeable) => placeable.document);
+  return walls
     .filter((wall) => {
       const flags = getFlagData(wall);
       return supportsWallTexture(wall) && isEnabled(flags.enabled) && getWallCoords(wall);
@@ -1992,27 +2005,32 @@ function redrawWallTextures() {
     return;
   }
 
-  const wallContainer = getTextureContainer(false);
-  const borderContainer = getTextureContainer(true);
-  if (!wallContainer || !borderContainer) return;
+  clearWallTextureContainer();
+  const visibleLevels = (canvas?.scene?.levels?.sorted ?? [])
+    .filter((level) => level.isVisible);
+  if (!visibleLevels.length && canvas?.level) visibleLevels.push(canvas.level);
 
-  wallContainer.removeChildren().forEach((child) => child.destroy());
-  borderContainer.removeChildren().forEach((child) => child.destroy());
-  const texturedWalls = getTexturedWalls();
-  const windows = texturedWalls.filter(isWindowWall);
-  const walls = texturedWalls.filter((wall) => !isWindowWall(wall));
-  const endpointMap = buildWallEndpointMap(walls);
-  const chains = buildWallTextureChains(walls, endpointMap);
+  for (const level of visibleLevels) {
+    const wallContainer = getTextureContainer(false, level);
+    const borderContainer = getTextureContainer(true, level);
+    if (!wallContainer || !borderContainer) continue;
 
-  for (const chain of chains) {
-    const style = getStyleDefinition(chain.styleKey, chain.wall);
-    const mesh = createWallRibbonMesh(style, chain.points, getFlagData(chain.wall));
-    if (mesh) (style.borderOnly ? borderContainer : wallContainer).addChild(mesh);
-  }
+    const texturedWalls = getTexturedWalls(level);
+    const windows = texturedWalls.filter(isWindowWall);
+    const walls = texturedWalls.filter((wall) => !isWindowWall(wall));
+    const endpointMap = buildWallEndpointMap(walls);
+    const chains = buildWallTextureChains(walls, endpointMap);
 
-  for (const wall of windows) {
-    const sprite = createWindowSprite(wall);
-    if (sprite) wallContainer.addChild(sprite);
+    for (const chain of chains) {
+      const style = getStyleDefinition(chain.styleKey, chain.wall);
+      const mesh = createWallRibbonMesh(style, chain.points, getFlagData(chain.wall));
+      if (mesh) (style.borderOnly ? borderContainer : wallContainer).addChild(mesh);
+    }
+
+    for (const wall of windows) {
+      const sprite = createWindowSprite(wall);
+      if (sprite) wallContainer.addChild(sprite);
+    }
   }
 }
 

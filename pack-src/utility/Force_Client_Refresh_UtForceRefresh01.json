@@ -1,0 +1,27 @@
+{
+  "name": "Принудительно обновить клиент",
+  "type": "script",
+  "author": "TSPF2EUTIL000001",
+  "img": "icons/svg/upgrade.svg",
+  "scope": "global",
+  "command": "const tool = await import(`/modules/ts-pf2e-utility/scripts/utility/hard-refresh.js?v=${Date.now()}`);\nawait tool.openHardRefreshDialog();",
+  "folder": null,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {},
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.364",
+    "systemId": "pf2e",
+    "systemVersion": "7.11.3",
+    "createdTime": 0,
+    "modifiedTime": 0,
+    "lastModifiedBy": "TSPF2EUTIL000001",
+    "exportSource": null
+  },
+  "_id": "UtForceRefresh01",
+  "sort": 90000,
+  "_key": "!macros!UtForceRefresh01"
+}

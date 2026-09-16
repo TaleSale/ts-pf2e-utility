@@ -1,5 +1,5 @@
 import { MODULE_ID, t } from "../core.js";
-import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20260906-shadow-overlay-v66";
+import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20260915-prison-topdown-v100";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_PRESETS = "sceneDecoratorPresets";

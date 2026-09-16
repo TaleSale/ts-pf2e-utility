@@ -1,6 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260906-shadow-overlay-v66";
-import { baseTextureSource, resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260906-shadow-overlay-v66";
+import { getCurrentFloorLevel, getFloorNumberForNativeLevel } from "./floor-textures.js?v=20260915-prison-topdown-v100";
+import { baseTextureSource, resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260915-prison-topdown-v100";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_SETS = "sceneAssetSets";
@@ -12,6 +12,8 @@ const SELECTION_NAME = "tsu-asset-selection";
 const SELECTION_DRAG_NAME = "tsu-asset-selection-drag";
 const FLAG_ROOT = "sceneAsset";
 const LIGHT_SWITCH_FLAG_KEY = "lightSwitch";
+const LIGHT_SWITCH_STATE_FLAG_KEY = "lightSwitchState";
+export const IMMERSIVE_TORCH_HOLDER_FLAG_KEY = "immersiveTorchHolder";
 const DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS = new Set(["candle", "torch", "lantern"]);
 const DEFAULT_ASSET = "table";
 const ROTATION_STEP = 15;
@@ -19,7 +21,7 @@ const MOVEMENT_STEP_RATIO = 0.1;
 const SIZE_STEP_CELLS = 0.1;
 const MIN_SIZE_CELLS = 0.2;
 const MAX_SIZE_CELLS = 6;
-export const ASSET_GEOMETRY_VERSION = 19;
+export const ASSET_GEOMETRY_VERSION = 20;
 export const MIRROR_CONFIG_VERSION = 6;
 function mirrorConfig(glass, shape = "rect", depth = 1) {
   return Object.freeze({
@@ -35,8 +37,52 @@ const RECTANGULAR_MIRROR_CONFIG = mirrorConfig({ x: 0.145, y: 0.47, width: 0.71,
 const ROUND_MIRROR_CONFIG = mirrorConfig({ x: 0.19, y: 0.45, width: 0.62, height: 0.23 }, "ellipse", 2);
 const OVAL_MIRROR_CONFIG = mirrorConfig({ x: 0.14, y: 0.47, width: 0.72, height: 0.20 }, "ellipse", 4);
 const TOPDOWN_COLUMN_KEYS = new Set(["columnStoneTopdown", "columnWoodTopdown"]);
-const TEXTURE_MIGRATION_UPDATE_OPTIONS = Object.freeze({ render: false, noHook: true });
+function textureMigrationUpdateOptions() {
+  // Foundry enriches update options internally, so each document operation
+  // must receive a fresh mutable object.
+  return { render: false, noHook: true };
+}
+const DOLLHOUSE_GEOMETRY_VERSION = 20;
+const DOLLHOUSE_RESIZE_FACTORS = Object.freeze({
+  dollhouseOpenSquare: 0.2 / 0.5,
+  dollhouseClosedSquare: 0.2 / 0.5,
+  dollhouseManorOpenSquare: 0.3,
+  dollhouseGothicCastleClosedSquare: 0.3,
+  dollhouseCastleOpenSquare: 0.3,
+});
 const LEGACY_ASSET_REDIRECTS = Object.freeze({
+  "scene-assets/prison-stocks-topdown-v1.webp": "scene-assets/prison-stocks-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/prison-stocks-topdown-v1.webp": "scene-assets/prison-stocks-topdown-v2.webp",
+
+  "scene-assets/prison-wall-manacles-topdown-v1.webp": "scene-assets/prison-wall-manacles-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/prison-wall-manacles-topdown-v1.webp": "scene-assets/prison-wall-manacles-topdown-v2.webp",
+
+  "scene-assets/prison-ceiling-chain-topdown-v1.webp": "scene-assets/prison-ceiling-chain-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/prison-ceiling-chain-topdown-v1.webp": "scene-assets/prison-ceiling-chain-topdown-v2.webp",
+
+  "scene-assets/prison-iron-maiden-topdown-v1.webp": "scene-assets/prison-iron-maiden-topdown-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/prison-iron-maiden-topdown-v1.webp": "scene-assets/prison-iron-maiden-topdown-v2.webp",
+
+  "scene-assets/tabletop-dollhouse-open-square-v1.webp": "scene-assets/tabletop-dollhouse-open-square-v2.webp",
+  "scene-assets/tabletop-dollhouse-closed-square-v1.webp": "scene-assets/tabletop-dollhouse-closed-square-v2.webp",
+  "scene-assets/tabletop-dollhouse-manor-open-square-v1.webp": "scene-assets/tabletop-dollhouse-manor-open-square-v2.webp",
+  "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v1.webp": "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v2.webp",
+  "scene-assets/tabletop-dollhouse-castle-open-square-v1.webp": "scene-assets/tabletop-dollhouse-castle-open-square-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-open-square-v1.webp": "scene-assets/tabletop-dollhouse-open-square-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-closed-square-v1.webp": "scene-assets/tabletop-dollhouse-closed-square-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-manor-open-square-v1.webp": "scene-assets/tabletop-dollhouse-manor-open-square-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v1.webp": "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v2.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-castle-open-square-v1.webp": "scene-assets/tabletop-dollhouse-castle-open-square-v2.webp",
+  "scene-assets/tabletop-dollhouse-open-square-v2.webp": "scene-assets/tabletop-dollhouse-open-square-v3.webp",
+  "scene-assets/tabletop-dollhouse-closed-square-v2.webp": "scene-assets/tabletop-dollhouse-closed-square-v3.webp",
+  "scene-assets/tabletop-dollhouse-manor-open-square-v2.webp": "scene-assets/tabletop-dollhouse-manor-open-square-v3.webp",
+  "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v2.webp": "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v3.webp",
+  "scene-assets/tabletop-dollhouse-castle-open-square-v2.webp": "scene-assets/tabletop-dollhouse-castle-open-square-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-open-square-v2.webp": "scene-assets/tabletop-dollhouse-open-square-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-closed-square-v2.webp": "scene-assets/tabletop-dollhouse-closed-square-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-manor-open-square-v2.webp": "scene-assets/tabletop-dollhouse-manor-open-square-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v2.webp": "scene-assets/tabletop-dollhouse-gothic-castle-closed-square-v3.webp",
+  "presets/bastion-blasphemy/scene-assets/tabletop-dollhouse-castle-open-square-v2.webp": "scene-assets/tabletop-dollhouse-castle-open-square-v3.webp",
   "scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
   "scene-assets/music-stand-sheet-music-topdown-v1.webp": "scene-assets/music-stand-sheet-music-topdown-v2.webp",
   "presets/bastion-blasphemy/scene-assets/music-stand-empty-topdown-v1.webp": "scene-assets/music-stand-empty-topdown-v2.webp",
@@ -198,10 +244,23 @@ export const LIGHT_PRESETS = Object.freeze({
   brazier: Object.freeze({ bright: 20, dim: 40, color: "#ff8a32", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 4, intensity: 6 } }),
   candle: Object.freeze({ bright: 0, dim: 10, color: "#ffd08a", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 2, intensity: 2 } }),
   lantern: Object.freeze({ bright: 20, dim: 40, color: "#ffc56d", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
+  everlight: Object.freeze({ bright: 20, dim: 40, color: "#ffdf3d", alpha: 0.15, angle: 360, negative: false, animation: { type: "starlight", speed: 1, intensity: 2 } }),
   chandelier: Object.freeze({ bright: 30, dim: 60, color: "#ffc56d", alpha: 0.1, angle: 360, negative: false, animation: { type: "flame", speed: 1, intensity: 2 } }),
 });
 
 export const ASSETS = Object.freeze({
+  prisonFloorCage: asset("Prison", "Floor cage", "prison-floor-cage-topdown-v1.webp", 2, "object", 1.00886700, null, 0, "Choices.PrisonFloorCage"),
+  prisonHangingCage: asset("Prison", "Hanging cage", "prison-hanging-cage-topdown-v1.webp", 1.5, "object", 0.99023438, null, 0, "Choices.PrisonHangingCage"),
+  prisonFairyTableCage: asset("Prison", "Fairy table cage", "prison-fairy-table-cage-topdown-v1.webp", 0.3, "object", 1.02708124, null, 0, "Choices.PrisonFairyTableCage"),
+  prisonFairyHangingCage: asset("Prison", "Fairy hanging cage", "prison-fairy-hanging-cage-topdown-v1.webp", 0.4, "object", 0.99511719, null, 0, "Choices.PrisonFairyHangingCage"),
+  prisonIronMaiden: asset("Prison", "Iron maiden", "prison-iron-maiden-topdown-v2.webp", 0.8, "object", 1.35449735, null, 0, "Choices.PrisonIronMaiden"),
+  prisonRestraintTable: asset("Prison", "Restraint table", "prison-restraint-table-topdown-v1.webp", 2, "object", 0.40917969, null, 0, "Choices.PrisonRestraintTable"),
+  prisonCeilingChain: asset("Prison", "Ceiling chain", "prison-ceiling-chain-topdown-v2.webp", 0.25, "object", 1.49053857, null, 0, "Choices.PrisonCeilingChain"),
+  prisonWallManacles: asset("Prison", "Wall manacles", "prison-wall-manacles-topdown-v2.webp", 1, "object", 5.36125654, null, 0, "Choices.PrisonWallManacles"),
+  prisonStocks: asset("Prison", "Stocks", "prison-stocks-topdown-v2.webp", 1, "object", 4.00000000, null, 0, "Choices.PrisonStocks"),
+  prisonRestraintChair: asset("Prison", "Restraint chair", "prison-restraint-chair-topdown-v1.webp", 0.8, "object", 1.31282051, null, 0, "Choices.PrisonRestraintChair"),
+  prisonInstrumentTable: asset("Prison", "Instrument table", "prison-instrument-table-topdown-v1.webp", 1, "object", 1.65161290, null, 0, "Choices.PrisonInstrumentTable"),
+  prisonBrazierPokers: asset("Prison", "Brazier pokers", "prison-brazier-pokers-topdown-v1.webp", 0.8, "object", 1.11912568, "brazier", 0, "Choices.PrisonBrazierPokers"),
   table: asset("Furniture", "Table", "table.webp", 1.6, "object", 1.549),
   nobleTableWalnut: asset("Furniture", "Polished walnut table", "noble-table-walnut-rectangular-topdown-v3.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableWalnut"),
   nobleTableMahoganyOval: asset("Furniture", "Carved oval mahogany table", "noble-table-mahogany-oval-topdown-v1.webp", 1.8, "object", 1024 / 661, null, 0, "Choices.NobleTableMahoganyOval"),
@@ -236,7 +295,10 @@ export const ASSETS = Object.freeze({
   torch: asset("Lighting", "Torch", "torch.webp", 0.3, "object", 512 / 462, "torch"),
   wallTorchIron: asset("Lighting", "WallTorchIron", "wall-torch-iron.webp", 0.65, "object", 0.475, "torch"),
   wallTorchBracket: asset("Lighting", "WallTorchBracket", "wall-torch-bracket.webp", 0.65, "object", 0.696, "torch"),
-  sideWallTorch: asset("Lighting", "Side wall torch", "side-wall-torch-topdown-v1.webp", 0.65, "object", 208 / 432, "torch", 0, "Choices.SideWallTorch"),
+  sideWallTorch: asset("Lighting", "Side wall torch", "side-wall-torch-holder-torch-topdown-v1.webp", 0.65, "object", 208 / 432, "torch", 0, "Choices.SideWallTorch", null, 2, "torch"),
+  sideWallTorchHolderEmpty: asset("Lighting", "Side wall torch holder — empty", "side-wall-torch-holder-empty-topdown-v1.webp", 0.65, "object", 208 / 432, "torch", 0, "HolderChoices.Empty", null, 2, null),
+  sideWallTorchHolderCrystal: asset("Lighting", "Side wall torch holder — everlight crystal", "side-wall-torch-holder-crystal-topdown-v1.webp", 0.65, "object", 208 / 432, "everlight", 0, "HolderChoices.Crystal", null, 2, "everlight-crystal"),
+  sideWallTorchHolderCursedCrystal: asset("Lighting", "Side wall torch holder — evercursed crystal ⚠", "side-wall-torch-holder-crystal-topdown-v1.webp", 0.65, "object", 208 / 432, "everlight", 0, "HolderChoices.CursedCrystal", null, 2, "evercursed-crystal"),
   brazier: asset("Lighting", "Brazier", "brazier.webp", 0.7, "object", 998 / 1017, "brazier"),
   chandelierRound: asset("Lighting", "ChandelierRound", "chandelier-round-topdown-v1.webp", 2, "overhead", 1, "chandelier", 0, null, null, 15),
   roundTable: asset("Furniture", "RoundTable", "round-table-four-legs.webp", 1, "object", 1),
@@ -275,6 +337,7 @@ export const ASSETS = Object.freeze({
   barrelsSideCluster: asset("Household", "BarrelsSideCluster", "barrels-side-cluster.webp", 1.4, "object", 0.615),
   crate: asset("Household", "Crate", "crate.webp", 0.6, "object", 747 / 768),
   sacks: asset("Household", "Sacks", "sacks.webp", 0.9, "object", 1024 / 995),
+  bucket: asset("Household", "Bucket", "bucket-topdown-v1.webp", 0.5, "object", 1),
   tub: asset("Household", "Tub", "tub.webp", 1.1, "object", 1024 / 666),
   bathtubWood: asset("Household", "BathtubWood", "bathtub-wood.webp", 1.5, "object", 0.488),
   bathtubCopper: asset("Household", "BathtubCopper", "bathtub-copper.webp", 1.5, "object", 0.676),
@@ -377,6 +440,11 @@ export const ASSETS = Object.freeze({
   tabletopCartography: asset("TabletopSets", "TabletopCartography", "tabletop-set-cartography-v1.webp", 0.9, "object", 1),
   tabletopMedicine: asset("TabletopSets", "TabletopMedicine", "tabletop-set-medicine-v1.webp", 0.9, "object", 1),
   tabletopDisguise: asset("TabletopSets", "TabletopDisguise", "tabletop-set-disguise-v1.webp", 0.9, "object", 1),
+  dollhouseOpenSquare: asset("TabletopSets", "Open square dollhouse", "tabletop-dollhouse-open-square-v3.webp", 0.2, "object", 1, null, 0, "DollhouseOpenSquare"),
+  dollhouseClosedSquare: asset("TabletopSets", "Closed square dollhouse", "tabletop-dollhouse-closed-square-v3.webp", 0.2, "object", 1, null, 0, "DollhouseClosedSquare"),
+  dollhouseManorOpenSquare: asset("TabletopSets", "Open square manor dollhouse", "tabletop-dollhouse-manor-open-square-v3.webp", 0.3, "object", 1, null, 0, "DollhouseManorOpenSquare"),
+  dollhouseGothicCastleClosedSquare: asset("TabletopSets", "Closed square gothic castle dollhouse", "tabletop-dollhouse-gothic-castle-closed-square-v3.webp", 0.3, "object", 1, null, 0, "DollhouseGothicCastleClosedSquare"),
+  dollhouseCastleOpenSquare: asset("TabletopSets", "Open square castle dollhouse", "tabletop-dollhouse-castle-open-square-v3.webp", 0.3, "object", 1, null, 0, "DollhouseCastleOpenSquare"),
   paintingLandscape: asset("Decor", "PaintingLandscape", "painting-landscape-topdown-v2.webp", 0.9, "object", 4.613),
   paintingPortrait: asset("Decor", "PaintingPortrait", "painting-portrait-topdown-v2.webp", 0.7, "object", 4.016),
   paintingStillLife: asset("Decor", "PaintingStillLife", "painting-still-life-topdown-v2.webp", 0.7, "object", 2.893),
@@ -415,7 +483,7 @@ export const ASSETS = Object.freeze({
   musicStandSheetMusic: asset("MusicalInstruments", "MusicStandSheetMusic", "music-stand-sheet-music-topdown-v2.webp", 0.9, "object", 964 / 1024),
 });
 
-const CATEGORIES = Object.freeze(["Furniture", "Household", "Armory", "Mechanisms", "TabletopSets", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Vehicles", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
+const CATEGORIES = Object.freeze(["Furniture", "Household", "Armory", "Prison", "Mechanisms", "TabletopSets", "MusicalInstruments", "TempleStage", "Lighting", "Nature", "Outdoors", "Vehicles", "Dock", "Water", "Transitions", "Ruins", "Decor", "Traces", "Remains"]);
 // Layer sort remains the fallback for generic assets. Furniture that must stack predictably
 // gets a more specific default sort: chairs/generic objects = 1, tables = 2, tabletop
 // sets/candles/lanterns = 3. Manual tile sorting is preserved.
@@ -425,7 +493,7 @@ const ASSET_SORT_VERSION = 1;
 function getDefaultAssetSort(key, definition = ASSETS[key]) {
   if (!definition) return 0;
   if (definition.layer !== "object") return LAYERS[definition.layer] ?? 0;
-  if (definition.category === "TabletopSets" || key === "candle" || key === "lantern") return 3;
+  if (definition.category === "TabletopSets" || key === "candle" || key === "lantern" || definition.holderContent !== undefined) return 3;
   if (definition.category === "Furniture" && String(key).toLowerCase().includes("table")) return 2;
   return 1;
 }
@@ -445,7 +513,7 @@ function resolveStoredAssetSort(key, definition, currentSort, flag = {}) {
   return { sort: desired, manual: false };
 }
 
-function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null, mirror = null, defaultElevation = null) {
+function asset(category, label, filename, size, layer, aspect, light = null, defaultRotation = 0, labelPath = null, mirror = null, defaultElevation = null, holderContent = undefined) {
   const source = `modules/${MODULE_ID}/images/scene-assets/${filename}`;
   return Object.freeze({
     category,
@@ -460,6 +528,7 @@ function asset(category, label, filename, size, layer, aspect, light = null, def
     defaultRotation,
     mirror,
     defaultElevation,
+    holderContent,
   });
 }
 
@@ -549,6 +618,57 @@ function redirectLegacySetPaths(sets) {
   return changed;
 }
 
+const PRISON_TOPDOWN_REVISION = 2;
+const PRISON_PREVIOUS_SIZES = Object.freeze({
+  prisonIronMaiden: 0.8, prisonCeilingChain: 2, prisonWallManacles: 1, prisonStocks: 1,
+});
+
+function revisedPrisonDimensions(item, flag, minimum = 1) {
+  const previousSize = PRISON_PREVIOUS_SIZES[flag?.key];
+  if (!previousSize || Number(flag.prisonTopdownRevision ?? 0) >= PRISON_TOPDOWN_REVISION) return null;
+  const definition = ASSETS[flag.key];
+  const major = Math.max(Number(item.width), Number(item.height)) * definition.size / previousSize;
+  if (!Number.isFinite(major) || major <= 0) return null;
+  const aspect = definition.aspect;
+  const fit = (value) => Math.max(minimum, minimum === 1 ? Math.round(value) : value);
+  return { width: fit(aspect >= 1 ? major : major * aspect), height: fit(aspect >= 1 ? major / aspect : major) };
+}
+
+function migratePrisonSetGeometry(sets) {
+  let changed = false;
+  for (const set of sets) {
+    for (const item of set.items ?? []) {
+      const flag = item.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      const dimensions = revisedPrisonDimensions(item, flag, 0.01);
+      if (!dimensions) continue;
+      Object.assign(item, dimensions);
+      // Saved cx/cy are centers and remain unchanged.
+      flag.prisonTopdownRevision = PRISON_TOPDOWN_REVISION;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function migrateDollhouseSetGeometry(sets) {
+  let changed = false;
+  for (const set of sets) {
+    for (const item of set.items ?? []) {
+      const flag = item.flags?.[MODULE_ID]?.[FLAG_ROOT];
+      const factor = DOLLHOUSE_RESIZE_FACTORS[flag?.key];
+      if (!factor || Number(flag.geometryVersion ?? 0) >= DOLLHOUSE_GEOMETRY_VERSION) continue;
+      const definition = ASSETS[flag.key];
+      const width = Number(item.width);
+      const height = Number(item.height);
+      item.width = Number.isFinite(width) ? Math.max(0.01, width * factor) : definition.size;
+      item.height = Number.isFinite(height) ? Math.max(0.01, height * factor) : definition.size / definition.aspect;
+      flag.geometryVersion = DOLLHOUSE_GEOMETRY_VERSION;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 async function migrateLegacySceneAssetPaths() {
   if (!game.user?.isGM) return false;
   let migrated = 0;
@@ -560,7 +680,7 @@ async function migrateLegacySceneAssetPaths() {
       if (replacement) foundry.utils.setProperty(sceneUpdate, path, resolvePresetTexture(replacement, undefined, scene));
     }
     if (Object.keys(sceneUpdate).length) {
-      await scene.update(sceneUpdate, TEXTURE_MIGRATION_UPDATE_OPTIONS);
+      await scene.update(sceneUpdate, textureMigrationUpdateOptions());
       migrated += Object.keys(sceneUpdate).length;
       if (scene === globalThis.canvas?.scene) activeSceneChanged = true;
     }
@@ -574,14 +694,17 @@ async function migrateLegacySceneAssetPaths() {
       await scene.updateEmbeddedDocuments(
         "Tile",
         updates.slice(offset, offset + 100),
-        TEXTURE_MIGRATION_UPDATE_OPTIONS,
+        textureMigrationUpdateOptions(),
       );
     }
     migrated += updates.length;
     if (updates.length && scene === globalThis.canvas?.scene) activeSceneChanged = true;
   }
   const sets = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTING_SETS)?.sets ?? []);
-  if (redirectLegacySetPaths(sets)) {
+  const setPathsChanged = redirectLegacySetPaths(sets);
+  const setGeometryChanged = migrateDollhouseSetGeometry(sets);
+  const prisonGeometryChanged = migratePrisonSetGeometry(sets);
+  if (setPathsChanged || setGeometryChanged || prisonGeometryChanged) {
     await game.settings.set(MODULE_ID, SETTING_SETS, { version: 1, sets });
     migrated += 1;
   }
@@ -601,7 +724,7 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
       if (desired && desired !== source) foundry.utils.setProperty(sceneUpdate, path, desired);
     }
     if (Object.keys(sceneUpdate).length) {
-      await scene.update(sceneUpdate, TEXTURE_MIGRATION_UPDATE_OPTIONS);
+      await scene.update(sceneUpdate);
       if (scene === globalThis.canvas?.scene) activeSceneChanged = true;
     }
     const updates = [];
@@ -615,7 +738,6 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
       await scene.updateEmbeddedDocuments(
         "Tile",
         updates.slice(offset, offset + 100),
-        TEXTURE_MIGRATION_UPDATE_OPTIONS,
       );
     }
     if (updates.length && scene === globalThis.canvas?.scene) activeSceneChanged = true;
@@ -624,7 +746,8 @@ async function synchronizeSceneAssetPresetPaths(targetScene = null) {
 }
 
 async function synchronizeRevisedAssetDimensions() {
-  if (!game.user?.isGM) return;
+  if (!game.user?.isGM) return false;
+  let activeSceneChanged = false;
   const wallFurniture = new Set(["cabinet", "cabinetNarrow", "bookshelf", "bookshelfNarrow"]);
   const narrowFurniture = new Set(["cabinetNarrow", "bookshelfNarrow"]);
   const squareToilets = new Set(["toiletBoardOak", "toiletBoardAlder", "toiletBoardWalnut"]);
@@ -647,12 +770,31 @@ async function synchronizeRevisedAssetDimensions() {
       if (!key) continue;
       const definition = ASSETS[key];
       if (!definition) continue;
+      const prisonDimensions = revisedPrisonDimensions(tile, flag);
+      if (prisonDimensions) {
+        const anchorX = Number(tile.texture?.anchorX ?? 0.5);
+        const anchorY = Number(tile.texture?.anchorY ?? 0.5);
+        const dx = (Number(tile.width) - prisonDimensions.width) * (0.5 - anchorX);
+        const dy = (Number(tile.height) - prisonDimensions.height) * (0.5 - anchorY);
+        const angle = Number(tile.rotation ?? 0) * Math.PI / 180;
+        updates.push({
+          _id: tile.id, ...prisonDimensions,
+          x: Number(tile.x) + dx * Math.cos(angle) - dy * Math.sin(angle),
+          y: Number(tile.y) + dx * Math.sin(angle) + dy * Math.cos(angle),
+          [`flags.${MODULE_ID}.${FLAG_ROOT}.prisonTopdownRevision`]: PRISON_TOPDOWN_REVISION,
+        });
+        continue;
+      }
       const previousGeometryVersion = Number(flag.geometryVersion ?? 0);
       const layerMismatch = flag.layer !== definition.layer;
       if (previousGeometryVersion >= ASSET_GEOMETRY_VERSION && !layerMismatch) continue;
       let desiredWidth = Math.max(1, Math.round(Number(tile.width) || grid * definition.size));
       let desiredHeight = Math.max(1, Math.round(Number(tile.height) || desiredWidth / definition.aspect));
-      if (wallFurniture.has(key)) {
+      const dollhouseResizeFactor = DOLLHOUSE_RESIZE_FACTORS[key];
+      if (dollhouseResizeFactor && previousGeometryVersion < DOLLHOUSE_GEOMETRY_VERSION) {
+        desiredWidth = Math.max(1, Math.round(desiredWidth * dollhouseResizeFactor));
+        desiredHeight = Math.max(1, Math.round(desiredHeight * dollhouseResizeFactor));
+      } else if (wallFurniture.has(key)) {
         if (narrowFurniture.has(key) && desiredHeight > desiredWidth) {
           const scale = desiredHeight / Math.max(1, grid * 0.44);
           desiredWidth = Math.max(1, Math.round(grid * 0.6 * scale));
@@ -707,9 +849,15 @@ async function synchronizeRevisedAssetDimensions() {
       updates.push(update);
     }
     for (let offset = 0; offset < updates.length; offset += 100) {
-      await scene.updateEmbeddedDocuments("Tile", updates.slice(offset, offset + 100));
+      await scene.updateEmbeddedDocuments(
+        "Tile",
+        updates.slice(offset, offset + 100),
+        textureMigrationUpdateOptions(),
+      );
     }
+    if (updates.length && scene === globalThis.canvas?.scene) activeSceneChanged = true;
   }
+  return activeSceneChanged;
 }
 
 async function synchronizeAssetDefaultSorts() {
@@ -738,15 +886,56 @@ async function synchronizeAssetDefaultSorts() {
   }
 }
 
-Hooks.once("ready", async () => {
-  const migratedActiveScene = await migrateLegacySceneAssetPaths();
-  const synchronizedActiveScene = await synchronizeSceneAssetPresetPaths();
-  await synchronizeRevisedAssetDimensions();
-  await synchronizeAssetDefaultSorts();
-  await synchronizeDefaultPlayerLightSwitches();
-  if ((migratedActiveScene || synchronizedActiveScene) && globalThis.canvas?.ready) {
-    await globalThis.canvas.draw();
+let sceneAssetMigrationPromise = null;
+let sceneAssetMigrationsComplete = false;
+
+async function runSceneAssetMigrations() {
+  if (!game.user?.isGM) {
+    sceneAssetMigrationsComplete = true;
+    return;
   }
+  if (sceneAssetMigrationsComplete) return;
+  if (sceneAssetMigrationPromise) return sceneAssetMigrationPromise;
+
+  sceneAssetMigrationPromise = (async () => {
+    let activeSceneChanged = false;
+    let failed = false;
+    const runStep = async (label, callback) => {
+      try {
+        const changed = await callback();
+        activeSceneChanged = Boolean(changed) || activeSceneChanged;
+      } catch (error) {
+        failed = true;
+        console.error(`${MODULE_ID} | Scene asset migration step failed: ${label}`, error);
+      }
+    };
+
+    await runStep("legacy paths", migrateLegacySceneAssetPaths);
+    await runStep("preset paths", synchronizeSceneAssetPresetPaths);
+    await runStep("geometry", synchronizeRevisedAssetDimensions);
+    await runStep("default sorts", synchronizeAssetDefaultSorts);
+    await runStep("player light switches", synchronizeDefaultPlayerLightSwitches);
+
+    if (activeSceneChanged && globalThis.canvas?.ready) {
+      try {
+        await globalThis.canvas.draw();
+      } catch (error) {
+        failed = true;
+        console.error(`${MODULE_ID} | Failed to redraw the active canvas after scene asset migration`, error);
+      }
+    }
+    sceneAssetMigrationsComplete = !failed;
+  })();
+
+  try {
+    await sceneAssetMigrationPromise;
+  } finally {
+    sceneAssetMigrationPromise = null;
+  }
+}
+
+Hooks.once("ready", () => {
+  void runSceneAssetMigrations();
 });
 
 Hooks.on(TEXTURE_PRESET_CHANGE_HOOK, (_preset, scene) => {
@@ -1617,9 +1806,13 @@ async function placeAsset(point) {
       level: placementLevel.level,
       lightId: null,
       geometryVersion: ASSET_GEOMETRY_VERSION,
+      prisonTopdownRevision: PRISON_TOPDOWN_REVISION,
       sortVersion: ASSET_SORT_VERSION,
       sortManual: false,
       ...(definition.mirror ? { mirror: getAssetMirrorFlag(definition) } : {}),
+      ...(definition.holderContent !== undefined ? {
+        [IMMERSIVE_TORCH_HOLDER_FLAG_KEY]: { kind: definition.holderContent, itemSource: null },
+      } : {}),
     } } },
   };
   const [tile] = await scene.createEmbeddedDocuments("Tile", [tileData]);
@@ -1644,6 +1837,7 @@ async function placeSet(point) {
       setId: set.id,
       batchId,
       geometryVersion: ASSET_GEOMETRY_VERSION,
+      prisonTopdownRevision: PRISON_TOPDOWN_REVISION,
     };
     const key = flags[MODULE_ID][FLAG_ROOT].key;
     const definition = ASSETS[key];
@@ -1779,6 +1973,7 @@ async function synchronizeDefaultPlayerLightSwitches() {
     for (const light of scene.lights ?? []) {
       const linkedAsset = light.flags?.[MODULE_ID]?.[FLAG_ROOT];
       if (!linkedAsset?.tileId || !DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS.has(linkedAsset.preset)) continue;
+      if (linkedAsset[IMMERSIVE_TORCH_HOLDER_FLAG_KEY] !== undefined) continue;
       const current = light.getFlag?.(MODULE_ID, LIGHT_SWITCH_FLAG_KEY);
       if (current !== undefined && current !== null) continue;
       updates.push({ _id: light.id, [`flags.${MODULE_ID}.${LIGHT_SWITCH_FLAG_KEY}`]: true });
@@ -1793,7 +1988,11 @@ export async function createLinkedLight(tile, presetKey, override = null) {
   const preset = override ?? lightSettings ?? LIGHT_PRESETS[presetKey];
   if (!preset || !tile?.parent) return;
   const center = tileCenter(tile);
-  const playerSwitch = DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS.has(presetKey);
+  const holder = tile.flags?.[MODULE_ID]?.[FLAG_ROOT]?.[IMMERSIVE_TORCH_HOLDER_FLAG_KEY];
+  const holderKind = holder?.kind ?? null;
+  const isHolder = holder !== undefined;
+  const playerSwitch = isHolder ? holderKind === "torch" : DEFAULT_PLAYER_SWITCH_LIGHT_PRESETS.has(presetKey);
+  const off = isHolder && holderKind === null;
   const [light] = await tile.parent.createEmbeddedDocuments("AmbientLight", [{
     name: `${tile.name} — ${localize("Light", "Light")}`,
     x: center.x,
@@ -1802,10 +2001,15 @@ export async function createLinkedLight(tile, presetKey, override = null) {
     levels: linkedLightLevelIds(tile),
     walls: true,
     vision: false,
-    config: { ...preset, darkness: { min: 0, max: 1 } },
+    config: { ...preset, ...(off ? { bright: 0, dim: 0 } : {}), darkness: { min: 0, max: 1 } },
     flags: { [MODULE_ID]: {
-      [FLAG_ROOT]: { tileId: tile.id, preset: presetKey },
+      [FLAG_ROOT]: {
+        tileId: tile.id,
+        preset: presetKey,
+        ...(isHolder ? { [IMMERSIVE_TORCH_HOLDER_FLAG_KEY]: { kind: holderKind } } : {}),
+      },
       ...(playerSwitch ? { [LIGHT_SWITCH_FLAG_KEY]: true } : {}),
+      ...(off ? { [LIGHT_SWITCH_STATE_FLAG_KEY]: { off: true, bright: preset.bright, dim: preset.dim } } : {}),
     } },
   }]);
   if (light) await tile.update({ [`flags.${MODULE_ID}.${FLAG_ROOT}.lightId`]: light.id });
@@ -1925,6 +2129,7 @@ Hooks.on("deleteAmbientLight", (light) => {
 });
 
 Hooks.on("canvasReady", () => {
+  if (!sceneAssetMigrationsComplete) void runSceneAssetMigrations();
   if (active) bindStage();
   void normalizeTrapdoorLayer();
   void queueNormalizeAssetLevels();
