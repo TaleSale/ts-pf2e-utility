@@ -4,7 +4,7 @@ import {
   currentTexturePreset,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260915-prison-topdown-v100";
+} from "./texture-presets.js?v=20260916-floor-loading-v102";
 import { installFogConcealment } from "./fog-visibility.js?v=20260913-weather-fog-v14";
 
 const SETTING_ENABLE = "enableFloorTextures";
@@ -35,6 +35,7 @@ const FLOOR_VISIBILITY_MIGRATION_VERSION = 1;
 const regionSyncs = new Map();
 const localFloorMutationDepth = new Map();
 const floorDataSnapshots = new Map();
+const floorUndoEntries = new Map();
 let refreshFogConcealment = () => {};
 // Rubble pools must be initialized before FLOOR_STYLES calls rubbleStyle().
 // Keeping the images external; this is only the registry of their paths and geometry.
@@ -733,6 +734,15 @@ Hooks.on("getSceneControlButtons", (controls) => {
       button: true,
       onChange: () => setBaseFloor(),
     },
+    {
+      name: "undo",
+      order: 5,
+      title: localize("Undo", "Undo last action"),
+      icon: "fa-solid fa-rotate-left",
+      visible: true,
+      button: true,
+      onChange: () => undoFloorAction(),
+    },
   ];
   const group = {
     name: CONTROL_NAME,
@@ -984,14 +994,39 @@ async function ensureNativeLevel(floorNumber, scene = canvas?.scene) {
   return created ?? null;
 }
 
-async function setSceneData(data) {
+async function undoFloorAction() {
+  const scene = canvas?.scene;
+  if (!scene || !enabled()) return;
+  if (localFloorMutationInProgress(scene)) return;
+  const key = regionSyncKey(scene);
+  const entry = floorUndoEntries.get(key);
+  if (!entry || JSON.stringify(getSceneDataForScene(scene)) !== JSON.stringify(entry.after)) {
+    floorUndoEntries.delete(key);
+    return ui.notifications.info(localize("NothingToUndo", "There is no floor action to undo."));
+  }
+  await setSceneData(foundry.utils.deepClone(entry.before), { recordUndo: false });
+  draftPoints = [];
+  selectedEdge = null;
+  lastClick = null;
+  redrawEditor();
+}
+
+async function setSceneData(data, { recordUndo = true } = {}) {
   if (!canvas?.scene || !game.user?.isGM) return;
   const scene = canvas.scene;
+  if (localFloorMutationInProgress(scene)) return;
   const previousData = getSceneDataForScene(scene);
+  if (JSON.stringify(previousData) === JSON.stringify(data)) return;
   const syncScope = buildFloorSyncScope(previousData, data);
   const sceneKey = beginLocalFloorMutation(scene);
   try {
     await scene.setFlag(MODULE_ID, FLAG_ROOT, data);
+    if (recordUndo) {
+      floorUndoEntries.set(sceneKey, {
+        before: foundry.utils.deepClone(previousData),
+        after: foundry.utils.deepClone(data),
+      });
+    } else floorUndoEntries.delete(sceneKey);
     floorDataSnapshots.set(sceneKey, foundry.utils.deepClone(data));
 
     const changedFloorNumbers = [...new Set(data.floors
@@ -3319,13 +3354,59 @@ function trackSceneWallStates() {
   for (const wall of canvas?.scene?.walls ?? []) trackedWallStates.set(wall.id, snapshotWallState(wall));
 }
 
+function visibleFloorTextureSources(scene, floorNumber) {
+  const sources = new Set();
+  const add = (src) => { if (typeof src === "string" && src) sources.add(src); };
+  const addAssets = (assets) => { for (const asset of assets ?? []) add(asset.src); };
+  for (const floor of getSceneDataForScene(scene).floors) {
+    const level = Number(floor.level ?? 0);
+    if (level > floorNumber || normalizePolygon(floor.points).length < 3) continue;
+    const style = FLOOR_STYLES[floor.style] ?? FLOOR_STYLES[DEFAULT_STYLE];
+    if (style.weather && level !== floorNumber) continue;
+    if (style.forest) {
+      addAssets(style.forest.assets);
+      continue;
+    }
+    const overlay = style.stretchedOverlay ?? style.cobweb;
+    if (overlay) {
+      add(overlay.src);
+      continue;
+    }
+    if (style.rubble) {
+      addAssets(style.rubble.assets);
+      continue;
+    }
+    add(style.src);
+    add(style.garden?.cropSrc);
+    add(style.edge?.texture);
+    add(style.edge?.corner);
+    addAssets(style.edge?.rockAssets);
+    if (!style.garden) addAssets(style.scatter?.assets);
+  }
+  return [...sources];
+}
+
+Hooks.on("canvasInit", (board) => {
+  // Foundry awaits these sources while the new scene/level is still hidden.
+  // Only inspect placed, visible styles: their getters resolve the active preset.
+  const floorNumber = board.level ? getFloorNumberForNativeLevel(board.level) : 0;
+  board.loadTexturesOptions.additionalSources.push(...visibleFloorTextureSources(board.scene, floorNumber));
+});
+
 Hooks.on("canvasReady", () => {
   if (canvas?.scene) floorDataSnapshots.set(regionSyncKey(canvas.scene), getSceneDataForScene(canvas.scene));
   currentLevel = canvas?.level ? getFloorNumberForNativeLevel(canvas.level) : 0;
   selectedLevel = currentLevel;
   trackSceneWallStates();
   bindStageEvents();
-  scheduleRedraw();
+  // canvasReady hooks are synchronous and run before Foundry reveals the level.
+  // A debounced redraw here exposes lower-floor assets for at least one frame.
+  clearTimeout(redrawTimer);
+  redrawTimer = null;
+  redrawNeedsFullPass = false;
+  pendingForestFloorIds.clear();
+  redrawFloors();
+  redrawEditor();
   refreshFogConcealment();
   if (canManageFloorSurfaces()) {
     void (async () => {

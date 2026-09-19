@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20260915-prison-topdown-v100";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260915-prison-topdown-v100";
+import { ASSETS } from "./scene-assets.js?v=20260916-floor-loading-v102";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20260916-floor-loading-v102";
 
 const GALLERY_FLAG = "bastionGallery";
 

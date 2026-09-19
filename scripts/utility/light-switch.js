@@ -1,5 +1,5 @@
-import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20260915-prison-topdown-v100";
-import { resolvePresetTexture } from "./texture-presets.js?v=20260915-prison-topdown-v100";
+import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20260916-floor-loading-v102";
+import { resolvePresetTexture } from "./texture-presets.js?v=20260916-floor-loading-v102";
 
 const MODULE_ID = "ts-pf2e-utility";
 const FLAG_KEY = "lightSwitch";

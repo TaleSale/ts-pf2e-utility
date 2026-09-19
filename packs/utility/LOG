@@ -1,25 +1,8 @@
-2026/09/16-11:28:09.062 3e6c Recovering log #270
-2026/09/16-11:28:09.062 3e6c Recovering log #631
-2026/09/16-11:28:09.210 3e6c Delete type=2 #108
-2026/09/16-11:28:09.210 3e6c Delete type=2 #188
-2026/09/16-11:28:09.211 3e6c Delete type=0 #270
-2026/09/16-11:28:09.211 3e6c Delete type=0 #631
-2026/09/16-11:28:09.211 3e6c Delete type=3 #269
-2026/09/16-13:00:35.534 2b1c Level-0 table #634: started
-2026/09/16-13:00:35.534 2b1c Level-0 table #634: 0 bytes OK
-2026/09/16-13:00:35.575 2b1c Delete type=0 #632
-2026/09/16-13:00:35.650 2b1c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at '!macros!UtHorrorToggle010' @ 33 : 1
-2026/09/16-13:00:35.650 2b1c Compacting 1@0 + 0@1 files
-2026/09/16-13:00:35.743 2b1c Generated table #635@0: 2 keys, 757 bytes
-2026/09/16-13:00:35.743 2b1c Compacted 1@0 + 0@1 files => 757 bytes
-2026/09/16-13:00:35.808 2b1c compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/09/16-13:00:35.808 2b1c Delete type=2 #263
-2026/09/16-13:00:35.809 2b1c Manual compaction at level-0 from '!macros!UtHorrorToggle010' @ 33 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
-2026/09/16-13:00:35.809 2b1c Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at '!macros!UtHorrorToggle010' @ 33 : 1
-2026/09/16-13:00:35.809 2b1c Compacting 1@1 + 1@2 files
-2026/09/16-13:00:35.949 2b1c Generated table #636@1: 11 keys, 2901 bytes
-2026/09/16-13:00:35.949 2b1c Compacted 1@1 + 1@2 files => 2901 bytes
-2026/09/16-13:00:35.991 2b1c compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/09/16-13:00:35.992 2b1c Delete type=2 #227
-2026/09/16-13:00:35.992 2b1c Delete type=2 #635
-2026/09/16-13:00:36.075 2b1c Manual compaction at level-1 from '!macros!UtHorrorToggle010' @ 33 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/19-09:39:42.073 104c Recovering log #675
+2026/09/19-09:39:42.160 104c Delete type=0 #675
+2026/09/19-09:39:42.160 104c Delete type=3 #673
+2026/09/19-09:47:41.845 1940 Level-0 table #680: started
+2026/09/19-09:47:41.845 1940 Level-0 table #680: 0 bytes OK
+2026/09/19-09:47:41.911 1940 Delete type=0 #678
+2026/09/19-09:47:42.081 1940 Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/19-09:47:42.081 1940 Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
