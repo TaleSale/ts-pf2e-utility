@@ -1,8 +1,8 @@
-2026/09/19-08:59:58.668 2938 Recovering log #671
-2026/09/19-08:59:58.778 2938 Delete type=0 #671
-2026/09/19-08:59:58.778 2938 Delete type=3 #669
-2026/09/19-09:37:59.201 4888 Level-0 table #676: started
-2026/09/19-09:37:59.202 4888 Level-0 table #676: 0 bytes OK
-2026/09/19-09:37:59.259 4888 Delete type=0 #674
-2026/09/19-09:37:59.384 4888 Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
-2026/09/19-09:37:59.385 4888 Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/28-12:34:07.405 aac Recovering log #746
+2026/09/28-12:34:07.449 aac Delete type=0 #746
+2026/09/28-12:34:07.449 aac Delete type=3 #745
+2026/09/28-14:57:26.001 b7c Level-0 table #750: started
+2026/09/28-14:57:26.002 b7c Level-0 table #750: 0 bytes OK
+2026/09/28-14:57:26.018 b7c Delete type=0 #748
+2026/09/28-14:57:26.183 b7c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/09/28-14:57:26.183 b7c Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
