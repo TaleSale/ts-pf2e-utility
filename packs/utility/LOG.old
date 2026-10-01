@@ -1,8 +1,3 @@
-2026/09/28-12:34:07.405 aac Recovering log #746
-2026/09/28-12:34:07.449 aac Delete type=0 #746
-2026/09/28-12:34:07.449 aac Delete type=3 #745
-2026/09/28-14:57:26.001 b7c Level-0 table #750: started
-2026/09/28-14:57:26.002 b7c Level-0 table #750: 0 bytes OK
-2026/09/28-14:57:26.018 b7c Delete type=0 #748
-2026/09/28-14:57:26.183 b7c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
-2026/09/28-14:57:26.183 b7c Manual compaction at level-1 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/10/01-14:30:56.575 1770 Recovering log #777
+2026/10/01-14:30:56.633 1770 Delete type=0 #777
+2026/10/01-14:30:56.633 1770 Delete type=3 #775
