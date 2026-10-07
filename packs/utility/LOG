@@ -1,14 +1,7 @@
-2026/10/07-11:12:01.827 2528 Recovering log #840
-2026/10/07-11:12:02.097 2528 Delete type=0 #840
-2026/10/07-11:12:02.097 2528 Delete type=3 #839
-2026/10/07-12:27:47.706 3a18 Level-0 table #844: started
-2026/10/07-12:27:47.706 3a18 Level-0 table #844: 0 bytes OK
-2026/10/07-12:27:47.776 3a18 Delete type=0 #842
-2026/10/07-12:27:48.065 3a18 Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at '!macros!UtTokAdj000001' @ 32 : 1
-2026/10/07-12:27:48.065 3a18 Compacting 2@0 + 0@1 files
-2026/10/07-12:27:48.159 3a18 Generated table #845@0: 11 keys, 2901 bytes
-2026/10/07-12:27:48.159 3a18 Compacted 2@0 + 0@1 files => 2901 bytes
-2026/10/07-12:27:48.225 3a18 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/10/07-12:27:48.227 3a18 Delete type=2 #282
-2026/10/07-12:27:48.227 3a18 Delete type=2 #636
-2026/10/07-12:27:48.552 3a18 Manual compaction at level-0 from '!macros!UtTokAdj000001' @ 32 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
+2026/10/07-16:39:48.767 139c8 Recovering log #843
+2026/10/07-16:39:49.056 139c8 Delete type=0 #843
+2026/10/07-16:39:49.163 139c8 Delete type=3 #841
+2026/10/07-16:45:28.045 1283c Level-0 table #849: started
+2026/10/07-16:45:28.045 1283c Level-0 table #849: 0 bytes OK
+2026/10/07-16:45:28.130 1283c Delete type=0 #847
+2026/10/07-16:45:28.727 1283c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)
