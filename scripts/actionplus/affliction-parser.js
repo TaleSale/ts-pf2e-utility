@@ -74,6 +74,28 @@ export function htmlToAfflictionText(value) {
     .trim();
 }
 
+export function localizedAfflictionDescription(value, language = "en") {
+  const raw = String(value ?? "");
+  if (!/^ru(?:-|$)/i.test(language)) return raw;
+  // Babele appends the untranslated description in an «Оригинал» details block.
+  const original = [...raw.matchAll(/<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>/giu)]
+    .find((match) => /Оригинал|Original/iu.test(htmlToAfflictionText(match[1])));
+  return original ? raw.slice(0, original.index) : raw;
+}
+
+export function normalizeDamageFormula(value) {
+  const formula = String(value ?? "").trim().replace(/−/g, "-");
+  if (!formula || /^(?:\d+(?:\.\d+)?|\d*d\d+)$/i.test(formula)) return formula;
+  // Avoid double grouping, but do not mistake `(1d6) + (2)` for one group.
+  let depth = 0;
+  const grouped = formula.startsWith("(") && [...formula].every((char, index) => {
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    return depth > 0 || (depth === 0 && index === formula.length - 1);
+  });
+  return grouped ? formula : `(${formula})`;
+}
+
 function normalizeSaveType(value) {
   return SAVE_ALIASES[String(value ?? "").trim().toLowerCase()] ?? null;
 }
@@ -151,7 +173,7 @@ function parseDamage(stageRaw, stageText) {
     const normalized = body.split("|")[0].trim();
     const flavored = /^(.+?)\[([a-z-]+)(?:,([a-z-]+))?\]$/iu.exec(normalized);
     damage.push({
-      formula: String(flavored?.[1] ?? normalized).trim(),
+      formula: normalizeDamageFormula(flavored?.[1] ?? normalized),
       damageType: String(flavored?.[2] ?? "untyped").trim().toLowerCase(),
       category: flavored?.[3] ? flavored[3].trim().toLowerCase() : null,
     });
@@ -164,7 +186,7 @@ function parseDamage(stageRaw, stageText) {
   ];
   for (const pattern of patterns) {
     for (const match of stageText.matchAll(pattern)) {
-      damage.push({ formula: match[1].replace(/\s+/g, ""), damageType: match[2] ?? "poison", category: null });
+      damage.push({ formula: normalizeDamageFormula(match[1].replace(/\s+/g, "")), damageType: match[2] ?? "poison", category: null });
     }
   }
   return damage;
@@ -210,15 +232,23 @@ function splitStages(text) {
   return [...unique.values()].sort((left, right) => left.number - right.number);
 }
 
-export function parseAfflictionDescription(rawDescription, { name = "", img = "", traits = [] } = {}) {
-  const raw = String(rawDescription ?? "");
+export function parseAfflictionDescription(rawDescription, { name = "", img = "", traits = [], language = "en", level = 1, adjustment = 0, damageAdjustment = adjustment } = {}) {
+  const raw = localizedAfflictionDescription(rawDescription, language);
   const text = htmlToAfflictionText(raw);
   const stages = splitStages(text);
+  const save = parseSave(raw, text);
+  if (save.dc) save.dc = Math.max(1, save.dc + adjustment);
+  for (const stage of stages) {
+    const damage = stage.damage[0];
+    if (damage && damageAdjustment) damage.formula = normalizeDamageFormula(`${damage.formula} ${damageAdjustment > 0 ? "+" : "-"} ${Math.abs(damageAdjustment)}`);
+  }
   return {
     name: String(name ?? "").trim(),
     img: String(img ?? "").trim(),
     type: "poison",
-    save: parseSave(raw, text),
+    level: Number.isFinite(Number(level)) ? Number(level) : 1,
+    counteractRank: Math.max(1, Math.ceil((Number(level) || 1) / 2)),
+    save,
     onset: extractLabeledDuration(text, ["onset", "возникновение", "период возникновения"]),
     maxDuration: extractLabeledDuration(text, ["maximum duration", "max. duration", "max duration", "макс. продолжительность", "макс.продолжительность", "максимальная продолжительность"]),
     virulent: (Array.isArray(traits) ? traits : Array.from(traits ?? [])).includes("virulent") || /\bvirulent\b|\bвирулентн/iu.test(text),
@@ -237,10 +267,25 @@ export function validateAfflictionDefinition(definition) {
   return errors;
 }
 
+export function parseAfflictionItem(item, { language = "en", description } = {}) {
+  const creatureAbility = item?.type === "action";
+  const actor = creatureAbility ? item?.actor : null;
+  const adjustment = actor?.type === "npc"
+    ? actor.isElite || actor.system?.attributes?.adjustment === "elite" ? 2
+      : actor.isWeak || actor.system?.attributes?.adjustment === "weak" ? -2 : 0
+    : 0;
+  return parseAfflictionDescription(description ?? item?.system?.description?.value ?? "", {
+    name: item?.name, img: item?.img, traits: item?.system?.traits?.value ?? [], language,
+    level: actor?.level ?? actor?.system?.details?.level?.value ?? item?.level ?? item?.system?.level?.value ?? 1,
+    adjustment,
+    damageAdjustment: adjustment * (item?.system?.frequency?.max ? 2 : 1),
+  });
+}
+
 export function mergeAfflictionDefinition(config) {
   const parsed = config?.parsed && typeof config.parsed === "object" ? structuredClone(config.parsed) : parseAfflictionDescription("");
   const overrides = config?.overrides && typeof config.overrides === "object" ? config.overrides : {};
-  for (const key of ["name", "img", "type", "save", "onset", "maxDuration", "virulent", "stages"]) {
+  for (const key of ["name", "img", "type", "save", "level", "counteractRank", "onset", "maxDuration", "virulent", "stages"]) {
     if (Object.prototype.hasOwnProperty.call(overrides, key)) parsed[key] = structuredClone(overrides[key]);
   }
   parsed.type = config?.type ?? parsed.type ?? "poison";

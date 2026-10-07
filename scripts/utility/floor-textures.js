@@ -2,9 +2,10 @@ import { MODULE_ID, i18nKey, t } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
   currentTexturePreset,
+  floorLoadingEnabled,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20260916-floor-loading-v102";
+} from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
 import { installFogConcealment } from "./fog-visibility.js?v=20260913-weather-fog-v14";
 
 const SETTING_ENABLE = "enableFloorTextures";
@@ -2148,7 +2149,9 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
         : getFloorContainer(true, floorNumber);
     floorParent?.addChild(floorLayer);
     const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
-    const renderPoints = style.rubble
+    const renderPoints = style.weather === "fog"
+      ? createFogBoundary(points, boundarySeed, gridSize)
+      : style.rubble
       ? points
       : style.edge?.texture ? points : style.edge ? createNaturalBoundary(points, boundarySeed, style.edge) : points;
     const stretchedOverlay = style.stretchedOverlay ?? style.cobweb;
@@ -2169,7 +2172,16 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
       if (edgeGraphic) floorLayer.addChild(edgeGraphic);
       continue;
     }
+    const fogFeather = style.weather === "fog" ? gridSize * 0.22 : 0;
     const bounds = polygonBounds(renderPoints);
+    // Extend the texture beneath the soft mask so its rectangular bounds cannot clip the mist.
+    if (fogFeather) {
+      const padding = fogFeather * 2.5;
+      bounds.x -= padding;
+      bounds.y -= padding;
+      bounds.width += padding * 2;
+      bounds.height += padding * 2;
+    }
     const roofFrame = style.edge?.kind === "roof" ? orientedPolygonFrame(renderPoints) : null;
     const texture = PIXI.Texture.from(style.src);
     const roofTextureQuarterTurn = roofFrame && roofFrame.height > roofFrame.width ? 90 : 0;
@@ -2192,10 +2204,11 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
       : Number(style.scale ?? 1);
     sprite.tileScale?.set?.(tileScale);
     sprite.alpha = Math.max(0, Math.min(1, Number(style.alpha ?? 1)));
-    const mask = isNaturalPathEdge(style.edge)
-      ? createFeatheredFloorMask(renderPoints, bounds, style.edge)
+    const softMask = fogFeather > 0 || isNaturalPathEdge(style.edge);
+    const mask = softMask
+      ? createFeatheredFloorMask(renderPoints, bounds, fogFeather ? { feather: fogFeather } : style.edge)
       : newGraphics();
-    if (!isNaturalPathEdge(style.edge)) drawPolygon(mask, renderPoints, 0xffffff);
+    if (!softMask) drawPolygon(mask, renderPoints, 0xffffff);
     sprite.mask = mask;
     floorLayer.addChild(sprite, mask);
     const scatter = createNaturalScatter(renderPoints, style.scatter, `${floor.id}:${floor.style}`);
@@ -2880,6 +2893,45 @@ function forestTint() {
   return 0xc6d0b8;
 }
 
+function createFogBoundary(points, seed, gridSize) {
+  const grid = Math.max(1, gridSize);
+  const corners = points.map((point, index) => {
+    const previous = points[(index + points.length - 1) % points.length];
+    const next = points[(index + 1) % points.length];
+    const incoming = Math.hypot(previous.x - point.x, previous.y - point.y);
+    const outgoing = Math.hypot(next.x - point.x, next.y - point.y);
+    const radius = Math.min(grid * 0.7, incoming * 0.3, outgoing * 0.3);
+    return {
+      point,
+      entry: { x: lerp(point.x, previous.x, radius / (incoming || 1)), y: lerp(point.y, previous.y, radius / (incoming || 1)) },
+      exit: { x: lerp(point.x, next.x, radius / (outgoing || 1)), y: lerp(point.y, next.y, radius / (outgoing || 1)) },
+    };
+  });
+  const result = [];
+  corners.forEach((corner, index) => {
+    // Quadratic arcs replace sharp turns; broad, stable waves break up straight stretches.
+    for (let step = 0; step < 12; step += 1) {
+      const t = step / 12, u = 1 - t;
+      result.push({
+        x: u * u * corner.entry.x + 2 * u * t * corner.point.x + t * t * corner.exit.x,
+        y: u * u * corner.entry.y + 2 * u * t * corner.point.y + t * t * corner.exit.y,
+      });
+    }
+    const from = corner.exit, to = corners[(index + 1) % corners.length].entry;
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const divisions = Math.max(1, Math.ceil(length / (grid * 0.12)));
+    const phase = stableNoise(`${seed}:${index}`) * Math.PI * 2;
+    for (let step = 0; step < divisions; step += 1) {
+      const t = step / divisions;
+      const wave = Math.sin(Math.PI * t) ** 2 * grid * 0.16
+        * (Math.sin(t * length / grid * 3.8 + phase) + 0.35 * Math.sin(t * length / grid * 7.1 + phase));
+      result.push({ x: from.x + dx * t - dy / length * wave, y: from.y + dy * t + dx / length * wave });
+    }
+  });
+  return result;
+}
+
 function createFeatheredFloorMask(points, bounds, edge) {
   const feather = Math.max(1, Number(edge.feather ?? 5));
   const padding = feather * 2.5;
@@ -3387,6 +3439,7 @@ function visibleFloorTextureSources(scene, floorNumber) {
 }
 
 Hooks.on("canvasInit", (board) => {
+  if (!floorLoadingEnabled(board.scene)) return;
   // Foundry awaits these sources while the new scene/level is still hidden.
   // Only inspect placed, visible styles: their getters resolve the active preset.
   const floorNumber = board.level ? getFloorNumberForNativeLevel(board.level) : 0;
@@ -3399,14 +3452,17 @@ Hooks.on("canvasReady", () => {
   selectedLevel = currentLevel;
   trackSceneWallStates();
   bindStageEvents();
-  // canvasReady hooks are synchronous and run before Foundry reveals the level.
-  // A debounced redraw here exposes lower-floor assets for at least one frame.
-  clearTimeout(redrawTimer);
-  redrawTimer = null;
-  redrawNeedsFullPass = false;
-  pendingForestFloorIds.clear();
-  redrawFloors();
-  redrawEditor();
+  if (floorLoadingEnabled(canvas?.scene)) {
+    // With preloaded textures, finish floors before Foundry reveals the level.
+    clearTimeout(redrawTimer);
+    redrawTimer = null;
+    redrawNeedsFullPass = false;
+    pendingForestFloorIds.clear();
+    redrawFloors();
+    redrawEditor();
+  } else {
+    scheduleRedraw();
+  }
   refreshFogConcealment();
   if (canManageFloorSurfaces()) {
     void (async () => {

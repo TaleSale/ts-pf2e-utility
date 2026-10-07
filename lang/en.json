@@ -124,6 +124,10 @@
         "Label": "Thumb Image",
         "FieldHint": "Custom thumbnail used for this scene in the navigation and directory."
       },
+      "FloorLoading": {
+        "Name": "Wait for floors before showing a level",
+        "Hint": "Enable only for maps built entirely with the scene builder and containing multiple levels. Loads floor textures before showing a level to prevent lower-level assets from flashing. May increase loading time. Disabled by default; takes effect the next time the scene or level is loaded."
+      },
       "TexturePreset": {
         "Name": "Scene texture preset",
         "Hint": "Selects a coordinated texture set for this scene only. Clients request only the set used by the active scene.",
@@ -142,6 +146,8 @@
         "ChangeFloorLevel": "Change floor level",
         "FloorLevelChanged": "Floor level changed.",
         "BaseFloor": "Base floor",
+        "Undo": "Undo last action",
+        "NothingToUndo": "There is no floor action to undo.",
         "OverlayFloorOnly": "Overlay floors can only be placed over an existing floor.",
         "Style": "Floor texture",
         "InvalidPolygon": "The floor boundary is invalid.",

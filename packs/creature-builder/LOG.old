@@ -1,22 +1,3 @@
-2026/10/06-08:38:20.320 356c Recovering log #853
-2026/10/06-08:38:20.320 356c Level-0 table #855: started
-2026/10/06-08:38:20.355 356c Level-0 table #855: 1753 bytes OK
-2026/10/06-08:38:20.444 356c Delete type=0 #853
-2026/10/06-08:38:20.445 356c Delete type=3 #852
-2026/10/06-09:20:04.691 2df0 Compacting 1@0 + 1@1 files
-2026/10/06-09:20:04.896 2df0 Generated table #857@0: 442 keys, 1920011 bytes
-2026/10/06-09:20:04.896 2df0 Compacted 1@0 + 1@1 files => 1920011 bytes
-2026/10/06-09:20:04.938 2df0 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/10/06-09:20:04.938 2df0 Delete type=2 #851
-2026/10/06-09:20:04.938 2df0 Delete type=2 #855
-2026/10/06-09:24:52.126 2df0 Level-0 table #859: started
-2026/10/06-09:24:52.250 2df0 Level-0 table #859: 157967 bytes OK
-2026/10/06-09:24:52.289 2df0 Delete type=0 #856
-2026/10/06-09:24:52.331 2df0 Manual compaction at level-0 from '!folders!0RLjvfWoEo3vypEH' @ 72057594037927935 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at '!items!RO2sm0Y9vSSVouKk' @ 2262 : 1
-2026/10/06-09:24:52.331 2df0 Compacting 1@0 + 1@1 files
-2026/10/06-09:24:52.711 2df0 Generated table #860@0: 443 keys, 2077543 bytes
-2026/10/06-09:24:52.711 2df0 Compacted 1@0 + 1@1 files => 2077543 bytes
-2026/10/06-09:24:52.731 2df0 compacted to: files[ 0 1 0 0 0 0 0 ]
-2026/10/06-09:24:52.731 2df0 Delete type=2 #857
-2026/10/06-09:24:52.732 2df0 Delete type=2 #859
-2026/10/06-09:24:52.733 2df0 Manual compaction at level-0 from '!items!RO2sm0Y9vSSVouKk' @ 2262 : 1 .. '!items!ziE04XTmMhHbnvKp' @ 0 : 0; will stop at (end)
+2026/10/06-14:52:14.314 3378 Recovering log #863
+2026/10/06-14:52:14.455 3378 Delete type=0 #863
+2026/10/06-14:52:14.463 3378 Delete type=3 #861

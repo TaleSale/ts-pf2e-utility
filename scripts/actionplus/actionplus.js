@@ -35,8 +35,14 @@ function localizeConfigLabel(label) {
     : String(label ?? "");
 }
 
-export function isSupportedActionPlusItem(item) {
-  return item?.type === "action";
+export function isSupportedActionPlusItem(item, featureId = null) {
+  const feature = featureId ? ensureActionPlusConfig().actionPlusFeatures.get(featureId) : null;
+  return (feature?.itemTypes ?? ["action"]).includes(item?.type);
+}
+
+function hasSupportedActionPlusFeature(item) {
+  return isSupportedActionPlusItem(item) || [...ensureActionPlusConfig().actionPlusFeatures.keys()]
+    .some((id) => isSupportedActionPlusItem(item, id));
 }
 
 export function normalizeActionOptions(value) {
@@ -136,7 +142,7 @@ function isFeatureVisible(featureId) {
 function rerenderOpenActionSheets() {
   for (const app of Object.values(ui.windows ?? {})) {
     const item = app?.document ?? app?.object ?? null;
-    if (!isSupportedActionPlusItem(item)) continue;
+    if (!hasSupportedActionPlusFeature(item)) continue;
     app.render(false);
   }
 }
@@ -291,7 +297,7 @@ Hooks.once("init", () => {
 Hooks.on("renderItemSheet", (app, html) => {
 
   const item = app.document ?? app.object;
-  if (!isSupportedActionPlusItem(item)) return;
+  if (!hasSupportedActionPlusFeature(item)) return;
 
   const root = getHtmlElement(html);
   if (!root) return;
@@ -306,7 +312,7 @@ Hooks.on("renderItemSheet", (app, html) => {
     { sensitivity: "base" },
   );
   const visibleFeatureEntries = Object.entries(config.actionOptions)
-    .filter(([value]) => value && isFeatureVisible(value))
+    .filter(([value]) => value && isFeatureVisible(value) && isSupportedActionPlusItem(item, value))
     .sort(compareFeatureEntries);
   const featureEntries = Object.entries(config.actionOptions).filter(([value]) => value);
   const canAddFeature = visibleFeatureEntries.some(([value]) => featureAllowsMultiple(value) || !currentOptions.includes(value));

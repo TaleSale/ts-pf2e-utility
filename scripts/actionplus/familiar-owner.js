@@ -4,6 +4,8 @@ import { isActionPlusFeatureEnabled, registerActionPlusFeature } from "./actionp
 const FEATURE_ID = "familiarOwner";
 const FLAG_KEY = "familiarOwner";
 const MASTER_FLAG_KEY = "familiarOwnerMasterUuid";
+const ABILITY_FLAG_KEY = "familiarOwnerAbility";
+const abilitySyncs = new WeakMap();
 const PATCH_MARKER = Symbol.for(`${MODULE_ID}.familiarOwner.masterGetter`);
 const ATTRIBUTE_PATCH_MARKER = Symbol.for(`${MODULE_ID}.familiarOwner.masterAttributeModifierGetter`);
 const localize = (key) => game.i18n.localize(`${I18N_PREFIX}.ActionPlus.FamiliarOwner.${key}`);
@@ -12,6 +14,11 @@ function normalizeConfig(value) {
   return {
     familiarUuid: String(value?.familiarUuid ?? "").trim(),
     familiarName: String(value?.familiarName ?? "").trim(),
+    abilityCount: Math.max(0, Math.min(50, Math.trunc(Number(value?.abilityCount) || 0))),
+    abilities: Array.isArray(value?.abilities) ? value.abilities.map((ability) => ({
+      uuid: String(ability?.uuid ?? "").trim(),
+      name: String(ability?.name ?? "").trim(),
+    })) : [],
   };
 }
 
@@ -172,7 +179,7 @@ async function linkFamiliar(item, familiar) {
   if (!master || !familiar) return false;
   if (!canUpdate(familiar)) return ui.notifications.warn(localize("NoPermission")), false;
   const previous = await resolveFamiliar(getConfig(item).familiarUuid);
-  await item.setFlag(MODULE_ID, FLAG_KEY, { familiarUuid: familiar.uuid, familiarName: familiar.name });
+  await item.setFlag(MODULE_ID, FLAG_KEY, { ...getConfig(item), familiarUuid: familiar.uuid, familiarName: familiar.name });
   ensurePatch();
   await familiar.update({
     "system.master.id": master.id,
@@ -180,7 +187,39 @@ async function linkFamiliar(item, familiar) {
   });
   familiar.reset();
   if (previous && previous !== familiar) await unlinkFamiliar(previous, master);
+  await syncFamiliarAbilities(item);
   return true;
+}
+
+function syncFamiliarAbilities(item) {
+  const previous = abilitySyncs.get(item) ?? Promise.resolve();
+  const pending = previous.catch(() => {}).then(async () => {
+    const config = getConfig(item);
+    const familiar = await resolveFamiliar(config.familiarUuid);
+    if (!familiar || !canUpdate(familiar)) return;
+    const desired = new Set(config.abilities.map((ability) => ability.uuid).filter(Boolean));
+    const managed = familiar.items.contents.filter((ability) => ability.getFlag(MODULE_ID, ABILITY_FLAG_KEY)?.ownerUuid === item.uuid);
+    const obsolete = managed.filter((ability) => !desired.has(ability.getFlag(MODULE_ID, ABILITY_FLAG_KEY).sourceUuid));
+    if (obsolete.length) await familiar.deleteEmbeddedDocuments("Item", obsolete.map((ability) => ability.id));
+    for (const uuid of desired) {
+      const existing = familiar.items.contents.some((ability) => ability.uuid === uuid
+        || ability.sourceId === uuid || ability._stats?.compendiumSource === uuid
+        || ability.flags?.core?.sourceId === uuid
+        || ability.getFlag(MODULE_ID, ABILITY_FLAG_KEY)?.sourceUuid === uuid);
+      if (existing) continue;
+      let ability;
+      try { ability = await fromUuid(uuid); } catch { continue; }
+      if (ability?.documentName !== "Item" || !["action", "feat"].includes(ability.type)) continue;
+      const source = ability.toObject();
+      delete source._id;
+      source.flags ??= {};
+      source.flags[MODULE_ID] ??= {};
+      source.flags[MODULE_ID][ABILITY_FLAG_KEY] = { ownerUuid: item.uuid, sourceUuid: uuid };
+      await familiar.createEmbeddedDocuments("Item", [source]);
+    }
+  });
+  abilitySyncs.set(item, pending);
+  return pending;
 }
 
 function renderControls({ item }) {
@@ -193,7 +232,19 @@ function renderControls({ item }) {
     </div>
     <div class="ts-familiar-owner-drop" style="margin-top:5px;padding:7px;border:1px dashed var(--color-border-light-tertiary);border-radius:3px;text-align:center;">
       ${escapeHtml(config.familiarName ? localize("SelectedFamiliar").replace("{name}", config.familiarName) : localize("DropHint"))}
-    </div>`;
+    </div>
+    <div class="form-group">
+      <label>${escapeHtml(localize("AbilityCount"))}</label>
+      <div class="form-fields"><input class="ts-familiar-ability-count" type="number" min="0" max="50" step="1" value="${config.abilityCount}"></div>
+    </div>
+    <p class="hint">${escapeHtml(localize("AbilitiesHint"))}</p>
+    ${Array.from({ length: config.abilityCount }, (_, index) => {
+      const ability = config.abilities[index];
+      return `<div class="ts-familiar-ability-slot" data-index="${index}" style="display:flex;gap:5px;align-items:center;margin-top:5px;padding:7px;border:1px dashed var(--color-border-light-tertiary);border-radius:3px;">
+        <span>${index + 1}.</span>
+        ${ability?.uuid ? `<a class="ts-familiar-ability-open" style="flex:1;">${escapeHtml(ability.name || ability.uuid)}</a><button type="button" class="ts-familiar-ability-remove" title="${escapeHtml(localize("RemoveAbility"))}" style="flex:0;">×</button>` : `<span style="flex:1;">${escapeHtml(localize("DropAbility"))}</span>`}
+      </div>`;
+    }).join("")}`;
 }
 
 async function saveFamiliar(item, uuid) {
@@ -205,6 +256,40 @@ async function saveFamiliar(item, uuid) {
 function activateListeners({ html, item, optionIndex }) {
   const panel = html.querySelector(`.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"]`);
   if (!panel) return;
+  panel.querySelector(".ts-familiar-ability-count")?.addEventListener("change", async (event) => {
+    const config = normalizeConfig({ ...getConfig(item), abilityCount: event.target.value });
+    await item.setFlag(MODULE_ID, FLAG_KEY, config);
+  });
+  for (const slot of panel.querySelectorAll(".ts-familiar-ability-slot")) {
+    const index = Number(slot.dataset.index);
+    slot.addEventListener("dragover", (event) => { event.preventDefault(); event.stopPropagation(); });
+    slot.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      let data;
+      try { data = JSON.parse(event.dataTransfer?.getData("text/plain") || "null"); } catch { return; }
+      let ability;
+      try { ability = data?.uuid ? await fromUuid(data.uuid) : null; } catch { /* unavailable document */ }
+      if (ability?.documentName !== "Item" || !["action", "feat"].includes(ability.type)) {
+        ui.notifications.warn(localize("InvalidAbility"));
+        return;
+      }
+      const config = getConfig(item);
+      if (index >= config.abilityCount) return;
+      config.abilities[index] = { uuid: ability.uuid, name: ability.name };
+      await item.setFlag(MODULE_ID, FLAG_KEY, config);
+    });
+    slot.querySelector(".ts-familiar-ability-open")?.addEventListener("click", async () => {
+      const uuid = getConfig(item).abilities[index]?.uuid;
+      if (!uuid) return;
+      try { (await fromUuid(uuid))?.sheet?.render(true); } catch { ui.notifications.warn(localize("InvalidAbility")); }
+    });
+    slot.querySelector(".ts-familiar-ability-remove")?.addEventListener("click", async () => {
+      const config = getConfig(item);
+      config.abilities[index] = { uuid: "", name: "" };
+      await item.setFlag(MODULE_ID, FLAG_KEY, config);
+    });
+  }
   const input = panel.querySelector(".ts-familiar-owner-uuid");
   input?.addEventListener("change", async () => {
     input.disabled = true;
@@ -238,8 +323,19 @@ registerActionPlusFeature({
 Hooks.once("ready", () => {
   ensurePatch();
   for (const familiar of (game.actors?.contents ?? []).filter((actor) => actor.type === "familiar")) {
-    if (configuredMaster(familiar)) familiar.reset();
+    const master = configuredMaster(familiar);
+    if (master) {
+      familiar.reset();
+      const item = getOwnerAction(master, familiar);
+      if (canUpdate(item)) void syncFamiliarAbilities(item).catch((error) => console.error(`${MODULE_ID} | Familiar ability sync failed`, error));
+    }
   }
+});
+
+Hooks.on("updateItem", (item, changed) => {
+  if (item.type !== "action" || !isActionPlusFeatureEnabled(item, FEATURE_ID)) return;
+  if (!changed.flags?.[MODULE_ID]?.[FLAG_KEY] || !canUpdate(item)) return;
+  void syncFamiliarAbilities(item).catch((error) => console.error(`${MODULE_ID} | Familiar ability sync failed`, error));
 });
 
 Hooks.on("createActor", (actor) => {

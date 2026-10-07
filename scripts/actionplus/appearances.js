@@ -43,6 +43,7 @@ function renderControls({ flags, occurrenceIndex = 0 }) {
     ["dynamicTokenImg", "DynamicTokenImage", true],
   ];
   return `<div class="ts-appearance-editor">
+    <div class="ts-appearance-drop-zone"><i class="fas fa-user-plus" aria-hidden="true"></i> ${escapeHtml(localize("DropHint"))}</div>
     ${fields.map(([field, label, isImage, inputType = "text"]) => `<div class="form-group"><label>${escapeHtml(localize(label))}</label><div class="form-fields">${isImage
       ? `<file-picker class="ts-appearance-input" data-field="${field}" type="imagevideo" value="${escapeHtml(config[field])}"></file-picker>`
       : `<input type="${inputType}" class="ts-appearance-input" data-field="${field}" value="${escapeHtml(config[field])}" ${inputType === "number" ? 'min="0.2" max="3" step="0.05"' : ""}>`
@@ -59,9 +60,8 @@ function renderControls({ flags, occurrenceIndex = 0 }) {
   </div>`;
 }
 
-async function persist(item, occurrenceIndex, panel) {
-  const configs = getConfigs(item);
-  const config = normalizeAppearance(configs[occurrenceIndex]);
+function readPanel(panel, value) {
+  const config = normalizeAppearance(value);
   for (const input of panel.querySelectorAll(".ts-appearance-input")) {
     if (input.type === "checkbox") config[input.dataset.field] = input.checked;
     else if (input.type === "number") {
@@ -70,7 +70,12 @@ async function persist(item, occurrenceIndex, panel) {
     }
     else config[input.dataset.field] = input.value.trim();
   }
-  configs[occurrenceIndex] = config;
+  return config;
+}
+
+async function persist(item, occurrenceIndex, panel) {
+  const configs = getConfigs(item);
+  configs[occurrenceIndex] = readPanel(panel, configs[occurrenceIndex]);
   await item.update({ [`flags.${MODULE_ID}.${FLAG_KEY}`]: configs }, { render: false });
   const actor = item.actor;
   const appearanceId = `${item.id}:${occurrenceIndex}`;
@@ -81,13 +86,62 @@ async function persist(item, occurrenceIndex, panel) {
   }
 }
 
-function activateListeners({ item, html, optionIndex, occurrenceIndex = 0 }) {
+function activateListeners({ app, item, html, optionIndex, occurrenceIndex = 0 }) {
   const root = htmlElement(html);
   const panel = root?.querySelector(`.ts-utility-feature-panel[data-feature-id="${FEATURE_ID}"][data-option-index="${optionIndex}"] .ts-appearance-editor`);
   if (!panel) return;
   panel.addEventListener("change", (event) => {
     if (!event.target.closest(".ts-appearance-input")) return;
     void persist(item, occurrenceIndex, panel);
+  });
+  const dropZone = panel.querySelector(".ts-appearance-drop-zone");
+  let importing = false;
+  dropZone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dropZone.classList.add("is-dragover");
+  });
+  dropZone.addEventListener("dragleave", (event) => {
+    if (!dropZone.contains(event.relatedTarget)) dropZone.classList.remove("is-dragover");
+  });
+  dropZone.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dropZone.classList.remove("is-dragover");
+    if (importing || !item.isOwner) return;
+    importing = true;
+    try {
+      const data = TextEditor.getDragEventData(event);
+      if (data?.type !== "Actor") return ui.notifications.warn(localize("DropActorOnly"));
+      const actor = await Actor.implementation.fromDropData(data);
+      if (!actor) return ui.notifications.warn(localize("DropActorOnly"));
+      const options = getItemActionPlusOptions(item);
+      const configs = getConfigs(item);
+      const count = options.filter((id) => id === FEATURE_ID).length;
+      const nextConfigs = Array.from({ length: count }, (_, index) => normalizeAppearance(configs[index]));
+      for (const editor of root.querySelectorAll('.ts-utility-feature-panel[data-feature-id="appearances"]')) {
+        const index = Number(editor.dataset.occurrenceIndex);
+        const fields = editor.querySelector(".ts-appearance-editor");
+        if (fields && Number.isInteger(index) && index >= 0 && index < count) {
+          nextConfigs[index] = readPanel(fields, nextConfigs[index]);
+        }
+      }
+      const original = readOriginal(actor);
+      nextConfigs.push(normalizeAppearance({ ...original, name: actor.name, actorName: actor.name }));
+      const nextOptions = [...options, FEATURE_ID];
+      await item.update({
+        [`flags.${MODULE_ID}.${FLAG_KEY}`]: nextConfigs,
+        [`flags.${MODULE_ID}.actionOptions`]: nextOptions,
+        [`flags.${MODULE_ID}.actionOption`]: nextOptions[0],
+      }, { render: false });
+      app.render(false);
+      item.actor?.sheet?.render(false);
+    } catch (error) {
+      console.error(`${MODULE_ID} | Appearance actor import failed`, error);
+      ui.notifications.error(localize("DropError"));
+    } finally {
+      importing = false;
+    }
   });
 }
 

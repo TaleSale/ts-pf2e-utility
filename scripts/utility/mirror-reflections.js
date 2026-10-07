@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core.js";
-import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20260916-floor-loading-v102";
+import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
 
 const ASSET_FLAG = "sceneAsset";
 const CONTAINER_NAME = "tsu-mirror-reflections";

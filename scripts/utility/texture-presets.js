@@ -1,6 +1,12 @@
 import { MODULE_ID, t } from "../core.js";
 
 export const TEXTURE_PRESET_FLAG = "texturePreset";
+export const FLOOR_LOADING_FLAG = "waitForFloorTextures";
+
+export function floorLoadingEnabled(scene) {
+  return scene?.getFlag?.(MODULE_ID, FLOOR_LOADING_FLAG) === true
+    && Number(scene?.levels?.size ?? 0) > 1;
+}
 export const TEXTURE_PRESET_CHANGE_HOOK = `${MODULE_ID}.texturePresetChanged`;
 export const BASE_TEXTURE_PRESET = "base";
 export const BASTION_TEXTURE_PRESET = "bastion-blasphemy";
@@ -928,6 +934,26 @@ function getElement(root) {
   return null;
 }
 
+function createSceneFloorLoadingField(scene) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "form-group tsu-scene-floor-loading-field";
+  const label = document.createElement("label");
+  label.textContent = t("Settings.FloorLoading.Name", "Wait for floors before showing a level");
+  const fields = document.createElement("div");
+  fields.className = "form-fields";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.name = `flags.${MODULE_ID}.${FLOOR_LOADING_FLAG}`;
+  input.dataset.dtype = "Boolean";
+  input.checked = scene?.getFlag?.(MODULE_ID, FLOOR_LOADING_FLAG) === true;
+  fields.append(input);
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = t("Settings.FloorLoading.Hint", "Enable only for maps built entirely with the scene builder and containing multiple levels. Loads floor textures before showing a level to prevent lower-level assets from flashing. May increase loading time. Disabled by default; takes effect the next time the scene or level is loaded.");
+  wrapper.append(label, fields, hint);
+  return wrapper;
+}
+
 function createScenePresetField(scene) {
   const wrapper = document.createElement("div");
   wrapper.className = "form-group tsu-scene-texture-preset-field";
@@ -961,10 +987,11 @@ Hooks.on("renderSceneConfig", (app, element) => {
   if (!root || root.querySelector(".tsu-scene-texture-preset-field")) return;
   const basicsTab = root.querySelector('.tab[data-tab="basics"]');
   if (!(basicsTab instanceof HTMLElement)) return;
+  const loadingField = createSceneFloorLoadingField(app.document);
   const field = createScenePresetField(app.document);
   const foregroundField = basicsTab.querySelector('file-picker[name="foreground"]')?.closest(".form-group");
-  if (foregroundField instanceof HTMLElement) foregroundField.after(field);
-  else basicsTab.append(field);
+  if (foregroundField instanceof HTMLElement) foregroundField.after(loadingField, field);
+  else basicsTab.append(loadingField, field);
   app.setPosition?.({ height: "auto" });
 });
 

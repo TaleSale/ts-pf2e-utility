@@ -2,9 +2,11 @@ import { escapeHtml, I18N_PREFIX, MODULE_ID, SOCKET_CHANNEL } from "../core.js";
 import { isActionPlusFeatureEnabled, isSupportedActionPlusItem, registerActionPlusFeature } from "./actionplus.js";
 import {
   durationUnitSeconds,
+  localizedAfflictionDescription,
   mergeAfflictionDefinition,
   normalizeDuration,
-  parseAfflictionDescription,
+  normalizeDamageFormula,
+  parseAfflictionItem,
   validateAfflictionDefinition,
 } from "./affliction-parser.js";
 import { exposureTransition, periodicTransition } from "./affliction-rules.js";
@@ -52,11 +54,7 @@ function defaultConfig(item = null) {
     type: "poison",
     sourceMode: "action",
     source: null,
-    parsed: parseAfflictionDescription(item?.system?.description?.value ?? "", {
-      name: item?.name ?? "",
-      img: item?.img ?? "",
-      traits: itemTraits(item),
-    }),
+    parsed: parseAfflictionItem(item, { language: game.i18n.lang }),
     overrides: {},
   };
 }
@@ -64,7 +62,7 @@ function defaultConfig(item = null) {
 function normalizeDamage(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
-    formula: String(source.formula ?? "").trim(),
+    formula: normalizeDamageFormula(source.formula),
     damageType: String(source.damageType ?? "poison").trim() || "poison",
     category: source.category ? String(source.category).trim() : null,
   };
@@ -118,6 +116,8 @@ function normalizeDefinition(value) {
     name: String(source.name ?? "").trim(),
     img: String(source.img ?? "").trim(),
     type: source.type === "poison" ? "poison" : String(source.type ?? "poison"),
+    level: Number.isFinite(Number(source.level)) ? Number(source.level) : 1,
+    counteractRank: Math.max(1, Math.trunc(Number(source.counteractRank) || Math.ceil((Number(source.level) || 1) / 2))),
     save: { type: ["fortitude", "reflex", "will"].includes(save.type) ? save.type : "fortitude", dc: Number(save.dc) || null },
     onset: normalizeDuration(source.onset),
     maxDuration: normalizeDuration(source.maxDuration),
@@ -145,7 +145,10 @@ function resolvedDefinition(config) {
 }
 
 function getConfig(item) {
-  return normalizeConfig(item?.getFlag?.(MODULE_ID, DEFINITION_FLAG), item);
+  const config = normalizeConfig(item?.getFlag?.(MODULE_ID, DEFINITION_FLAG), item);
+  // Automatic values follow the current language, source level and NPC adjustment.
+  if (config.sourceMode === "action") config.parsed = normalizeDefinition(parseAfflictionItem(item, { language: game.i18n.lang }));
+  return config;
 }
 
 async function persistConfig(item, config, { render = true } = {}) {
@@ -208,6 +211,7 @@ function renderControls({ item }) {
     ${errorHtml}
     <div class="form-group"><label>${escapeHtml(localize("Name"))}</label><div class="form-fields"><input type="text" data-top-field="name" value="${escapeHtml(definition.name || item.name)}">${resetButton("name", config)}</div></div>
     <div class="form-group"><label>${escapeHtml(localize("Save"))}</label><div class="form-fields"><select data-save-field="type">${["fortitude", "reflex", "will"].map((type) => `<option value="${type}" ${definition.save.type === type ? "selected" : ""}>${escapeHtml(localize(`Saves.${type}`))}</option>`).join("")}</select><input type="number" min="1" data-save-field="dc" value="${definition.save.dc ?? ""}">${resetButton("save", config)}</div></div>
+    <div class="form-group"><label>${escapeHtml(localize("CounteractRank"))}</label><div class="form-fields"><input type="number" min="1" data-top-field="counteractRank" value="${definition.counteractRank}">${resetButton("counteractRank", config)}</div></div>
     <div class="form-group"><label>${escapeHtml(localize("Onset"))}</label><div class="form-fields">${durationInput(definition.onset, "onset")}${resetButton("onset", config)}</div></div>
     <div class="form-group"><label>${escapeHtml(localize("MaxDuration"))}</label><div class="form-fields">${durationInput(definition.maxDuration, "maxDuration")}${resetButton("maxDuration", config)}</div></div>
     <div class="form-group"><label>${escapeHtml(localize("Virulent"))}</label><div class="form-fields"><input type="checkbox" data-top-field="virulent" ${definition.virulent ? "checked" : ""}>${resetButton("virulent", config)}</div></div>
@@ -232,6 +236,7 @@ function readDuration(element) {
 function definitionFromEditor(editor, base) {
   const definition = clone(base);
   definition.name = String(editor.querySelector('[data-top-field="name"]')?.value ?? definition.name).trim();
+  definition.counteractRank = Math.max(1, Number(editor.querySelector('[data-top-field="counteractRank"]')?.value) || definition.counteractRank);
   definition.save = {
     type: String(editor.querySelector('[data-save-field="type"]')?.value ?? "fortitude"),
     dc: Number(editor.querySelector('[data-save-field="dc"]')?.value) || null,
@@ -294,7 +299,7 @@ function activateListeners({ app, html, item, optionIndex }) {
         ? "save"
         : event.target.closest("[data-field]")?.dataset.field
           ?? event.target.dataset.topField;
-    if (["name", "save", "onset", "maxDuration", "virulent", "stages"].includes(field)) {
+    if (["name", "save", "counteractRank", "onset", "maxDuration", "virulent", "stages"].includes(field)) {
       void saveEditorOverride(field);
     }
   });
@@ -308,7 +313,7 @@ function activateListeners({ app, html, item, optionIndex }) {
     if (event.target.closest('[data-action="parse-action"]')) {
       const config = getConfig(item);
       config.sourceMode = "action"; config.source = null;
-      config.parsed = normalizeDefinition(parseAfflictionDescription(item.system?.description?.value ?? "", { name: item.name, img: item.img, traits: itemTraits(item) }));
+      config.parsed = normalizeDefinition(parseAfflictionItem(item, { language: game.i18n.lang }));
       await persistConfig(item, config); return;
     }
     if (event.target.closest('[data-action="add-stage"]')) {
@@ -344,7 +349,7 @@ function activateListeners({ app, html, item, optionIndex }) {
         if (item.getFlag(MODULE_ID, DEFINITION_FLAG) && !await confirmReplace()) return;
         const config = defaultConfig(item);
         config.sourceMode = "dropped"; config.source = { name: dropped.name, img: dropped.img };
-        config.parsed = normalizeDefinition(parseAfflictionDescription(dropped.system?.description?.value ?? "", { name: dropped.name, img: dropped.img, traits: itemTraits(dropped) }));
+        config.parsed = normalizeDefinition(parseAfflictionItem(dropped, { language: game.i18n.lang }));
         config.overrides = {}; await persistConfig(item, config); return;
       }
       if (dropped.type !== "effect") return ui.notifications.warn(localize("OnlyEffect"));
@@ -361,14 +366,18 @@ async function cleanup({ item }) {
   await item.unsetFlag(MODULE_ID, DEFINITION_FLAG);
 }
 
-registerActionPlusFeature({ id: FEATURE_ID, label: `${I18N_PREFIX}.ActionPlus.Affliction.FeatureLabel`, render: renderControls, activateListeners, cleanup });
+registerActionPlusFeature({
+  id: FEATURE_ID, label: `${I18N_PREFIX}.ActionPlus.Affliction.FeatureLabel`,
+  itemTypes: ["action", "consumable", "equipment", "weapon", "armor", "shield", "backpack", "treasure", "book"],
+  render: renderControls, activateListeners, cleanup,
+});
 
 Hooks.on("preUpdateItem", (item, changed) => {
-  if (!isSupportedActionPlusItem(item) || !isActionPlusFeatureEnabled(item, FEATURE_ID, changed)) return;
+  if (!isSupportedActionPlusItem(item, FEATURE_ID) || !isActionPlusFeatureEnabled(item, FEATURE_ID, changed)) return;
   const description = foundry.utils.getProperty(changed, "system.description.value");
   if (description === undefined) return;
   const config = getConfig(item); if (config.sourceMode !== "action") return;
-  config.parsed = normalizeDefinition(parseAfflictionDescription(description, { name: item.name, img: item.img, traits: itemTraits(item) }));
+  config.parsed = normalizeDefinition(parseAfflictionItem(item, { description, language: game.i18n.lang }));
   foundry.utils.setProperty(changed, `flags.${MODULE_ID}.${DEFINITION_FLAG}`, config);
 });
 
@@ -415,11 +424,11 @@ async function resolveAction(message) {
   for (const candidate of [message?.item, origin.item, origin.itemUuid, context.item, context.itemUuid, toolbelt.item, actionUuid]) {
     const rawId = typeof candidate === "string" && !candidate.includes(".") ? candidate : null;
     const item = (rawId ? actors.map((actor) => actor.items?.get(rawId)).find(Boolean) : null) ?? await documentFromReference(candidate);
-    if (item?.type === "action" && item.getFlag?.(MODULE_ID, DEFINITION_FLAG)) return item;
+    if (isSupportedActionPlusItem(item, FEATURE_ID) && isActionPlusFeatureEnabled(item, FEATURE_ID)) return item;
   }
   const options = Array.isArray(context.options) ? context.options : [];
   const slug = options.find((option) => String(option).startsWith("item:slug:"))?.slice(10) ?? context.action ?? context.slug;
-  return slug ? actors.flatMap((actor) => actor.itemTypes?.action ?? []).find((item) => (item.slug ?? item.system?.slug) === slug && item.getFlag(MODULE_ID, DEFINITION_FLAG)) ?? null : null;
+  return slug ? actors.flatMap((actor) => actor.items?.contents ?? Array.from(actor.items ?? [])).find((item) => (item.slug ?? item.system?.slug) === slug && isSupportedActionPlusItem(item, FEATURE_ID) && isActionPlusFeatureEnabled(item, FEATURE_ID)) ?? null : null;
 }
 
 function getCycleOption(context) {
@@ -444,39 +453,50 @@ function appendActionCardContent(content, addition) {
 }
 
 Hooks.on("preCreateChatMessage", (message) => {
+  // Snapshot consumables before PF2e removes an exhausted, auto-destroyed item.
+  const sourceItem = message.item;
+  if (!message.isRoll && isSupportedActionPlusItem(sourceItem, FEATURE_ID) && isActionPlusFeatureEnabled(sourceItem, FEATURE_ID)) {
+    const definition = resolvedDefinition(getConfig(sourceItem));
+    if (!validateAfflictionDefinition(definition).length) message.updateSource({
+      [`flags.${MODULE_ID}.afflictionExposure`]: { actionUuid: sourceItem.uuid, cycleId: `exposure:${uid()}`, definition, prepared: false },
+    });
+    return;
+  }
   const context = messageContext(message);
   if (context?.type !== "saving-throw" || getCycleOption(context)) return;
   const origin = context.origin ?? message.flags?.pf2e?.origin;
   const actor = actorFromReference(origin?.actor ?? origin?.actorUuid);
   const rawId = typeof origin?.item === "string" && !origin.item.includes(".") ? origin.item : null;
   const item = rawId ? actor?.items?.get(rawId) : message.item;
-  if (item?.type !== "action" || !item.getFlag?.(MODULE_ID, DEFINITION_FLAG)) return;
+  if (!isSupportedActionPlusItem(item, FEATURE_ID) || !isActionPlusFeatureEnabled(item, FEATURE_ID)) return;
   const options = Array.from(new Set([...(context.options ?? []), `${CYCLE_OPTION_PREFIX}${uid()}`, `${ACTION_OPTION_PREFIX}${item.uuid}`, "item:trait:poison"]));
   message.updateSource({ "flags.pf2e.context.options": options });
 });
 
 async function prepareExposureMessage(message) {
+  const snapshot = message?.getFlag?.(MODULE_ID, "afflictionExposure");
   if (
     !message?.isAuthor
     || message.isRoll
-    || message.getFlag?.(MODULE_ID, "afflictionExposure")
+    || (snapshot && snapshot.prepared !== false)
     || message.getFlag?.(MODULE_ID, "afflictionSave")
   ) return;
   const action = await resolveAction(message);
-  if (!action || !isActionPlusFeatureEnabled(action, FEATURE_ID)) return;
-  const definition = resolvedDefinition(getConfig(action));
+  if ((!action || !isActionPlusFeatureEnabled(action, FEATURE_ID)) && !snapshot?.definition) return;
+  const definition = snapshot?.definition ?? resolvedDefinition(getConfig(action));
   if (validateAfflictionDefinition(definition).length) {
     ui.notifications.warn(localize("InvalidUse"));
     return;
   }
 
-  const cycleId = `exposure:${message.id}:${uid()}`;
+  const cycleId = snapshot?.cycleId ?? `exposure:${message.id}:${uid()}`;
+  const actionUuid = action?.uuid ?? snapshot.actionUuid;
   const updates = {
-    [`flags.${MODULE_ID}.afflictionExposure`]: { actionUuid: action.uuid, cycleId },
+    [`flags.${MODULE_ID}.afflictionExposure`]: { actionUuid, cycleId, definition: clone(definition), prepared: true },
   };
-  const rawDescription = String(action.system?.description?.value ?? "");
-  if (!/@Check\s*\[/i.test(rawDescription)) {
-    const check = `@Check[${definition.save.type}|dc:${definition.save.dc}|options:${CYCLE_OPTION_PREFIX}${cycleId},${ACTION_OPTION_PREFIX}${action.uuid},item:trait:poison]{${localize("InitialSave")}}`;
+  const rawDescription = localizedAfflictionDescription(action?.system?.description?.value, game.i18n.lang);
+  if (action?.type !== "action" || !/@Check\s*\[/i.test(rawDescription)) {
+    const check = `@Check[${definition.save.type}|dc:${definition.save.dc}|immutable:true|options:${CYCLE_OPTION_PREFIX}${cycleId},${ACTION_OPTION_PREFIX}${actionUuid},item:trait:poison]{${localize("InitialSave")}}`;
     const enriched = await TextEditor.enrichHTML(`<div class="tsu-affliction-initial-save"><strong>${escapeHtml(definition.name)}</strong><span class="tsu-affliction-save-separator"> — </span>${check}</div>`, { async: true, relativeTo: action });
     updates.content = appendActionCardContent(message.content, enriched);
   }
@@ -488,9 +508,9 @@ async function prepareExposureMessage(message) {
     const helper = clone(message.flags?.["pf2e-toolbelt"]?.targetHelper ?? {});
     Object.assign(helper, {
       type: "action",
-      author: action.actor?.uuid ?? null,
-      item: action.uuid,
-      options: Array.from(new Set([...(helper.options ?? []), `${CYCLE_OPTION_PREFIX}${cycleId}`, `${ACTION_OPTION_PREFIX}${action.uuid}`, "item:trait:poison"])),
+      author: action?.actor?.uuid ?? null,
+      item: actionUuid,
+      options: Array.from(new Set([...(helper.options ?? []), `${CYCLE_OPTION_PREFIX}${cycleId}`, `${ACTION_OPTION_PREFIX}${actionUuid}`, "item:trait:poison"])),
       saveVariants: { null: { basic: false, dc: definition.save.dc, statistic: definition.save.type, saves: {} } },
       targets: targetUuids,
     });
@@ -550,15 +570,21 @@ function instanceDescription(instance) {
 
 function rootEffectSource(instance) {
   return {
-    name: instance.definition.name || localize("UnnamedPoison"), type: "effect",
+    name: rootEffectName(instance.definition), type: "effect",
     img: instance.definition.img || "icons/consumables/potions/potion-jar-corked-labeled-poison-skull-green.webp",
     system: {
       badge: effectBadge(instance.definition, instance), description: { value: instanceDescription(instance) },
       duration: { value: -1, unit: "unlimited", expiry: null, sustained: false },
-      level: { value: 1 }, rules: [], slug: null, tokenIcon: { show: true }, traits: { value: ["poison"] }, unidentified: false,
+      level: { value: instance.definition.level ?? 1 }, rules: [], slug: null, tokenIcon: { show: true }, traits: { value: ["poison"] }, unidentified: false,
     },
     flags: { [MODULE_ID]: { [INSTANCE_FLAG]: instance } },
   };
+}
+
+function rootEffectName(definition) {
+  return localize("EffectName").replace("{name}", definition.name || localize("UnnamedPoison"))
+    .replace("{dc}", String(definition.save.dc))
+    .replace("{rank}", String(definition.counteractRank ?? Math.max(1, Math.ceil((definition.level ?? 1) / 2))));
 }
 
 async function createRootEffect(actor, instance) {
@@ -567,10 +593,11 @@ async function createRootEffect(actor, instance) {
 
 async function updateRootEffect(effect, instance) {
   await effect.update({
+    name: rootEffectName(instance.definition),
     [`flags.${MODULE_ID}.${INSTANCE_FLAG}`]: instance,
     "system.badge": effectBadge(instance.definition, instance),
     "system.description.value": instanceDescription(instance),
-  }, { render: false });
+  }, { render: false, tsuAfflictionWrite: true });
 }
 
 async function deleteManagedChildren(actor, instanceId) {
@@ -598,7 +625,7 @@ async function applyStageItems(actor, effect, instance) {
 }
 
 function damageFormula(stage) {
-  const entries = stage.damage.filter((entry) => entry.formula).map((entry) => `${entry.formula}[${[entry.damageType, entry.category].filter(Boolean).join(",")}]`);
+  const entries = (stage.damage ?? []).filter((entry) => entry.formula).map((entry) => `${normalizeDamageFormula(entry.formula)}[${[entry.damageType, entry.category].filter(Boolean).join(",")}]`);
   if (!entries.length) return null;
   return entries.length === 1 ? entries[0] : `{${entries.join(",")}}`;
 }
@@ -614,7 +641,22 @@ async function applyStageDamage(actor, effect, instance) {
     speaker: ChatMessage.getSpeaker({ actor, token }), flavor: `${escapeHtml(instance.definition.name)} — ${escapeHtml(localize("Stage").replace("{stage}", String(instance.stage)))}`,
     flags: { [MODULE_ID]: { afflictionDamage: { instanceId: instance.id, revision: instance.revision } }, pf2e: { context: { type: "damage-roll", target: { actor: actor.uuid, token: token?.document?.uuid ?? null }, options: ["item:trait:poison"] } } },
   });
-  const appliedMessage = await actor.applyDamage({ damage: roll, token, item: effect, rollOptions: new Set(["item:trait:poison", "origin:action:trait:poison"]) });
+  // PF2e returns the Actor from applyDamage, not the damage-taken message.
+  // Correlate the actual undo record with this application, even if other
+  // actors or other damage sources create messages at the same time.
+  const applicationOption = `${MODULE_ID}:affliction-damage:${uid()}`;
+  let appliedMessage = null;
+  const hookId = Hooks.on("createChatMessage", (message) => {
+    const context = messageContext(message);
+    const applied = message.flags?.pf2e?.appliedDamage;
+    if (context.type === "damage-taken" && context.options?.includes(applicationOption)
+      && (!applied || applied.uuid === actor.uuid)) appliedMessage = message;
+  });
+  try {
+    await actor.applyDamage({ damage: roll, token, item: effect, rollOptions: new Set(["item:trait:poison", "origin:action:trait:poison", applicationOption]) });
+  } finally {
+    Hooks.off("createChatMessage", hookId);
+  }
   return { messages: [rollMessage?.id, appliedMessage?.id].filter(Boolean), appliedDamage: clone(appliedMessage?.flags?.pf2e?.appliedDamage ?? null) };
 }
 
@@ -633,6 +675,11 @@ async function postStageDescription(actor, instance) {
 
 async function enterStage(actor, effect, instance, { damage = true } = {}) {
   instance.phase = "stage"; instance.stage = Math.clamp(instance.stage, 1, instance.definition.stages.length);
+  // Every stage entry starts a fresh interval, even when re-exposure advances
+  // to the maximum stage while a save for the previous stage is still pending.
+  instance.awaitingSave = false;
+  instance.pendingCycleId = null;
+  instance.pendingMessageId = null;
   instance.remainingStageTurns = await durationTurns(instance.definition.stages[instance.stage - 1]?.duration);
   instance.revision += 1;
   await deleteManagedChildren(actor, instance.id);
@@ -653,14 +700,18 @@ async function saveTransactions(actor, transactions) {
 }
 
 async function undoTransaction(actor, transaction) {
-  if (transaction.appliedDamage) await actor.undoDamage(transaction.appliedDamage);
+  const damageMessage = transaction.messages?.map((id) => game.messages?.get(id))
+    .find((message) => message?.flags?.pf2e?.appliedDamage?.uuid === actor.uuid);
+  if (transaction.appliedDamage && !damageMessage?.flags?.pf2e?.appliedDamage?.isReverted) {
+    await undoAppliedDamage(actor, transaction.appliedDamage);
+  }
   const messageIds = transaction.messages?.filter((id) => game.messages?.get(id)?.canUserModify?.(game.user, "delete")) ?? [];
   if (messageIds.length) await ChatMessage.deleteDocuments(messageIds);
   const current = findInstanceEffect(actor, { actionUuid: transaction.actionUuid });
   if (current) {
     const currentInstance = instanceFromEffect(current);
     await deleteManagedChildren(actor, currentInstance.id);
-    await current.delete({ render: false });
+    await current.delete({ render: false, tsuAfflictionWrite: true });
   }
   if (!transaction.baseInstance) return null;
   const base = clone(transaction.baseInstance);
@@ -669,9 +720,31 @@ async function undoTransaction(actor, transaction) {
   return effect;
 }
 
+async function undoAppliedDamage(actor, appliedDamage) {
+  // Use PF2e's recorded deltas (after resistance, temporary HP, etc.). Its
+  // undoDamage currently launches actor.update without awaiting it, so await
+  // the inverse update here before a reroll can apply the new stage's damage.
+  const changes = {};
+  for (const { path, value } of appliedDamage.updates ?? []) {
+    const current = foundry.utils.getProperty(actor, path);
+    if (typeof current === "number") changes[path] = current + value;
+  }
+  const shield = appliedDamage.shield;
+  const shieldItem = shield ? actor.items.get(shield.id) : null;
+  if (shieldItem) changes.items = [{ _id: shield.id, "system.hp.value": shieldItem.hitPoints.value + shield.damage }];
+  const hasChanges = Object.keys(changes).length > 0;
+  const persistent = (appliedDamage.persistent ?? []).filter((id) => actor.items.has(id));
+  if (persistent.length) await actor.deleteEmbeddedDocuments("Item", persistent, { render: !hasChanges });
+  if (hasChanges) {
+    const restoredHp = changes["system.attributes.hp.value"];
+    const damageTaken = typeof restoredHp === "number" ? actor.hitPoints.value - restoredHp : 0;
+    await actor.update(changes, { damageTaken, damageUndo: true });
+  }
+}
+
 async function removeInstance(actor, effect, instance) {
   await deleteManagedChildren(actor, instance.id);
-  await effect.delete({ render: false });
+  await effect.delete({ render: false, tsuAfflictionWrite: true });
 }
 
 async function buildInitialInstance(definition, actionUuid, targetActor, targetStage) {
@@ -687,10 +760,17 @@ async function buildInitialInstance(definition, actionUuid, targetActor, targetS
   return instance;
 }
 
-async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, kind = "exposure", instanceId = null }) {
+async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, kind = "exposure", instanceId = null, reroll = false }) {
   let transactions = getTransactions(actor);
   let transaction = transactions.find((entry) => entry.cycleId === cycleId);
+  // Toolbelt broadcasts the original card update separately from its roll hook.
+  // A delayed original result must never replace an already accepted reroll.
+  if (transaction?.reroll && !reroll) return;
   if (transaction?.outcome === outcome) {
+    if (reroll && !transaction.reroll) {
+      transaction.reroll = true;
+      await saveTransactions(actor, transactions);
+    }
     if (kind === "periodic") {
       const current = findInstanceEffect(actor, { instanceId, actionUuid });
       const currentInstance = instanceFromEffect(current);
@@ -722,7 +802,9 @@ async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, k
   let effect = findInstanceEffect(actor, { instanceId, actionUuid });
   let instance = effect ? instanceFromEffect(effect) : null;
   const baseInstance = instance ? clone(instance) : null;
-  const record = { cycleId, actionUuid, kind, outcome, definition: clone(definition), baseInstance, messages: [], appliedDamage: null, appliedRevision: null };
+  // A delayed answer to a superseded save card must not alter the current stage.
+  if (kind === "periodic" && !transaction && (!instance?.awaitingSave || (instance.pendingCycleId && instance.pendingCycleId !== cycleId))) return;
+  const record = { cycleId, actionUuid, instanceId: instance?.id ?? instanceId, kind, outcome, reroll, definition: clone(definition), baseInstance, messages: [], appliedDamage: null, appliedRevision: null };
 
   if (kind === "exposure" && !instance) {
     if (["success", "criticalSuccess"].includes(outcome)) {
@@ -766,6 +848,7 @@ async function applyOutcome({ actor, definition, actionUuid, cycleId, outcome, k
     }
   }
   const applied = findInstanceEffect(actor, { actionUuid });
+  record.instanceId ??= instance?.id ?? null;
   record.appliedRevision = instanceFromEffect(applied)?.revision ?? null;
   transactions.push(record); await saveTransactions(actor, transactions);
 }
@@ -806,24 +889,34 @@ async function processRollNow(message, overrides = {}) {
     : game.user === targetActor?.primaryUpdater;
   if (!outcome || !targetActor || !mayCoordinate) return;
   const context = messageContext(message);
+  const reroll = overrides.reroll ?? Boolean(context.isReroll);
   const saveFlag = overrides.automationMessage?.getFlag?.(MODULE_ID, "afflictionSave") ?? message.getFlag?.(MODULE_ID, "afflictionSave");
-  const optionInstanceId = (context.options ?? []).find((option) => String(option).startsWith(PERIODIC_OPTION_PREFIX))?.slice(PERIODIC_OPTION_PREFIX.length) ?? null;
+  const options = [...(context.options ?? []), ...(overrides.automationMessage?.flags?.["pf2e-toolbelt"]?.targetHelper?.options ?? [])];
+  const optionInstanceId = options.find((option) => String(option).startsWith(PERIODIC_OPTION_PREFIX))?.slice(PERIODIC_OPTION_PREFIX.length) ?? null;
   const periodicInstanceId = saveFlag?.instanceId ?? optionInstanceId;
   if (periodicInstanceId) {
     const effect = findInstanceEffect(targetActor, { instanceId: periodicInstanceId }); const instance = instanceFromEffect(effect);
-    if (!instance) return;
-    const cycleId = saveFlag?.cycleId ?? getCycleOption(context) ?? `${periodicInstanceId}:${uid()}`;
-    await applyOutcome({ actor: targetActor, definition: instance.definition, actionUuid: instance.actionUuid, cycleId, outcome, kind: "periodic", instanceId: instance.id });
+    const cycleId = saveFlag?.cycleId ?? getCycleOption({ options });
+    if (!cycleId) return;
+    // A successful save may have removed the effect. The transaction still
+    // contains its definition and pre-roll state, including for a later reroll.
+    const transaction = getTransactions(targetActor).find((entry) => entry.cycleId === cycleId && entry.kind === "periodic");
+    const source = instance ?? transaction;
+    if (!source) return;
+    await applyOutcome({ actor: targetActor, definition: source.definition, actionUuid: source.actionUuid, cycleId, outcome, kind: "periodic", instanceId: periodicInstanceId, reroll });
     return;
   }
   const action = await resolveAction(overrides.automationMessage ?? message) ?? await resolveAction(message);
-  if (!action) return;
-  const definition = resolvedDefinition(getConfig(action));
+  const optionCycle = getCycleOption(context);
+  const exposure = (overrides.automationMessage ?? message).getFlag?.(MODULE_ID, "afflictionExposure")
+    ?? (game.messages?.contents ?? []).find((entry) => entry.getFlag?.(MODULE_ID, "afflictionExposure")?.cycleId === optionCycle)?.getFlag(MODULE_ID, "afflictionExposure");
+  if (!action && !exposure?.definition) return;
+  const definition = exposure?.definition ? normalizeDefinition(exposure.definition) : resolvedDefinition(getConfig(action));
   const errors = validateAfflictionDefinition(definition);
   if (errors.length) return ui.notifications.warn(localize("InvalidUse"));
   if (isPoisonImmune(targetActor, action)) return ui.notifications.info(localize("Immune").replace("{name}", targetActor.name));
   const cycleId = overrides.cycleId ?? getCycleOption(messageContext(message)) ?? `message:${message.id}:${targetActor.uuid}`;
-  await applyOutcome({ actor: targetActor, definition, actionUuid: action.uuid, cycleId, outcome, kind: "exposure" });
+  await applyOutcome({ actor: targetActor, definition, actionUuid: action?.uuid ?? exposure.actionUuid, cycleId, outcome, kind: "exposure", reroll });
 }
 
 Hooks.on("createChatMessage", (message) => {
@@ -841,6 +934,7 @@ function toolbeltTargetData(target) {
 
 async function processToolbeltSave({ message, rollMessage = null, target, outcome, reroll = false }) {
   const targetData = toolbeltTargetData(target);
+  outcome = normalizeOutcome(outcome);
   if (!message || !targetData || !outcome) return;
   const cycleId = `toolbelt:${message.id}:${targetData.tokenUuid}`;
   if (game.user === targetData.actor.primaryUpdater) {
@@ -849,6 +943,7 @@ async function processToolbeltSave({ message, rollMessage = null, target, outcom
       outcome,
       targetActor: targetData.actor,
       cycleId,
+      reroll,
       localToolbelt: true,
     });
     return;
@@ -871,11 +966,12 @@ Hooks.on("pf2e-toolbelt.rerollSave", ({ message, target, data } = {}) => {
     .catch((error) => console.error(`${MODULE_ID} | Toolbelt affliction reroll failed`, error));
 });
 
-function storedToolbeltOutcome(message, targetId) {
+function storedToolbeltResult(message, targetId) {
   const variants = message?.flags?.["pf2e-toolbelt"]?.targetHelper?.saveVariants ?? {};
   for (const variant of Object.values(variants)) {
-    const outcome = variant?.saves?.[targetId]?.success;
-    if (outcome) return outcome;
+    const result = variant?.saves?.[targetId];
+    const success = normalizeOutcome(result?.success);
+    if (success) return { ...result, success };
   }
   return null;
 }
@@ -884,19 +980,26 @@ async function processStoredToolbeltResults(message) {
   const targets = game.toolbelt?.targetHelper?.getMessageTargets?.(message) ?? [];
   for (const target of targets) {
     const targetData = toolbeltTargetData(target);
-    const outcome = storedToolbeltOutcome(message, target.id);
+    const result = storedToolbeltResult(message, target.id);
+    const outcome = result?.success;
     if (!targetData || !outcome || game.user !== targetData.actor.primaryUpdater) continue;
     await processRoll(message, {
       automationMessage: message,
       outcome,
       targetActor: targetData.actor,
       cycleId: `toolbelt:${message.id}:${targetData.tokenUuid}`,
+      reroll: Boolean(result.rerolled),
       localToolbelt: true,
     });
   }
 }
 
 Hooks.on("updateChatMessage", (message, changed) => {
+  if (shouldProcessStandardMessage(message) && (
+    foundry.utils.hasProperty(changed, "flags.pf2e.context")
+    || Object.keys(changed ?? {}).some((key) => key.startsWith("flags.pf2e.context."))
+    || Object.hasOwn(changed, "rolls")
+  )) void processRoll(message).catch((error) => console.error(`${MODULE_ID} | Updated affliction roll failed`, error));
   if (!message.getFlag?.(MODULE_ID, "afflictionSave") && !message.getFlag?.(MODULE_ID, "afflictionExposure")) return;
   const toolbeltChanged = foundry.utils.hasProperty(changed, "flags.pf2e-toolbelt")
     || foundry.utils.hasProperty(changed, "flags.pf2e-toolbelt.targetHelper")
@@ -920,18 +1023,20 @@ Hooks.once("ready", () => {
         outcome: request.payload.outcome,
         targetActor: actor,
         cycleId: request.payload.cycleId,
+        reroll: Boolean(request.payload.reroll),
         localToolbelt: true,
       });
     })().catch((error) => console.error(`${MODULE_ID} | Socket affliction save failed`, error));
   });
 });
 
-Hooks.on("pf2e.reroll", () => { /* The replacement message preserves the cycle roll option and is handled by createChatMessage. */ });
+// PF2e emits pf2e.reroll before choosing the kept die. Process its replacement
+// ChatMessage instead: that contains the final outcome and original cycle option.
 
 async function postPeriodicSave(combatant, effect, instance) {
   const cycleId = `periodic:${instance.id}:${uid()}`;
   const label = `${instance.definition.name} — ${localize("Stage").replace("{stage}", String(instance.stage))}`;
-  const check = `@Check[${instance.definition.save.type}|dc:${instance.definition.save.dc}|options:${PERIODIC_OPTION_PREFIX}${instance.id},${CYCLE_OPTION_PREFIX}${cycleId},item:trait:poison]{${localize("RollSave")}}`;
+  const check = `@Check[${instance.definition.save.type}|dc:${instance.definition.save.dc}|immutable:true|options:${PERIODIC_OPTION_PREFIX}${instance.id},${CYCLE_OPTION_PREFIX}${cycleId},item:trait:poison]{${localize("RollSave")}}`;
   const targetUuid = combatant.token?.uuid;
   const helper = targetUuid && game.toolbelt?.targetHelper ? {
     type: "check",
@@ -994,13 +1099,15 @@ async function recoverPendingSave(actor, effect, instance) {
     }
     const target = game.toolbelt?.targetHelper?.getMessageTargets?.(message)
       ?.find((candidate) => toolbeltTargetData(candidate)?.actor === actor);
-    const outcome = target ? storedToolbeltOutcome(message, target.id) : null;
+    const result = target ? storedToolbeltResult(message, target.id) : null;
+    const outcome = result?.success;
     if (target && outcome) {
       await processRollNow(message, {
         automationMessage: message,
         outcome,
         targetActor: actor,
         cycleId: `toolbelt:${message.id}:${target.uuid}`,
+        reroll: Boolean(result.rerolled),
         localToolbelt: true,
       });
       return "resolved";
@@ -1065,7 +1172,46 @@ Hooks.on("pf2e.endTurn", (combatant) => {
     .catch((error) => console.error(`${MODULE_ID} | Affliction turn processing failed`, error));
 });
 
-Hooks.on("deleteItem", (item) => {
+Hooks.on("preUpdateItem", (item, changed, options) => {
+  if (options.tsuAfflictionWrite) return;
+  const instance = instanceFromEffect(item);
+  const value = foundry.utils.getProperty(changed, "system.badge.value");
+  if (!instance || !Number.isFinite(Number(value)) || value === undefined) return;
+  const offset = instance.definition.onset ? 1 : 0;
+  const stage = Math.clamp(Math.trunc(Number(value)) - offset, offset ? 0 : 1, instance.definition.stages.length);
+  const phase = stage === 0 ? "onset" : "stage";
+  if (stage === instance.stage && phase === instance.phase) return;
+  instance.stage = stage;
+  instance.phase = phase;
+  instance.pendingStage = Math.max(1, stage);
+  instance.virulentSuccesses = 0;
+  instance.awaitingSave = false;
+  instance.pendingCycleId = null;
+  instance.pendingMessageId = null;
+  instance.skipEndTurnKey = null;
+  instance.revision += 1;
+  foundry.utils.setProperty(changed, `flags.${MODULE_ID}.${INSTANCE_FLAG}`, instance);
+  options.tsuAfflictionManualStage = true;
+});
+
+Hooks.on("updateItem", (item, _changed, options) => {
+  if (!options.tsuAfflictionManualStage || !item.actor || game.user !== item.actor.primaryUpdater) return;
+  void enqueueActorMutation(item.actor, async () => {
+    const instance = instanceFromEffect(item);
+    if (!instance || !item.actor.items.has(item.id)) return;
+    if (instance.phase === "stage") {
+      instance.remainingMaxTurns ??= await durationTurns(instance.definition.maxDuration);
+      await enterStage(item.actor, item, instance, { damage: false });
+    } else {
+      instance.remainingOnsetTurns = await durationTurns(instance.definition.onset);
+      await deleteManagedChildren(item.actor, instance.id);
+      await updateRootEffect(item, instance);
+    }
+  }).catch((error) => console.error(`${MODULE_ID} | Manual affliction stage failed`, error));
+});
+
+Hooks.on("deleteItem", (item, options = {}) => {
+  if (options.tsuAfflictionWrite) return;
   const instance = instanceFromEffect(item); if (!instance || !item.actor || game.user !== item.actor.primaryUpdater) return;
   void deleteManagedChildren(item.actor, instance.id);
 });

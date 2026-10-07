@@ -100,6 +100,7 @@ function noteRule(option, { second = false, applyToSpellAttackDamage = false } =
     selector: applyToSpellAttackDamage ? ["strike-damage", "spell-damage"] : "strike-damage",
     predicate: [
       `${prefix}:${option.value}`,
+      { gte: ["self:level", Math.max(option.level, second ? 15 : 9)] },
       "target:condition:off-guard",
       ...(applyToSpellAttackDamage ? [{ or: [{ not: "item:type:spell" }, "item:trait:attack"] }] : []),
     ],
@@ -226,7 +227,35 @@ function syncGeneratedData(item, changed) {
   const config = getPendingConfig(item, changed);
   const existingRules = foundry.utils.deepClone(foundry.utils.getProperty(changed, "system.rules") ?? item._source?.system?.rules ?? []);
   const preservedRules = existingRules.filter((rule) => !isGeneratedRule(rule));
+  // Existing PF2e controls participate in mergeable suboption lists too.
+  // Apply the same gates to them so they cannot bypass our generated rules.
+  for (const rule of preservedRules) {
+    if (rule.key !== "RollOption" || !["debilitation", "second-debilitation"].includes(rule.option)) continue;
+    const minimumLevel = rule.option === "second-debilitation" ? 15 : 9;
+    const addGate = (predicate, level) => {
+      const gate = { gte: ["self:level", level] };
+      const entries = Array.isArray(predicate) ? predicate : [];
+      return entries.some((entry) => JSON.stringify(entry) === JSON.stringify(gate)) ? entries : [...entries, gate];
+    };
+    rule.predicate = addGate(rule.predicate, minimumLevel);
+    if (Array.isArray(rule.suboptions)) {
+      for (const suboption of rule.suboptions) {
+        const level = suboption.value === "master-strike" ? 20 : OPTIONS.find((option) => option.value === suboption.value)?.level;
+        if (level) suboption.predicate = addGate(suboption.predicate, Math.max(level, minimumLevel));
+      }
+    }
+  }
   const existingNoteSignatures = new Set(preservedRules.map(noteSignature).filter(Boolean));
+  for (const rule of preservedRules) {
+    const signature = noteSignature(rule);
+    if (!signature) continue;
+    const second = signature.startsWith("second-");
+    const value = signature.split(":")[1];
+    const level = value === "master-strike" ? 20 : OPTIONS.find((option) => option.value === value)?.level;
+    if (!level) continue;
+    const gate = { gte: ["self:level", Math.max(level, second ? 15 : 9)] };
+    if (!rule.predicate.some((entry) => JSON.stringify(entry) === JSON.stringify(gate))) rule.predicate.push(gate);
+  }
   const generatedRules = preserveRollOptionState(buildGeneratedRules(config), existingRules).filter((rule) => {
     const signature = noteSignature(rule);
     return !signature || !existingNoteSignatures.has(signature);
@@ -287,6 +316,34 @@ async function cleanup({ item }) {
     CLEANING_ITEMS.delete(item.uuid);
   }
 }
+
+async function refreshExistingDebilitations() {
+  if (game.users.activeGM?.id !== game.user.id) return;
+  const actors = new Set(game.actors?.contents ?? []);
+  for (const scene of game.scenes?.contents ?? []) {
+    for (const token of scene.tokens?.contents ?? []) {
+      if (!token.actorLink && token.actor) actors.add(token.actor);
+    }
+  }
+  const items = new Set(game.items?.contents ?? []);
+  for (const actor of actors) {
+    for (const item of actor.items?.contents ?? []) items.add(item);
+  }
+  for (const item of items) {
+    if (!isSupportedActionPlusItem(item) || !isActionPlusFeatureEnabled(item, FEATURE_ID)) continue;
+    try {
+      const changed = {};
+      syncGeneratedData(item, changed);
+      if (JSON.stringify(changed.system.rules) === JSON.stringify(item._source?.system?.rules ?? [])
+        && changed.system.description.value === (item._source?.system?.description?.value ?? "")) continue;
+      await item.update(changed);
+    } catch (error) {
+      console.error(`${MODULE_ID} | Failed to refresh debilitating strike ${item.uuid}`, error);
+    }
+  }
+}
+
+Hooks.once("ready", refreshExistingDebilitations);
 
 Hooks.on("preUpdateItem", (item, changed) => {
   if (CLEANING_ITEMS.has(item.uuid)) return;

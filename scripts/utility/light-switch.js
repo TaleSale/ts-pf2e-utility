@@ -1,5 +1,6 @@
-import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20260916-floor-loading-v102";
-import { resolvePresetTexture } from "./texture-presets.js?v=20260916-floor-loading-v102";
+import { positionButton, positionInteractionButtons } from "./hotbar-interactions.js?v=20261006-instruments-v2";
+import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20261006-fog-soft-boundary-v104";
+import { resolvePresetTexture } from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
 
 const MODULE_ID = "ts-pf2e-utility";
 const FLAG_KEY = "lightSwitch";
@@ -10,7 +11,6 @@ const SOCKET_TYPE = "toggleLightSwitch";
 const HOLDER_SOCKET_TYPE = "immersiveTorchHolder";
 const BUTTON_ID = "tsu-light-switch";
 const HOLDER_BUTTON_ID = "tsu-light-holder-action";
-const REBELLION_SLOT_ID = "rebellion-extra-hotbar-slot-11";
 const HOLDER_ITEM_UUIDS = Object.freeze({
   torch: "Compendium.pf2e.equipment-srd.Item.8Jdw4yAzWYylGePS",
   "everlight-crystal": "Compendium.pf2e.equipment-srd.Item.mRz8Jmk4Q06SsZpC",
@@ -186,91 +186,6 @@ async function recoverPreviouslyHiddenSwitches() {
   }
 }
 
-function localBox(element, ancestor) {
-  let left = 0;
-  let top = 0;
-  let current = element;
-  while (current && current !== ancestor) {
-    left += current.offsetLeft;
-    top += current.offsetTop;
-    current = current.offsetParent;
-  }
-  if (current === ancestor) return {
-    left,
-    top,
-    width: element.offsetWidth,
-    height: element.offsetHeight,
-  };
-
-  const elementRect = element.getBoundingClientRect();
-  const ancestorRect = ancestor.getBoundingClientRect();
-  const scaleX = ancestorRect.width > 0 && ancestor.offsetWidth > 0
-    ? ancestorRect.width / ancestor.offsetWidth
-    : 1;
-  const scaleY = ancestorRect.height > 0 && ancestor.offsetHeight > 0
-    ? ancestorRect.height / ancestor.offsetHeight
-    : 1;
-  return {
-    left: (elementRect.left - ancestorRect.left) / scaleX,
-    top: (elementRect.top - ancestorRect.top) / scaleY,
-    width: elementRect.width / scaleX,
-    height: elementRect.height / scaleY,
-  };
-}
-
-function positionButton(button) {
-  const hotbar = document.getElementById("hotbar");
-  const actionBar = hotbar?.querySelector("#action-bar");
-  if (!(hotbar instanceof HTMLElement) || !(actionBar instanceof HTMLElement)) return;
-
-  if (button.parentElement !== actionBar) actionBar.append(button);
-  actionBar.style.position ||= "relative";
-  actionBar.style.overflow = "visible";
-
-  const normalSlots = [...hotbar.querySelectorAll("[data-slot]")]
-    .filter((slot) => slot.id !== REBELLION_SLOT_ID);
-  const rebellionSlot = hotbar.querySelector(`#${REBELLION_SLOT_ID}`);
-  const anchor = rebellionSlot
-    ?? normalSlots.reduce((last, slot) => (
-      Number(slot.dataset.slot) > Number(last?.dataset.slot ?? 0) ? slot : last
-    ), null)
-    ?? [...actionBar.querySelectorAll("button, [role=button]")]
-      .findLast((element) => element instanceof HTMLElement && element !== button);
-  if (!(anchor instanceof HTMLElement)) return;
-
-  const box = localBox(anchor, actionBar);
-  if (!box || box.width < 1 || box.height < 1) return;
-  let left = box.left + box.width + 4;
-  const controls = [...hotbar.querySelectorAll("button, li[data-slot], [role=button]")]
-    .filter((element) => element instanceof HTMLElement && element !== button)
-    .filter((element) => ![BUTTON_ID, HOLDER_BUTTON_ID].includes(element.id))
-    .filter((element) => {
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-    });
-  for (const control of controls) {
-    const controlBox = localBox(control, actionBar);
-    if (controlBox) left = Math.max(left, controlBox.left + controlBox.width + 4);
-  }
-  button.style.left = `${Math.round(left + (game.user?.isGM ? 0 : 10))}px`;
-  button.style.top = `${Math.round(box.top)}px`;
-  button.style.width = `${Math.round(box.width)}px`;
-  button.style.height = `${Math.round(box.height)}px`;
-}
-
-function positionInteractionButtons() {
-  const lightButton = document.getElementById(BUTTON_ID);
-  const holderButton = document.getElementById(HOLDER_BUTTON_ID);
-  if (lightButton) positionButton(lightButton);
-  if (!holderButton) return;
-  positionButton(holderButton);
-  if (!lightButton) return;
-  const actionBar = document.querySelector("#hotbar #action-bar");
-  const box = actionBar ? localBox(lightButton, actionBar) : null;
-  if (box) holderButton.style.left = `${Math.round(box.left + box.width + 4)}px`;
-}
-
 function scheduleButtonPosition(button) {
   const generation = ++positionGeneration;
   const place = () => {
@@ -287,6 +202,7 @@ function refreshButton() {
   if (!lights.length) {
     existing?.remove();
     existingHolder?.remove();
+    positionInteractionButtons();
     return;
   }
 

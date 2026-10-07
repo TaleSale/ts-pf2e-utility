@@ -5123,7 +5123,8 @@
 .tsu-asset-light-settings input[type="color"] { padding:2px; }
 
 #tsu-light-switch,
-#tsu-light-holder-action {
+#tsu-light-holder-action,
+#tsu-musical-instrument {
   position: absolute;
   z-index: 6;
   display: flex;
@@ -5143,6 +5144,11 @@
 #tsu-light-switch i,
 #tsu-light-holder-action i { font-size: 25px; }
 #tsu-light-switch.on i { color: #fff; opacity: 1; }
+#tsu-musical-instrument {
+  color: #ffd17a;
+}
+#tsu-musical-instrument i { font-size: 25px; }
+#tsu-musical-instrument:hover { box-shadow: 0 0 8px var(--color-shadow-highlight); }
 #tsu-light-switch.off i { color: #fff; opacity: .35; }
 #tsu-light-holder-action.empty i { color: #9bd0ff; }
 #tsu-light-holder-action.occupied i { color: #ffd17a; }
@@ -5285,6 +5291,18 @@ ul[data-option-toggles] > li.ts-automation-toggle-row > .ts-automation-lock > i 
   flex-direction: column;
   grid-area: img;
   min-width: 0;
+}
+
+.ts-appearance-editor .ts-appearance-drop-zone {
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 2px dashed var(--color-border-light-primary);
+  border-radius: 4px;
+  text-align: center;
+}
+.ts-appearance-editor .ts-appearance-drop-zone.is-dragover {
+  border-color: var(--color-border-highlight, #c9a45c);
+  background: rgba(201, 164, 92, 0.12);
 }
 
 /* Keep the Horror panel readable even with all GM actions visible. */
