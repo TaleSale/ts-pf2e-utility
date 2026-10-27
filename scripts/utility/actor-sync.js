@@ -65,7 +65,7 @@ async function resolveSourceActor(actor) {
   return source?.documentName === "Actor" ? source : null;
 }
 
-function getUuidFromCompendiumLink(value) {
+function getUuidFromActorLink(value) {
   const text = String(value ?? "").trim();
   if (!text) return null;
 
@@ -79,11 +79,13 @@ function getUuidFromCompendiumLink(value) {
   if (richLink?.groups?.uuid) return richLink.groups.uuid.trim();
 
   const compendiumUuid = text.match(/Compendium\.[^\s\]\}"']+/);
-  return compendiumUuid?.[0]?.trim() ?? null;
+  if (compendiumUuid) return compendiumUuid[0].trim();
+
+  return /^Actor\.[A-Za-z0-9_-]+$/.test(text) ? text : null;
 }
 
 async function resolvePastedSourceActor(value) {
-  const uuid = getUuidFromCompendiumLink(value);
+  const uuid = getUuidFromActorLink(value);
   if (!uuid) return null;
 
   const source = await fromUuid(uuid).catch((error) => {
@@ -91,7 +93,7 @@ async function resolvePastedSourceActor(value) {
     return null;
   });
 
-  if (source?.documentName !== "Actor" || !source.pack) return null;
+  if (source?.documentName !== "Actor") return null;
   return source;
 }
 
@@ -239,6 +241,7 @@ function getPrototypeTokenData(actor) {
 }
 
 function getCompendiumLabel(document) {
+  if (!document?.pack) return "Мир";
   const pack = document?.pack ? game.packs?.get(document.pack) : null;
   return pack?.metadata?.label || pack?.title || document?.pack || "Неизвестный компендиум";
 }
@@ -350,11 +353,11 @@ function buildManualSourceInput(actor, { hasAutomaticSource = false } = {}) {
   return `
     <section data-manual-source-drop style="border:1px solid var(--color-border-light-primary); border-radius:8px; padding:12px;">
       <div style="color:var(--color-text-secondary);">${hasAutomaticSource
-        ? "Можно указать другого актёра из компендиума вместо найденного автоматически."
-        : "У этого актёра нет ссылки на исходный документ компендиума."}</div>
+        ? "Можно указать другого актёра из мира или компендиума вместо выбранного источника."
+        : "Укажите ссылку на актёра из мира или компендиума, чтобы использовать его как источник."}</div>
       <label style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
-        <span style="font-weight:600;">Ссылка на актёра из компендиума</span>
-        <input type="text" name="manualSourceUuid" placeholder="Compendium.pf2e...Actor..." autocomplete="off" style="width:100%;">
+        <span style="font-weight:600;">Ссылка на актёра из мира или компендиума</span>
+        <input type="text" name="manualSourceUuid" placeholder="Actor.… или Compendium.pf2e.…" autocomplete="off" style="width:100%;">
       </label>
       <div style="display:flex; justify-content:flex-end; margin-top:10px;">
         <button type="button" data-action="resolve-manual-source">
@@ -637,6 +640,15 @@ async function refreshSelectedItems(root) {
     itemData._id = item.id;
     itemData.sort = item.sort;
 
+    // Preserve stored inventory values, without baking in prepared rune bonuses.
+    const currentSystem = item.toObject().system ?? {};
+    for (const field of ["quantity", "runes"]) {
+      if (Object.hasOwn(currentSystem, field)) {
+        itemData.system ??= {};
+        itemData.system[field] = foundry.utils.deepClone(currentSystem[field]);
+      }
+    }
+
     if (item.type === "spell") {
       spellLocations.set(item.id, foundry.utils.deepClone(item.system?.location ?? {}));
       itemData.system ??= {};
@@ -746,7 +758,7 @@ export async function openActorFullRefreshDialog() {
     title: "Обновление существа без смены ID",
     content: buildDialogShell({
       title: "Обновление существа без смены ID",
-      description: "Макрос найдёт исходное существо в компендиуме и полностью заменит данные актёра, сохранив его ID.",
+      description: "Макрос найдёт исходное существо в компендиуме или позволит выбрать источник из мира по ссылке и полностью заменит данные актёра, сохранив его ID.",
       buttonLabel: "Обновить существо",
     }),
     buttons: {},
@@ -779,7 +791,7 @@ export async function openActorFullRefreshDialog() {
         const input = root.querySelector('input[name="manualSourceUuid"]');
         const sourceActor = await resolvePastedSourceActor(input?.value);
         if (!sourceActor) {
-          ui.notifications?.warn("Не удалось найти актёра в компендиуме по этой ссылке.");
+          ui.notifications?.warn("Не удалось найти актёра в мире или компендиуме по этой ссылке.");
           return null;
         }
 
@@ -816,7 +828,7 @@ export async function openActorFullRefreshDialog() {
         event.stopPropagation();
 
         const raw = event.dataTransfer?.getData("text/plain") ?? "";
-        const uuid = getUuidFromCompendiumLink(raw);
+        const uuid = getUuidFromActorLink(raw);
         const input = root.querySelector('input[name="manualSourceUuid"]');
         if (input instanceof HTMLInputElement && uuid) {
           input.value = uuid;
@@ -843,7 +855,7 @@ export async function openActorFullRefreshDialog() {
 
         const confirmed = await Dialog.confirm({
           title: "Подтвердите обновление актёра",
-          content: `<p>Обновить <strong>${escapeHtml(selectedActor.name)}</strong> из компендиума <strong>${escapeHtml(getCompendiumLabel(sourceActor))}</strong>?</p>`,
+          content: `<p>Обновить <strong>${escapeHtml(selectedActor.name)}</strong> данными актёра <strong>${escapeHtml(sourceActor.name)}</strong> (источник: <strong>${escapeHtml(getCompendiumLabel(sourceActor))}</strong>)?</p>`,
           yes: () => true,
           no: () => false,
           defaultYes: false,

@@ -4767,6 +4767,10 @@
 .tsu-dos-effect button { width: 22px; min-width: 22px; height: 22px; padding: 0; }
 .tsu-dos-effect-fields { display: grid; grid-template-columns: auto 38px auto 38px minmax(0, 1fr); align-items: center; gap: 4px; margin-top: 5px; }
 .tsu-dos-effect-fields label { display: contents; }
+.tsu-dos-link { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+.tsu-dos-link select { flex: 1; width: 0; min-width: 0; font-size: 11px; }
+.tsu-dos-persistent { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px; gap: 4px; margin-top: 5px; }
+.tsu-dos-persistent input, .tsu-dos-persistent select { width: 100%; min-width: 0; }
 .tsu-dos-effect-fields i { width: 14px; text-align: center; opacity: .8; }
 .tsu-dos-effect-fields input { width: 38px; min-width: 0; height: 24px; padding: 1px 3px; text-align: center; }
 .tsu-dos-effect-fields select { width: 100%; min-width: 0; height: 24px; padding: 1px 18px 1px 4px; font-size: 11px; }

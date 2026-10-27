@@ -60,30 +60,42 @@ function rememberFirstSave(event) {
   pendingSave = {
     inline,
     itemUuid: item?.uuid,
-    saveVariant: saveLink ? getSaveVariant(saveLink) : getSaveVariantFromInline(inline),
+    saveVariant: saveLink ? getSaveVariant(saveLink) : getSaveVariantFromInline(inline, item),
     createdAt: Date.now(),
   };
 }
 
 function isSaveLink(element) {
   return ["fortitude", "reflex", "will"].includes(String(element?.dataset?.pf2Check).toLowerCase())
-    && Number.isFinite(Number(element?.dataset?.pf2Dc));
+    && String(element?.dataset?.pf2Dc ?? "").trim() !== ""
+    && Number.isFinite(Number(element?.dataset?.pf2Dc))
+    && Number(element.dataset.pf2Dc) > 0;
 }
 
 function getSaveVariant(element) {
   return {
     basic: element.dataset.isBasic != null,
-    dc: Number(element.dataset.pf2Dc),
+    dc: Number(element.dataset.pf2Dc) + (Number(element.dataset.pf2Adjustment) || 0),
     statistic: String(element.dataset.pf2Check).toLowerCase(),
     saves: {},
   };
 }
 
-function getSaveVariantFromInline(inline) {
+function getSaveVariantFromInline(inline, item = null) {
   const parameters = inline.match(/@Check\[([^\]]+)\]/i)?.[1]?.split("|") ?? [];
   const statistic = parameters[0]?.trim().toLowerCase();
-  const dc = Number(parameters.find((parameter) => /^dc:/i.test(parameter.trim()))?.split(":")[1]);
-  if (!["fortitude", "reflex", "will"].includes(statistic) || !Number.isFinite(dc)) return null;
+  const rawDc = parameters.find((parameter) => /^dc:/i.test(parameter.trim()))?.split(":").slice(1).join(":").trim();
+  let dc = rawDc ? Number(rawDc) : NaN;
+  const actor = item?.actor;
+  if (rawDc != null && (!rawDc || /^v[0-3]$/i.test(rawDc))
+    && (actor?.isOfType?.("npc") || actor?.type === "npc") && typeof globalThis.MonsterDC === "function") {
+    // Reuse the installed Monster DC helper, including its standalone V0–V3 tiers.
+    const variant = parameters.find((parameter) => /^v[0-3]$/i.test(parameter.trim()))?.trim().toLowerCase();
+    const tier = ({ v0: "low", v1: "moderate", v2: "high", v3: "extreme" })[variant] ?? "moderate";
+    const level = actor.system?.details?.level?.value ?? actor.system?.details?.level ?? actor.level ?? actor.system?.level?.value;
+    if (level != null && Number.isFinite(Number(level))) dc = globalThis.MonsterDC(Number(level), tier);
+  }
+  if (!["fortitude", "reflex", "will"].includes(statistic) || !Number.isFinite(dc) || dc <= 0) return null;
   return {
     basic: parameters.some((parameter) => /^basic\b/i.test(parameter.trim())),
     dc,

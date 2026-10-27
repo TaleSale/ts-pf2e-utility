@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core.js";
-import { ASSETS } from "./scene-assets.js?v=20261006-fog-soft-boundary-v104";
-import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
+import { ASSETS } from "./scene-assets.js?v=20261027-floor-light-v1";
+import { BASTION_TEXTURE_PRESET } from "./texture-presets.js?v=20261026-spell-floors-v111";
 
 const GALLERY_FLAG = "bastionGallery";
 

@@ -1,5 +1,6 @@
 {
   "TS_PF2E_UTILITY": {
+    "SpellFloorsLabel": "Floors",
     "Common": {
       "Empty": {
         "NoPlayers": "No players found. Assign characters to users or drag actors into the game window."
@@ -154,7 +155,7 @@
         "SelfIntersection": "The floor boundary crosses itself.",
         "AlreadyFilled": "This area already has a floor.",
         "NoFloor": "No floor was found here.",
-        "OpenRoom": "No closed room was found here.",
+        "OpenRoom": "Fill room: no enclosed area was found here. To draw a custom area, select Draw boundary and finish with a double-click.",
         "NeedThreePoints": "A floor needs at least three points.",
         "NoScene": "The scene is not ready.",
         "BaseFloorCreated": "The base floor covers the whole scene.",
@@ -319,7 +320,12 @@
           "CobwebAbove": "Cobweb above — full",
           "CobwebAboveCorner": "Cobweb above — corner",
           "CobwebAboveStrip": "Cobweb above — along edge",
-          "WeatherFog": "Fog"
+          "WeatherBright": "Bright",
+          "WeatherDim": "Dim",
+          "WeatherDarkness": "Darkness",
+          "WeatherDeepDarkness": "Deep darkness",
+          "WeatherFog": "Fog",
+          "WeatherSnow": "Snow — difficult terrain"
         }
       },
       "ObstructingForest": {
@@ -748,6 +754,8 @@
       }
     },
     "TempHP": {
+      "TemporaryShort": "Temp HP",
+      "HitPointsShort": "HP",
       "TemporaryButton": "Apply temporary HP",
       "OverflowButton": "Heal + temporary HP",
       "TemporaryTitle": "Apply the result as temporary Hit Points",

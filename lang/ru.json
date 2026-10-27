@@ -1,5 +1,6 @@
 {
   "TS_PF2E_UTILITY": {
+    "SpellFloorsLabel": "Полы",
     "Common": {
       "Empty": {
         "NoPlayers": "Список пуст. Назначьте игрокам персонажей или перетащите актёров в окно игры."
@@ -154,7 +155,7 @@
         "SelfIntersection": "Граница пола пересекает сама себя.",
         "AlreadyFilled": "В этой области уже есть пол.",
         "NoFloor": "В этой точке пол не найден.",
-        "OpenRoom": "Замкнутая комната в этой точке не найдена.",
+        "OpenRoom": "Режим «Залить комнату»: замкнутая область не найдена. Для произвольной области выберите «Рисовать границы» и завершите контур двойным щелчком.",
         "NeedThreePoints": "Для пола нужны минимум три точки.",
         "NoScene": "Сцена ещё не готова.",
         "BaseFloorCreated": "Базовый пол заполнил всю сцену.",
@@ -319,7 +320,12 @@
           "CobwebAbove": "Паутина сверху — сплошная",
           "CobwebAboveCorner": "Паутина сверху — угловая",
           "CobwebAboveStrip": "Паутина сверху — вдоль края",
-          "WeatherFog": "Туман"
+          "WeatherBright": "Ярко",
+          "WeatherDim": "Тускло",
+          "WeatherDarkness": "Тьма",
+          "WeatherDeepDarkness": "Сильная тьма",
+          "WeatherFog": "Туман",
+          "WeatherSnow": "Снег — сложная местность"
         }
       },
       "ObstructingForest": {
@@ -817,6 +823,8 @@
       }
     },
     "TempHP": {
+      "TemporaryShort": "ВОЗ",
+      "HitPointsShort": "ОЗ",
       "TemporaryButton": "Применить временные ОЗ",
       "OverflowButton": "Исцелить + временные ОЗ",
       "TemporaryTitle": "Применить результат как временные ОЗ",

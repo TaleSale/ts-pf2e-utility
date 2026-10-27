@@ -22,6 +22,7 @@ const PACK_CONFIGS = Object.freeze([
     publishPath: path.join(MODULE_ROOT, "packs", "mechanics"),
     sourceFiles: Object.freeze([
       "pack-src/games/Open_Duel_Combat_D7m3oX9QaL2cV8pR.json",
+      "pack-src/mechanics/Fishing_TsFishing0000001.json",
     ]),
   },
   {
@@ -147,19 +148,29 @@ async function syncPack(ClassicLevel, config) {
 async function publishPack(config) {
   const targetParent = path.dirname(config.publishPath);
   await fsp.mkdir(targetParent, { recursive: true });
-  await fsp.rm(config.publishPath, { recursive: true, force: true });
-  await fsp.mkdir(config.publishPath, { recursive: true });
-
-  const entries = await fsp.readdir(config.dbPath, { withFileTypes: true });
-  for (const entry of entries) {
-    if (entry.name === "LOCK") continue;
-    const source = path.join(config.dbPath, entry.name);
-    const target = path.join(config.publishPath, entry.name);
-    if (entry.isDirectory()) {
-      await fsp.cp(source, target, { recursive: true, force: true });
-      continue;
+  // Stage first. Renaming a locked Windows pack fails without partially deleting it.
+  const staged = await fsp.mkdtemp(path.join(targetParent, `.${config.label}-staged-`));
+  const backup = `${staged}-previous`;
+  let movedPrevious = false;
+  try {
+    const entries = await fsp.readdir(config.dbPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === "LOCK") continue;
+      await fsp.cp(path.join(config.dbPath, entry.name), path.join(staged, entry.name), { recursive: true });
     }
-    await fsp.copyFile(source, target);
+    if (fs.existsSync(config.publishPath)) {
+      await fsp.rename(config.publishPath, backup);
+      movedPrevious = true;
+    }
+    try {
+      await fsp.rename(staged, config.publishPath);
+    } catch (error) {
+      if (movedPrevious) await fsp.rename(backup, config.publishPath);
+      throw error;
+    }
+    if (movedPrevious) await fsp.rm(backup, { recursive: true, force: true });
+  } finally {
+    await fsp.rm(staged, { recursive: true, force: true });
   }
 }
 
@@ -182,6 +193,16 @@ async function main() {
   const { ClassicLevel } = foundryRequire("classic-level");
 
   for (const config of packConfigs) {
+    // Acquire LevelDB's lock before touching a published pack. An active Foundry
+    // world must update macro documents through the runtime sync instead.
+    if (fs.existsSync(config.publishPath)) {
+      const probe = new ClassicLevel(config.publishPath, { keyEncoding: "utf8", valueEncoding: "json" });
+      try {
+        await probe.open();
+      } finally {
+        await probe.close();
+      }
+    }
     const result = await syncPack(ClassicLevel, config);
     await publishPack(config);
     console.log(`${config.label}: created=${result.created.length}, updated=${result.updated.length}, deleted=${result.deleted.length}`);

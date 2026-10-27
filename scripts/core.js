@@ -49,6 +49,7 @@ const MODULE_COMPENDIUM_CONFIGS = Object.freeze([
     ]),
     sourceFiles: Object.freeze([
       "pack-src/games/Open_Duel_Combat_D7m3oX9QaL2cV8pR.json",
+      "pack-src/mechanics/Fishing_TsFishing0000001.json",
     ]),
     iconUpdates: Object.freeze({
       D7m3oX9QaL2cV8pR: "icons/skills/melee/weapons-crossed-swords-pink.webp",
@@ -620,7 +621,8 @@ export async function requestGameAction(gameId, action, data = {}) {
     },
   };
 
-  if (game.user?.isGM) {
+  const primaryGMOnly = getGameDefinition(gameId)?.primaryGMOnly;
+  if (game.user?.isGM && (!primaryGMOnly || game.users.activeGM?.id === game.user.id)) {
     await enqueueGameAction(payload);
     return;
   }
@@ -636,6 +638,7 @@ function getGameActionQueueKey(message) {
 
 function enqueueGameAction(message) {
   if (!game.user?.isGM) return Promise.resolve();
+  if (getGameDefinition(message?.payload?.gameId)?.primaryGMOnly && game.users.activeGM?.id !== game.user.id) return Promise.resolve();
 
   const queueKey = getGameActionQueueKey(message);
   const previous = gameActionQueues.get(queueKey) ?? Promise.resolve();

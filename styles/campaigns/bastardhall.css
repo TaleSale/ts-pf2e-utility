@@ -1,3 +1,33 @@
+.tsu-bastardhall-window .bh-phobias-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.tsu-bastardhall-window .bh-phobias-hint { color: var(--bh-paper); margin: 0 0 16px; }
+.tsu-bastardhall-window .bh-phobia-character { min-width: 0; padding: 0; display: grid; grid-template-columns: minmax(210px, 25%) minmax(0, 1fr); }
+.tsu-bastardhall-window .bh-phobia-person { background: linear-gradient(90deg, var(--bh-teal-dark), var(--bh-teal)); color: #fff; padding: 12px; }
+.tsu-bastardhall-window .bh-phobia-person h2 { margin: 0; padding: 0; border: 0; color: inherit; font-size: 14px; }
+.tsu-bastardhall-window .bh-phobia-add-controls { display: flex; gap: 5px; margin-top: 12px; }
+.tsu-bastardhall-window .bh-phobia-add-controls select { min-width: 0; flex: 1; background: var(--bh-paper); color: var(--bh-ink); }
+.tsu-bastardhall-window .bh-phobia-add-controls button { flex: 0 0 28px; width: 28px; padding: 0; }
+.tsu-bastardhall-window .bh-phobia-add-controls button i { margin: 0; line-height: 1; }
+.tsu-bastardhall-window .bh-phobia-consent { margin-top: 8px; width: auto; }
+.tsu-bastardhall-window .bh-phobia-list { min-width: 0; padding: 4px 16px; }
+.tsu-bastardhall-window .bh-phobia-character.is-dragover { outline: 2px solid var(--bh-gold); }
+.tsu-bastardhall-window .bh-phobia-character h2,
+.tsu-bastardhall-window .bh-phobia-entry header { display: flex; align-items: center; gap: 8px; }
+.tsu-bastardhall-window .bh-phobia-character h2 img { width: 42px; height: 42px; object-fit: cover; border-radius: 50%; }
+.tsu-bastardhall-window .bh-phobia-character h2 small { margin-left: auto; }
+.tsu-bastardhall-window .bh-phobia-entry { border-top: 1px solid var(--bh-teal); padding: 12px 0; }
+.tsu-bastardhall-window .bh-phobia-entry:first-child { border-top: 0; }
+.tsu-bastardhall-window .bh-phobia-entry header img { width: 32px; height: 32px; object-fit: cover; }
+.tsu-bastardhall-window .bh-phobia-entry header strong { flex: 1; overflow-wrap: anywhere; }
+.tsu-bastardhall-window .bh-phobia-entry header button { flex: 0 0 28px; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.tsu-bastardhall-window .bh-phobia-entry header button i { margin: 0; line-height: 1; }
+.tsu-bastardhall-window .bh-phobia-description { overflow-wrap: anywhere; margin-top: 8px; }
+.tsu-bastardhall-window .bh-phobias-empty { font-style: italic; opacity: .7; }
+
 .tsu-bastardhall-btn {
   align-items: center;
   background: #176b6c;

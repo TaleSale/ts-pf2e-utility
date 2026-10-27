@@ -1,3 +1,4 @@
+import { regionFloorOverlays, tokenInsideSpellFog, SPELL_FLOOR_FLAG } from "./spell-floors.js?v=20261026-spell-floors-v5";
 import { MODULE_ID, i18nKey, t } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
@@ -5,8 +6,9 @@ import {
   floorLoadingEnabled,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
-import { installFogConcealment } from "./fog-visibility.js?v=20260913-weather-fog-v14";
+} from "./texture-presets.js?v=20261026-spell-floors-v111";
+import { installFogConcealment } from "./fog-visibility.js?v=20261026-spell-floors-v15";
+import { refreshFloorLightDepth } from "./floor-light-depth.js?v=20261027-floor-light-v1";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -29,7 +31,7 @@ const LEVEL_NUMBER_FLAG = "floorLevelNumber";
 const RUBBLE_REGION_FLAG = "rubbleDifficultTerrain";
 const RUBBLE_REGION_VERSION = 1;
 const FLOOR_SURFACE_REGION_FLAG = "floorSurface";
-const FLOOR_SURFACE_REGION_VERSION = 4;
+const FLOOR_SURFACE_REGION_VERSION = 5;
 const MANAGED_LOWER_VISIBILITY_FLAG = "managedLowerFloorVisibility";
 const SETTING_VISIBILITY_MIGRATION = "floorVisibilityMigration";
 const FLOOR_VISIBILITY_MIGRATION_VERSION = 1;
@@ -192,9 +194,19 @@ const FLOOR_STYLES = Object.freeze({
   "cobweb-above": cobwebStyle("CobwebAbove", "Cobweb above — full", "above", "patch"),
   "cobweb-above-corner": cobwebStyle("CobwebAboveCorner", "Cobweb above — corner", "above", "corner"),
   "cobweb-above-strip": cobwebStyle("CobwebAboveStrip", "Cobweb above — along edge", "above", "strip"),
+  "weather-bright": lightingWeatherStyle("WeatherBright", "Bright", 0, "#fff0bb"),
+  "weather-dim": lightingWeatherStyle("WeatherDim", "Dim", 0.5, "#8892a3"),
+  "weather-darkness": lightingWeatherStyle("WeatherDarkness", "Darkness", 0.85, "#343746"),
+  "weather-deep-darkness": lightingWeatherStyle("WeatherDeepDarkness", "Deep darkness", 1, "#080910"),
   "weather-fog": weatherStyle("WeatherFog", "Fog", "weather-fog-floor-v1.webp", {
     alpha: 0.48,
     scale: 1,
+  }),
+  "weather-snow": Object.freeze({
+    labelKey: "Settings.FloorTextures.Choices.WeatherSnow", fallback: "Snow — difficult terrain",
+    src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#dbe8f0"/><path d="M0 25 Q18 9 40 23 T64 18 M0 50 Q24 30 48 47 T64 40" fill="none" stroke="white" stroke-width="8"/></svg>')}`,
+    overlay: true, weather: "snow", snow: true, alpha: 0.45,
+    difficultTerrain: true, movementCost: DIFFICULT_TERRAIN_COST,
   }),
   "garden-cabbage": gardenStyle("GardenCabbage", "Cabbage beds", "garden-cabbage-floor.webp", "garden-crop-cabbage-v2.webp", { cropSize: 0.19, spacingX: 0.27, spacingY: 0.19, missingChance: 0.015, cropBrightness: 1.24, cropSaturation: 0.14 }),
   "garden-carrot": gardenStyle("GardenCarrot", "Carrot beds", "garden-carrot-floor.webp", "garden-crop-carrot-v2.webp", { cropSize: 0.17, spacingX: 0.21, spacingY: 0.13, missingChance: 0.02, cropBrightness: 1.5, cropSaturation: 0.26 }),
@@ -265,8 +277,17 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
     "cobweb-below", "cobweb-below-corner", "cobweb-below-strip",
     "cobweb-above", "cobweb-above-corner", "cobweb-above-strip",
   ] }),
-  Object.freeze({ key: "Weather", fallback: "Weather", styles: ["weather-fog"] }),
+  Object.freeze({ key: "Weather", fallback: "Weather", styles: ["weather-fog", "weather-snow", "weather-bright", "weather-dim", "weather-darkness", "weather-deep-darkness"] }),
 ]);
+
+function lightingWeatherStyle(label, fallback, darkness, color) {
+  // A picker swatch only: the Region renders actual lighting, with no painted overlay.
+  const src = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${color}"/></svg>`)}`;
+  return Object.freeze({
+    labelKey: `Settings.FloorTextures.Choices.${label}`,
+    fallback, src, overlay: true, weather: "lighting", darkness,
+  });
+}
 
 function weatherStyle(label, fallback, filename, options = {}) {
   const source = `modules/${MODULE_ID}/images/scene-floors/${filename}`;
@@ -654,6 +675,7 @@ Hooks.once("init", () => {
   });
   refreshFogConcealment = installFogConcealment({
     getFogPolygons: fogPolygonsForScene,
+    isSpellFog: tokenInsideSpellFog,
     getFloorNumber: floorNumberForToken,
   });
 });
@@ -1169,9 +1191,9 @@ function floorSurfaceBehaviorData() {
       placement: "bottom",
       light: true,
       move: false,
-      // Restrict vision at the floor polygon, leaving uncovered lower levels visible.
+      // Restrict vision and sound at the floor polygon, leaving uncovered openings clear.
       sight: true,
-      sound: false,
+      sound: true,
       occlusion: false,
       exposure: false,
       culling: true,
@@ -1405,7 +1427,7 @@ async function synchronizeFloorSurfaceRegions(scene, scope = null) {
       await createLiveRegionBehavior(scene, region.id, floorSurfaceBehaviorData(), floorSurfaceBehavior);
     } else {
       const behaviorUpdate = { _id: behavior.id };
-      for (const restriction of ["light", "sight"]) {
+      for (const restriction of ["light", "sight", "sound"]) {
         if (!Boolean(behavior.system?.[restriction] ?? behavior._source?.system?.[restriction])) {
           behaviorUpdate[`system.${restriction}`] = true;
         }
@@ -1431,6 +1453,59 @@ async function synchronizeFloorSurfaceRegions(scene, scope = null) {
   }
 }
 
+function weatherLightingRegionData(scene, floor) {
+  const style = FLOOR_STYLES[floor.style];
+  const data = floorSurfaceRegionData(scene, floor);
+  if (!data || style?.weather !== "lighting") return null;
+  data.name = t(style.labelKey, style.fallback);
+  data.elevation = { bottom: null, top: null };
+  data.behaviors = [{
+    name: "", type: "adjustDarknessLevel", disabled: false,
+    system: { mode: 0, modifier: style.darkness },
+  }];
+  data.flags = { [MODULE_ID]: { weatherLighting: { floorId: floor.id } } };
+  return data;
+}
+
+async function synchronizeWeatherLightingRegions(scene, scope = null) {
+  if (!scene || !canManageFloorSurfaces() || !scene.regions) return;
+  const floors = getSceneDataForScene(scene).floors.filter((floor) =>
+    FLOOR_STYLES[floor.style]?.weather === "lighting" && normalizePolygon(floor.points).length >= 3);
+  const ids = new Set(floors.map((floor) => floor.id));
+  const managed = new Map();
+  const stale = new Set();
+  for (const region of scene.regions) {
+    const id = region.flags?.[MODULE_ID]?.weatherLighting?.floorId;
+    if (!id) continue;
+    if (!ids.has(id) || managed.has(id)) stale.add(region.id);
+    else managed.set(id, region.id);
+  }
+  await deleteLiveRegions(scene, stale);
+  for (const floor of floors) {
+    if (!floorTouchesSyncScope(floor, scope)) continue;
+    const data = weatherLightingRegionData(scene, floor);
+    if (!data) continue;
+    const region = liveRegion(scene, managed.get(floor.id));
+    if (!region) {
+      await scene.createEmbeddedDocuments("Region", [data]);
+      continue;
+    }
+    const update = { _id: region.id };
+    if (!regionMatchesRubble(region, floor)) update.shapes = data.shapes;
+    if (!sameStringSet(region._source?.levels ?? [], data.levels)) update.levels = data.levels;
+    if (region.name !== data.name) update.name = data.name;
+    if (Object.keys(update).length > 1) await updateLiveRegion(scene, update);
+    const getBehavior = (r) => [...(r.behaviors ?? [])].find((b) => b.type === "adjustDarknessLevel");
+    const behavior = getBehavior(region);
+    if (!behavior) await createLiveRegionBehavior(scene, region.id, data.behaviors[0], getBehavior);
+    else if (behavior.system?.mode !== 0 || behavior.system?.modifier !== data.behaviors[0].system.modifier || behavior.disabled) {
+      await updateLiveRegionBehavior(scene, region.id, {
+        _id: behavior.id, system: data.behaviors[0].system, disabled: false,
+      });
+    }
+  }
+}
+
 function queueRegionSync(scene, task, errorLabel) {
   if (!scene) return Promise.resolve();
   const key = scene.id ?? scene.uuid;
@@ -1450,7 +1525,10 @@ function queueFloorSurfaceSync(scene, scope = null) {
   if (floorSyncScopeEmpty(scope)) return Promise.resolve();
   return queueRegionSync(
     scene,
-    () => synchronizeFloorSurfaceRegions(scene, scope),
+    async () => {
+      await synchronizeFloorSurfaceRegions(scene, scope);
+      await synchronizeWeatherLightingRegions(scene, scope);
+    },
     "Failed to synchronize procedural floor surfaces",
   );
 }
@@ -2108,6 +2186,8 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     return;
   }
   const sceneData = getSceneData();
+  sceneData.floors.push(...regionFloorOverlays(canvas.scene, currentLevel, findNativeLevel(currentLevel, canvas.scene)?.id));
+  if (!forestOnly) refreshFloorLightDepth(canvas);
   const gridSize = Number(canvas?.dimensions?.size ?? 100);
   const texturePreset = currentTexturePreset();
   const blockingWalls = blockingWallSegments();
@@ -2120,6 +2200,7 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
     const floorNumber = Number(floor.level ?? 0);
     const style = FLOOR_STYLES[floor.style] ?? FLOOR_STYLES[DEFAULT_STYLE];
     if (style.weather && floorNumber !== currentLevel) continue;
+    if (style.weather === "lighting") continue;
     if (style.forest) {
       if (targetedForestIds && !targetedForestIds.has(floor.id)) continue;
       visibleForestIds.add(floor.id);
@@ -2135,6 +2216,7 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
       forestContainer?.addChild(floorLayer);
       const forest = createForestFill(points, style.forest, `${floor.id}:${floor.style}`, nearbyWalls);
       if (forest) floorLayer.addChild(forest);
+      clipSpellFloor(floorLayer, floor);
       forestRenderSignatures.set(floor.id, signature);
       continue;
     }
@@ -2148,6 +2230,12 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
         ? getCobwebAboveContainer(true, floorNumber)
         : getFloorContainer(true, floorNumber);
     floorParent?.addChild(floorLayer);
+    clipSpellFloor(floorLayer, floor);
+    if (style.snow) {
+      floorLayer.addChild(createSnowFill(points, floor.id, texturePreset === BASTION_TEXTURE_PRESET));
+      floorLayer.alpha = style.alpha;
+      continue;
+    }
     const boundarySeed = style.edge?.kind === "garden" ? "shared-garden-boundary" : `${floor.id}:${floor.style}`;
     const renderPoints = style.weather === "fog"
       ? createFogBoundary(points, boundarySeed, gridSize)
@@ -3410,7 +3498,7 @@ function visibleFloorTextureSources(scene, floorNumber) {
   const sources = new Set();
   const add = (src) => { if (typeof src === "string" && src) sources.add(src); };
   const addAssets = (assets) => { for (const asset of assets ?? []) add(asset.src); };
-  for (const floor of getSceneDataForScene(scene).floors) {
+  for (const floor of [...getSceneDataForScene(scene).floors, ...regionFloorOverlays(scene, floorNumber, findNativeLevel(floorNumber, scene)?.id)]) {
     const level = Number(floor.level ?? 0);
     if (level > floorNumber || normalizePolygon(floor.points).length < 3) continue;
     const style = FLOOR_STYLES[floor.style] ?? FLOOR_STYLES[DEFAULT_STYLE];
@@ -3757,4 +3845,52 @@ function polygonsEquivalent(a, b) {
   const left = keys(a); const right = keys(b); const doubled = `${right.join("|")}|${right.join("|")}`;
   const reversed = [...right].reverse(); const doubledReverse = `${reversed.join("|")}|${reversed.join("|")}`;
   return doubled.includes(left.join("|")) || doubledReverse.includes(left.join("|"));
+}
+
+function clipSpellFloor(container, floor) {
+  if (!floor.region) return;
+  // Fade the entire spell terrain layer, including foliage, borders and scatter.
+  if (FLOOR_STYLES[floor.style]?.forest || ["flowering-shrubs-dense", "weather-snow"].includes(floor.style)) {
+    container.alpha = 0.45;
+  }
+  const mask = new PIXI.Graphics();
+  mask.beginFill(0xffffff);
+  floor.region.polygonTree.drawShape(mask);
+  mask.endFill();
+  container.addChild(mask);
+  container.mask = mask;
+}
+
+function createSnowFill(points, seed, bastion = false) {
+  const container = new PIXI.Container();
+  const graphic = newGraphics();
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  drawPolygon(graphic, points, bastion ? 0xc7d0d9 : 0xe1edf5);
+  const bounds = polygonBounds(points);
+  const grid = Number(canvas.dimensions.size ?? 100);
+  const random = seededRandom(`${seed}:snow`);
+  const count = Math.min(1200, Math.ceil(bounds.width * bounds.height / (grid * grid) * 5));
+  for (let i = 0; i < count; i++) {
+    const x = bounds.x + random() * bounds.width;
+    const y = bounds.y + random() * bounds.height;
+    const width = grid * (0.15 + random() * 0.55);
+    const height = width * (0.18 + random() * 0.15);
+    const drift = Array.from({ length: 16 }, (_, index) => {
+      const angle = index * Math.PI / 8;
+      return { x: x + Math.cos(angle) * width, y: y + Math.sin(angle) * height };
+    });
+    drawPolygon(graphic, drift, i % 3 ? 0xffffff : 0xa8bdcc, i % 3 ? 0.6 : 0.18);
+  }
+  graphic.mask = mask;
+  container.addChild(graphic, mask);
+  return container;
+}
+
+for (const event of ["createRegion", "updateRegion", "deleteRegion"]) {
+  Hooks.on(event, (region) => {
+    if (region.parent?.id !== canvas?.scene?.id || !region.flags?.[MODULE_ID]?.[SPELL_FLOOR_FLAG]) return;
+    scheduleRedraw();
+    refreshFogConcealment?.();
+  });
 }

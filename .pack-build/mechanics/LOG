@@ -1,8 +1,8 @@
-2026/08/26-10:59:59.371 bb60 Recovering log #74
-2026/08/26-10:59:59.387 bb60 Delete type=0 #74
-2026/08/26-10:59:59.387 bb60 Delete type=3 #72
-2026/08/26-10:59:59.410 a330 Level-0 table #79: started
-2026/08/26-10:59:59.410 a330 Level-0 table #79: 0 bytes OK
-2026/08/26-10:59:59.419 a330 Delete type=0 #77
-2026/08/26-10:59:59.420 a330 Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
-2026/08/26-10:59:59.420 a330 Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/10/27-10:56:52.711 7c34 Recovering log #8
+2026/10/27-10:56:52.724 7c34 Delete type=0 #8
+2026/10/27-10:56:52.724 7c34 Delete type=3 #6
+2026/10/27-10:56:52.776 696c Level-0 table #13: started
+2026/10/27-10:56:52.776 696c Level-0 table #13: 0 bytes OK
+2026/10/27-10:56:52.780 696c Delete type=0 #11
+2026/10/27-10:56:52.780 696c Manual compaction at level-0 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)
+2026/10/27-10:56:52.780 696c Manual compaction at level-1 from '' @ 72057594037927935 : 1 .. '~' @ 0 : 0; will stop at (end)

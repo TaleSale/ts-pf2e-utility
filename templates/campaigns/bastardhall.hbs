@@ -32,6 +32,7 @@
       <button type="button" class="{{#if showMain}}active{{/if}}" data-view="main"><i class="fa-solid fa-landmark"></i> Главная</button>
       {{#if showCookingTab}}<button type="button" class="{{#if showCooking}}active{{/if}}" data-view="cooking"><i class="fa-solid fa-utensils"></i> Готовка и Блага</button>{{/if}}
       <button type="button" class="{{#if showInventory}}active{{/if}}" data-view="inventory"><i class="fa-solid fa-box-archive"></i> Инвентарь</button>
+      <button type="button" class="{{#if showPhobias}}active{{/if}}" data-view="phobias"><i class="fa-solid fa-ghost"></i> Фобии</button>
       <button type="button" class="{{#if showInvestigations}}active{{/if}}" data-view="investigations"><i class="fa-solid fa-magnifying-glass-chart"></i> Изыскания</button>
       <button type="button" class="{{#if showSideQuests}}active{{/if}}" data-view="side-quests"><i class="fa-solid fa-list-check"></i> Сайд-квесты</button>
       <button type="button" class="{{#if showFamilyTree}}active{{/if}}" data-view="family-tree"><i class="fa-solid fa-people-roof"></i> Древо Арудора</button>
@@ -39,6 +40,40 @@
   {{/unless}}
 
   <section class="bh-body">
+    {{#if showPhobias}}
+    <div class="bh-phobias-view">
+      <p class="bh-phobias-hint">Фобии и их штрафы для персонажей группы.{{#if canEditPhobias}} Перетащите эффект на строку персонажа — он будет действовать до удаления фобии.{{/if}}</p>
+      <div class="bh-phobias-grid">
+        {{#each phobiaCharacters}}
+        <section class="bh-panel bh-phobia-character" data-drop-kind="phobia" data-actor-uuid="{{uuid}}">
+          <div class="bh-phobia-person">
+            <h2><img src="{{img}}" alt="">{{name}} <small>{{phobias.length}}</small></h2>
+            {{#if ../canEditPhobias}}
+            <div class="bh-phobia-add-controls">
+              <select data-phobia-preset aria-label="Выбрать фобию"><option value="">Добавить фобию…</option>{{#each availablePhobias}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
+              <button type="button" data-phobia-add title="Добавить фобию" aria-label="Добавить фобию"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            {{/if}}
+          </div>
+          <div class="bh-phobia-list">
+          {{#each phobias}}
+          <article class="bh-phobia-entry">
+            <header><img src="{{img}}" alt=""><strong>{{name}}</strong>
+              {{#if ../../canEditPhobias}}
+              <button type="button" data-phobia-action="edit" data-phobia-id="{{id}}" title="Редактировать фобию" aria-label="Редактировать фобию"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" data-phobia-action="delete" data-phobia-id="{{id}}" title="Удалить фобию" aria-label="Удалить фобию"><i class="fa-solid fa-trash"></i></button>
+              {{/if}}
+            </header>
+            <div class="bh-phobia-description" data-phobia-description="{{id}}"></div>
+            {{#if isProditiophobia}}{{#if canRollConsent}}<button type="button" class="bh-phobia-consent" data-phobia-consent-actor="{{actorUuid}}">Принять эффект союзника · Воля КС 26</button>{{/if}}{{/if}}
+          </article>
+          {{else}}<p class="bh-phobias-empty">Фобий пока нет.</p>{{/each}}
+          </div>
+        </section>
+        {{else}}<section class="bh-panel"><p>В активной группе нет персонажей. Добавьте их в группу PF2e.</p></section>{{/each}}
+      </div>
+    </div>
+    {{/if}}
     {{#if showMain}}
     <div class="bh-tracker-tab">
       <div class="bh-column">
@@ -556,6 +591,7 @@
         </section>
       </div>
       {{else}}
+      {{#if showConfig}}
       <div class="bh-config-view">
         <form class="bh-config-form">
           <section class="bh-panel bh-climate-config">
@@ -664,6 +700,7 @@
           <button type="submit" class="bh-save"><i class="fa-solid fa-floppy-disk"></i> Сохранить настройки Бастардхолла</button>
         </form>
       </div>
+      {{/if}}
       {{/if}}
       {{/if}}
       {{/if}}

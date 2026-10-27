@@ -1,8 +1,9 @@
 import { MODULE_ID, SOCKET_CHANNEL, escapeHtml, i18nKey } from "../core.js";
+import { PHOBIA_PRESETS, presetPhobia, presetRules, phobiaEnvironment, installPhobiaRuntime, invalidatePhobiaRuntime, cleanupPhobiaConditions, requestPhobiaConsent } from "./bastardhall-phobias.js";
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20261006-fog-soft-boundary-v104";
+} from "../utility/texture-presets.js?v=20261026-spell-floors-v111";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";
@@ -17,6 +18,7 @@ const VIEW_SELECTORS = Object.freeze([
   ".bh-tracker-tab",
   ".bh-cooking-view",
   ".bh-inventory-view",
+  ".bh-phobias-view",
   ".bh-investigation-view",
   ".bh-sidequest-view",
   ".bh-family-tree-view",
@@ -26,6 +28,7 @@ const BASTARDHALL_VIEWS = Object.freeze([
   "main",
   "cooking",
   "inventory",
+  "phobias",
   "investigations",
   "side-quests",
   "family-tree",
@@ -406,7 +409,8 @@ function createDefaultMementos() {
 
 function createDefaultData() {
   return {
-    version: 27,
+    version: 30,
+    phobias: [],
     inventory: [],
     sideQuests: [],
     investigations: [],
@@ -863,7 +867,11 @@ function normalizeData(raw) {
         : servant
     ));
   }
-  data.version = 27;
+  if (storedVersion < 28) data.phobias = raw?.phobias ?? [];
+  if (storedVersion < 29) data.phobias = normalizeArray(data.phobias).map((entry) => entry ? { effectSystem: null, ...entry } : entry);
+  if (storedVersion < 30) data.phobias = normalizeArray(data.phobias).map((entry) => entry ? { presetId: "", outdoors: false, ...entry } : entry);
+  data.phobias = normalizePhobias(data.phobias);
+  data.version = 30;
   data.inventory = stackInventoryEntries(data.inventory);
   if (storedVersion < 19) data.investigations = [];
   if (storedVersion < 20) data.mementos = normalizeArray(data.mementos).map((memento) => ({ regionUuids: "", ...memento }));
@@ -1404,13 +1412,42 @@ function pcNightPenaltyActive(data, nightActive) {
   return elapsedSinceSunset >= 1;
 }
 
+function phantomLocationEffect(data, actor) {
+  const locations = [
+    { id: "aron", value: "orms-rest", label: "Покой Орма" },
+    { id: "esmira", value: "esmira-library", label: "Школа и библиотека Эсмиры" },
+    { id: "ilana", value: "ilana-workshop", label: "Мастерская Иланы" },
+    { id: "shireyl", value: "shireyl-church", label: "Церковь Ширейл" },
+  ].filter(({ id }) => phantomRank(data, id) >= 0);
+  if (!locations.length) return null;
+
+  const saved = managedEffect(actor, "phantom-location")?._source?.system?.rules
+    ?.find((rule) => rule.key === "RollOption" && rule.option === "bastardhall:location");
+  // Preserve the character's choice, including when upgrading legacy separate toggles.
+  const legacy = !saved && locations.find(({ id, value }) => managedEffect(actor, `phantom-${id}`)
+    ?._source?.system?.rules?.some((rule) => rule.key === "RollOption"
+      && rule.option === `bastardhall:location:${value}` && rule.value === true));
+  const available = locations.some(({ value }) => value === saved?.selection);
+  return {
+    name: "Здание в Майсерин",
+    description: "Включите бонусы Майсерин и выберите здание, в котором находится персонаж.",
+    img: "icons/environment/settlement/house-farmland-small.webp",
+    rules: [{
+      key: "RollOption", domain: "all", option: "bastardhall:location",
+      toggleable: true, label: "В Майсерин",
+      value: saved ? available && saved.value === true : Boolean(legacy),
+      selection: available ? saved.selection : legacy?.value ?? locations[0].value,
+      suboptions: locations.map(({ value, label }) => ({ value, label })),
+    }],
+  };
+}
+
 function phantomPermanentEffect(id, rank) {
   if (rank < 0) return null;
   if (id === "aron") return {
     name: "Поддержка Арона",
     description: "Бонус предмета +1 к проверкам Проживания в «Покое Орма».",
     rules: [
-      { key: "RollOption", domain: "all", option: "bastardhall:location:orms-rest", toggleable: true, label: "В «Покое Орма»" },
       { key: "FlatModifier", selector: "survival", type: "item", value: 1, predicate: ["bastardhall:location:orms-rest", "action:subsist"] },
     ],
     img: "icons/containers/kitchenware/mug-stein-wood-brown.webp",
@@ -1421,7 +1458,6 @@ function phantomPermanentEffect(id, rank) {
       name: "Поддержка Эсмиры",
       description: `В школе и библиотеке Эсмиры перечисленные проверки получают бонус предмета +${value}. Ограничение по месту контролирует мастер.`,
       rules: [
-        { key: "RollOption", domain: "all", option: "bastardhall:location:esmira-library", toggleable: true, label: "В школе или библиотеке Эсмиры" },
         {
           key: "FlatModifier",
           selector: "skill-check",
@@ -1439,7 +1475,6 @@ function phantomPermanentEffect(id, rank) {
       name: "Поддержка Иланы",
       description: `В мастерской Иланы Создание и Ремонт получают бонус предмета +${value}. Ограничение по месту контролирует мастер.`,
       rules: [
-        { key: "RollOption", domain: "all", option: "bastardhall:location:ilana-workshop", toggleable: true, label: "В мастерской Иланы" },
         { key: "FlatModifier", selector: "crafting", type: "item", value, predicate: ["bastardhall:location:ilana-workshop", { or: ["action:craft", "action:repair"] }] },
       ],
       img: "icons/tools/smithing/hammer-sledge-steel-grey.webp",
@@ -1451,7 +1486,6 @@ function phantomPermanentEffect(id, rank) {
       name: "Поддержка Ширейл",
       description: `В церкви Ширейл Лечение ран и Лечение ядов получают бонус предмета +${value}. Ограничение по месту контролирует мастер.`,
       rules: [
-        { key: "RollOption", domain: "all", option: "bastardhall:location:shireyl-church", toggleable: true, label: "В церкви Ширейл" },
         { key: "FlatModifier", selector: "medicine", type: "item", value, predicate: ["bastardhall:location:shireyl-church", { or: ["action:treat-wounds", "action:treat-poison"] }] },
       ],
       img: "icons/magic/life/heart-cross-strong-flame-blue.webp",
@@ -1638,6 +1672,7 @@ function mementoRules(memento, key) {
 }
 
 async function reconcileActorEffects(data, nightActive, stormActive, campaignEnabled = true) {
+  await reconcilePhobiaEffects(data, campaignEnabled);
   const hp = totalBonusHp(data);
   const familyResearchPoints = researchPoints(data, 0);
   const searchResearchPoints = researchPoints(data, 1);
@@ -1706,6 +1741,10 @@ async function reconcileActorEffects(data, nightActive, stormActive, campaignEna
       await syncEffect(actor, key, active, () => effectSource(key, `Бастардхолл: ${memento.name}`, mementoBonusText(memento), mementoRules(memento, key)));
     }
 
+    const location = phantomLocationEffect(data, actor);
+    await syncEffect(actor, "phantom-location", campaignEnabled && playerCharacter && Boolean(location), () => effectSource(
+      "phantom-location", `Бастардхолл: ${location.name}`, location.description, location.rules, location.img,
+    ));
     for (const phantom of data.phantoms) {
       const key = `phantom-${phantom.id}`;
       const support = phantomPermanentEffect(phantom.id, phantom.found ? Number(phantom.rank) || 0 : -1);
@@ -2006,6 +2045,7 @@ function actorReconcileSignature(data, nightActive, stormActive, enabled) {
     pcNightActive: pcNightPenaltyActive(data, nightActive),
     stormActive,
     soulhearts: data.soulhearts,
+    phobias: data.phobias,
     climate: {
       excludedNpcRefs: data.climate.excludedNpcRefs,
       stage: getClimateStage(data),
@@ -2016,6 +2056,7 @@ function actorReconcileSignature(data, nightActive, stormActive, enabled) {
     collectedMementos,
     research: data.research.map(({ id, points }) => ({ id, points })),
     mementos: data.mementos.map(({ id, name, bonus, rules }) => ({ id, name, bonus, rules })),
+    phantomLocationVersion: 1,
     phantoms: data.phantoms.map(({ id, name, found, rank, actorUuid }) => ({ id, name, found, rank, actorUuid })),
     dailyBoons: { shelynActive: data.boons.shelyn.active },
   });
@@ -2055,6 +2096,7 @@ let lastAccessBlockStates = new Map();
 async function runReconcile(request) {
   const data = getData();
   const enabled = Boolean(game.settings.get(MODULE_ID, ENABLE_SETTING));
+  if (enabled) await hydratePhobiaEffects(data);
   const nightActive = enabled && !isDaytime(data);
   const stormActive = enabled && Boolean(data.climate.stormActive);
 
@@ -2074,6 +2116,8 @@ async function runReconcile(request) {
   if (request.forceActors || actorSignature !== lastActorSignature) {
     await reconcileActorEffects(data, nightActive, stormActive, enabled);
     lastActorSignature = actorSignature;
+  } else if (request.forcePhobias) {
+    await reconcilePhobiaEffects(data, enabled);
   }
 
   const sceneSignature = sceneReconcileSignature(data, nightActive, stormActive);
@@ -2089,10 +2133,11 @@ async function runReconcile(request) {
   }
 }
 
-function queueReconcile({ forceActors = false, forceScenes = false, forceMementos = false, observeNightTransition = false, restoreNightPresets = false } = {}) {
+function queueReconcile({ forceActors = false, forcePhobias = false, forceScenes = false, forceMementos = false, observeNightTransition = false, restoreNightPresets = false } = {}) {
   if (!isPrimaryGM()) return activeReconcile;
   pendingReconcile ??= { forceActors: false, forceScenes: false, forceMementos: false, observeNightTransition: false, restoreNightPresets: false };
   pendingReconcile.forceActors ||= forceActors;
+  pendingReconcile.forcePhobias ||= forcePhobias;
   pendingReconcile.forceScenes ||= forceScenes;
   pendingReconcile.forceMementos ||= forceMementos;
   pendingReconcile.observeNightTransition ||= observeNightTransition;
@@ -2229,6 +2274,106 @@ async function choosePhantom(data, heart) {
 
 function playerCharacters() {
   return (game.actors?.contents ?? []).filter((actor) => isPlayerCharacter(actor));
+}
+
+function phobiaCharacters() {
+  const party = game.actors?.party;
+  return (party ? Array.from(party.members ?? []) : playerCharacters())
+    .filter((actor) => actor.type === "character");
+}
+
+function normalizePhobias(value) {
+  const seen = new Set();
+  return normalizeArray(value).filter((entry) => entry && typeof entry === "object" && entry.actorUuid)
+    .map((entry) => ({
+      id: normalizeText(entry.id, 120) || randomId(),
+      actorUuid: normalizeText(entry.actorUuid, 300),
+      sourceUuid: normalizeText(entry.sourceUuid, 300),
+      name: normalizeText(entry.name, 200) || "Фобия",
+      img: normalizeText(entry.img, 2000) || "systems/pf2e/icons/default-icons/effect.svg",
+      description: String(entry.description ?? "").slice(0, 30000),
+      presetId: PHOBIA_PRESETS.some((preset) => preset.id === entry.presetId) ? entry.presetId : "",
+      outdoors: entry.outdoors === true,
+      effectSystem: entry.effectSystem && typeof entry.effectSystem === "object" && !Array.isArray(entry.effectSystem)
+        ? clone(entry.effectSystem) : null,
+    })).filter((entry) => {
+      const key = entry.presetId ? `${entry.actorUuid}:preset:${entry.presetId}` : entry.sourceUuid ? `${entry.actorUuid}:${entry.sourceUuid}` : entry.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+async function enrichPhobiaDescriptions(root) {
+  const data = getData();
+  for (const element of root.querySelectorAll("[data-phobia-description]")) {
+    const entry = data.phobias.find((phobia) => phobia.id === element.dataset.phobiaDescription);
+    if (!entry) continue;
+    const html = await TextEditor.enrichHTML(entry.description, { async: true, secrets: Boolean(game.user?.isGM) });
+    if (element.isConnected) element.innerHTML = html;
+  }
+}
+
+async function hydratePhobiaEffects(data) {
+  if (!isPrimaryGM()) return;
+  let changed = false;
+  for (const phobia of data.phobias) {
+    if (phobia.effectSystem || !phobia.sourceUuid) continue;
+    try {
+      const source = await fromUuid(phobia.sourceUuid);
+      if (source?.type !== "effect") continue;
+      phobia.effectSystem = clone(source.toObject?.().system ?? source._source?.system ?? source.system);
+      changed = true;
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Cannot resolve phobia effect ${phobia.sourceUuid}`, error);
+    }
+  }
+  if (changed) await saveData(data);
+}
+
+function phobiaEffectSource(phobia, environment = {}) {
+  const key = `phobia:${phobia.id}`;
+  const source = effectSource(key, phobia.name, "", [], phobia.img);
+  const system = clone(phobia.effectSystem);
+  source.system = { ...source.system, ...system,
+    description: { ...system.description, value: phobia.description },
+    rules: phobia.presetId ? presetRules(phobia, environment) : normalizeArray(system.rules),
+    duration: source.system.duration,
+    start: source.system.start,
+    tokenIcon: { show: false },
+  };
+  return source;
+}
+
+async function reconcilePhobiaEffects(data, enabled) {
+  if (!isPrimaryGM()) return;
+  await cleanupPhobiaConditions(data, enabled);
+  const byActor = new Map();
+  if (enabled) for (const entry of data.phobias) {
+    if (!entry.effectSystem) continue;
+    const group = byActor.get(entry.actorUuid) ?? [];
+    group.push(entry); byActor.set(entry.actorUuid, group);
+  }
+  for (const actor of game.actors?.contents ?? []) {
+    const phobias = enabled && isPlayerCharacter(actor)
+      ? byActor.get(actor.uuid) ?? [] : [];
+    const keys = new Set(phobias.map((entry) => `phobia:${entry.id}`));
+    const obsolete = actor.items?.filter((item) => {
+      const key = item.getFlag?.(MODULE_ID, EFFECT_FLAG);
+      return typeof key === "string" && key.startsWith("phobia:") && !keys.has(key);
+    }) ?? [];
+    if (obsolete.length) await actor.deleteEmbeddedDocuments("Item", obsolete.map((item) => item.id));
+    const environment = phobias.some((entry) => ["nyctophobia", "arachnophobia"].includes(entry.presetId)) ? phobiaEnvironment(actor) : {};
+    for (const phobia of phobias) {
+      // Without a viewed token, preserve the last known light penalty.
+      const previous = managedEffect(actor, `phobia:${phobia.id}`)?._source?.system?.rules ?? [];
+      const localEnvironment = { ...environment,
+        light: environment.light ?? Math.abs(Number(previous.find((rule) => rule.selector === "will")?.value ?? 0)),
+        outdoors: previous.find((rule) => rule.key === "RollOption" && rule.option === "bastardhall:outdoors")?.value ?? phobia.outdoors,
+      };
+      await syncEffect(actor, `phobia:${phobia.id}`, true, () => phobiaEffectSource(phobia, localEnvironment));
+    }
+  }
 }
 
 async function choosePlayerCharacters(title, max = 1) {
@@ -4028,6 +4173,15 @@ export class BastardhallSheet extends FormApplication {
       data,
       isGM,
       canEditFamilyTree,
+      canEditPhobias: isPrimaryGM(),
+      phobiaCharacters: phobiaCharacters().map((actor) => ({
+        uuid: actor.uuid, name: actor.name, img: actor.img,
+        availablePhobias: PHOBIA_PRESETS.filter((preset) => !data.phobias.some((entry) => entry.actorUuid === actor.uuid && entry.presetId === preset.id)),
+        phobias: data.phobias.filter((entry) => entry.actorUuid === actor.uuid).map((entry) => ({ ...entry,
+          isProditiophobia: entry.presetId === "proditiophobia",
+          canRollConsent: isGM || actor.isOwner,
+        })),
+      })),
       bonusHp: totalBonusHp(data),
       areas: AREA_NAMES.map((name, index) => ({ name, unlocked: unlockedAreas.has(name), wide: index === 0 })),
       collections: Object.entries(COLLECTIONS).map(([key, definition]) => ({ key, label: definition.label, count: Number(data.collections[key]) || 0 })),
@@ -4079,6 +4233,7 @@ export class BastardhallSheet extends FormApplication {
       showMain: this._view === "main" || (this._view === "config" && !isGM),
       showCooking: this._view === "cooking",
       showInventory: this._view === "inventory",
+      showPhobias: this._view === "phobias",
       showFamilyTree: this._view === "family-tree",
       showInvestigations: this._view === "investigations",
       showSideQuests: this._view === "side-quests",
@@ -4130,6 +4285,61 @@ export class BastardhallSheet extends FormApplication {
     const root = getFormRoot(html);
     if (!root) return;
     void enrichInvestigationLinks(root);
+    void enrichPhobiaDescriptions(root);
+
+    root.querySelectorAll("[data-phobia-add]").forEach((button) => button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      if (!isPrimaryGM()) return;
+      const row = event.currentTarget.closest("[data-actor-uuid]");
+      const selected = row.querySelector("[data-phobia-preset]")?.value;
+      if (!selected || !phobiaCharacters().some((actor) => actor.uuid === row.dataset.actorUuid)) return;
+      const data = getData();
+      if (data.phobias.some((entry) => entry.actorUuid === row.dataset.actorUuid && entry.presetId === selected)) return;
+      const entry = presetPhobia(selected, row.dataset.actorUuid);
+      if (!entry) return;
+      data.phobias.push(entry);
+      await saveData(data);
+    }));
+    root.querySelectorAll("[data-phobia-consent-actor]").forEach((button) => button.addEventListener("click", (event) => {
+      event.preventDefault();
+      void requestPhobiaConsent(event.currentTarget.dataset.phobiaConsentActor);
+    }));
+
+    root.querySelectorAll("[data-phobia-action]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (!isPrimaryGM()) return;
+        const { phobiaId, phobiaAction } = event.currentTarget.dataset;
+        const entry = getData().phobias.find((phobia) => phobia.id === phobiaId);
+        if (!entry) return;
+        if (phobiaAction === "delete") {
+          const confirmed = await Dialog.confirm({
+            title: "Удалить фобию?", content: `<p>Удалить «${escapeHtml(entry.name)}» из коллекции персонажа?</p>`,
+            yes: () => true, no: () => false, defaultYes: false,
+          });
+          if (!confirmed || !isPrimaryGM()) return;
+          const data = getData();
+          data.phobias = data.phobias.filter((phobia) => phobia.id !== phobiaId);
+          await saveData(data);
+        } else if (phobiaAction === "edit") {
+          const draft = await Dialog.prompt({
+            title: "Редактировать фобию", label: "Сохранить", rejectClose: false,
+            content: `<form><div class="form-group"><label>Название</label><input name="name" maxlength="200" value="${escapeHtml(entry.name)}"></div><div class="form-group stacked"><label>Описание и штрафы (поддерживается HTML)</label><textarea name="description" rows="12" maxlength="30000">${escapeHtml(entry.description)}</textarea></div></form>`,
+            callback: (html) => ({
+              name: dialogRoot(html).querySelector('[name="name"]').value,
+              description: dialogRoot(html).querySelector('[name="description"]').value,
+            }),
+          });
+          if (!draft || !isPrimaryGM()) return;
+          const data = getData();
+          const current = data.phobias.find((phobia) => phobia.id === phobiaId);
+          if (!current) return;
+          current.name = normalizeText(draft.name, 200) || entry.name;
+          current.description = draft.description;
+          await saveData(data);
+        }
+      });
+    });
 
     const partialView = VIEW_SELECTORS.some((selector) => root.matches?.(selector));
     if (!partialView) super.activateListeners(html);
@@ -4166,7 +4376,7 @@ export class BastardhallSheet extends FormApplication {
       const resetButton = event.currentTarget;
       const confirmed = await Dialog.confirm({
         title: "Сбросить Лист Бастардхолла?",
-        content: "<p>Будут удалены собранные предметы, ранги фантомов, изыскания из журналов, очки исследований, связи семейного древа и настройки листа. Зелёный туман вернётся на настроенные бордюры.</p><p><b>Это действие нельзя отменить.</b></p>",
+        content: "<p>Будут удалены собранные предметы, фобии, ранги фантомов, изыскания из журналов, очки исследований, связи семейного древа и настройки листа. Зелёный туман вернётся на настроенные бордюры.</p><p><b>Это действие нельзя отменить.</b></p>",
         yes: () => true,
         no: () => false,
         defaultYes: false,
@@ -4942,6 +5152,7 @@ export class BastardhallSheet extends FormApplication {
       const target = closestDropTarget(event);
       if (!target && this._view === "config") return;
       event.preventDefault();
+      event.stopPropagation();
       (target ?? root.querySelector(".bh-sheet"))?.classList.remove("is-dragover");
       void this._onDrop(event);
     });
@@ -4965,6 +5176,29 @@ export class BastardhallSheet extends FormApplication {
       dropData = JSON.parse(event.dataTransfer?.getData("text/plain") || "{}");
     }
     const document = await getDocumentFromDrop(dropData);
+
+    if (target?.dataset.dropKind === "phobia") {
+      if (!isPrimaryGM()) {
+        ui.notifications?.warn?.("Добавлять фобии может только основной активный мастер.");
+        return;
+      }
+      if (document?.documentName !== "Item" || document.type !== "effect") {
+        ui.notifications?.warn?.("Перетащите эффект фобии на карточку персонажа.");
+        return;
+      }
+      const actorUuid = target.dataset.actorUuid;
+      if (!phobiaCharacters().some((actor) => actor.uuid === actorUuid)) return;
+      const data = getData();
+      if (data.phobias.some((entry) => entry.actorUuid === actorUuid && entry.sourceUuid === document.uuid)) {
+        ui.notifications?.warn?.("Эта фобия уже есть у персонажа.");
+        return;
+      }
+      data.phobias.push({ id: randomId(), actorUuid, sourceUuid: document.uuid,
+        name: document.name, img: document.img, description: document.system?.description?.value ?? "",
+        effectSystem: clone(document.toObject?.().system ?? document._source?.system ?? document.system) });
+      await saveData(data);
+      return;
+    }
 
     if (target?.dataset.dropKind === "family-tree") {
       if (!isPrimaryGM() || document?.documentName !== "Actor") {
@@ -5105,6 +5339,7 @@ Hooks.once("init", () => {
       if (typeof app?.refreshCurrentView === "function") void app.refreshCurrentView();
       else app?.render?.(false);
       queueReconcile({ forceMementos: true });
+      invalidatePhobiaRuntime();
     },
   });
 });
@@ -5121,6 +5356,12 @@ Hooks.on("updateWorldTime", () => {
   if (app?._view === "cooking" && typeof app.refreshCurrentView === "function") void app.refreshCurrentView();
 });
 Hooks.on("createActor", () => queueReconcile({ forceActors: true }));
+for (const hook of ["createActor", "updateActor", "deleteActor"]) {
+  Hooks.on(hook, () => {
+    const app = Object.values(ui.windows ?? {}).find((windowApp) => windowApp?.id === APP_ID);
+    if (app?._view === "phobias") void app.refreshCurrentView();
+  });
+}
 Hooks.on("createWall", (document) => void handleAccessDocumentChange(document).catch((error) => {
   console.error(`${MODULE_ID} | Failed to process created Bastardhall wall`, error);
 }));
@@ -5137,6 +5378,7 @@ Hooks.on("deleteWall", (document) => void removeAccessBlockDocument(document));
 Hooks.on("deleteRegion", (document) => void removeAccessBlockDocument(document));
 
 Hooks.once("ready", async () => {
+  installPhobiaRuntime({ getData, saveData, isPrimaryGM, queueReconcile });
   game.socket?.on?.(SOCKET_CHANNEL, async (message) => {
     if (message?.type === "bastardhall-open-sheet") {
       const sender = game.users?.get?.(message.senderId);

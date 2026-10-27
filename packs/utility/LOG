@@ -1,7 +1,0 @@
-2026/10/07-16:39:48.767 139c8 Recovering log #843
-2026/10/07-16:39:49.056 139c8 Delete type=0 #843
-2026/10/07-16:39:49.163 139c8 Delete type=3 #841
-2026/10/07-16:45:28.045 1283c Level-0 table #849: started
-2026/10/07-16:45:28.045 1283c Level-0 table #849: 0 bytes OK
-2026/10/07-16:45:28.130 1283c Delete type=0 #847
-2026/10/07-16:45:28.727 1283c Manual compaction at level-0 from '!macros!UtActSync0000001' @ 72057594037927935 : 1 .. '!macros!UtTokAdj000001' @ 0 : 0; will stop at (end)

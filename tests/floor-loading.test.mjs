@@ -14,6 +14,7 @@ function fixture(floors, styles, { enabled = true, levels = 2 } = {}) {
   const scene = { levels: { size: levels }, getFlag: () => enabled };
   const board = { scene, level: { number: 1 }, loadTexturesOptions: { additionalSources: ["native.webp"] } };
   const context = vm.createContext({
+    regionFloorOverlays: () => [], findNativeLevel: () => ({ id: "level" }),
     floorLoadingEnabled, scheduleRedraw: () => events.push("scheduled"),
     Hooks: { on: (name, callback) => { hooks[name] = callback; } },
     getSceneDataForScene: () => ({ floors }), FLOOR_STYLES: styles, DEFAULT_STYLE: "plain",

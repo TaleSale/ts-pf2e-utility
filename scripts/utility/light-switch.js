@@ -1,6 +1,6 @@
 import { positionButton, positionInteractionButtons } from "./hotbar-interactions.js?v=20261006-instruments-v2";
-import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20261006-fog-soft-boundary-v104";
-import { resolvePresetTexture } from "./texture-presets.js?v=20261006-fog-soft-boundary-v104";
+import { createLinkedLight, IMMERSIVE_TORCH_HOLDER_FLAG_KEY, LIGHT_PRESETS } from "./scene-assets.js?v=20261027-floor-light-v1";
+import { resolvePresetTexture } from "./texture-presets.js?v=20261026-spell-floors-v111";
 
 const MODULE_ID = "ts-pf2e-utility";
 const FLAG_KEY = "lightSwitch";

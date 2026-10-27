@@ -1,5 +1,5 @@
 import { MODULE_ID, t } from "../core.js";
-import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20261006-fog-soft-boundary-v104";
+import { ASSET_GEOMETRY_VERSION, ASSETS, LIGHT_PRESETS, closeAssetLibrary, getAssetMirrorFlag, getAssetPlacementLevelData } from "./scene-assets.js?v=20261027-floor-light-v1";
 
 const SETTING_ENABLE = "enableSceneAssets";
 const SETTING_PRESETS = "sceneDecoratorPresets";

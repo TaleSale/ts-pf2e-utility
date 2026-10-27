@@ -62,6 +62,12 @@ function normalizeEffect(effect) {
     value: rawValue !== "" && rawValue != null && Number.isFinite(value) && value >= 1 ? Math.trunc(value) : "",
     durationValue: Number.isFinite(durationValue) && durationValue > 0 ? Math.trunc(durationValue) : "",
     durationUnit,
+    parentUuid: String(effect?.parentUuid ?? ""),
+    persistent: effect?.persistent ? {
+      formula: String(effect.persistent.formula ?? "1"),
+      damageType: String(effect.persistent.damageType ?? "bleed"),
+      dc: Math.max(1, Math.trunc(Number(effect.persistent.dc) || 15)),
+    } : null,
   };
 }
 
@@ -98,6 +104,19 @@ function getConfig(item) {
   return normalizeConfig(item?.getFlag?.(MODULE_ID, FLAG_KEY));
 }
 
+function canLinkEffect(effects, childUuid, parentUuid) {
+  const visited = new Set([childUuid]);
+  let current = parentUuid;
+  while (current) {
+    if (visited.has(current)) return false;
+    visited.add(current);
+    const parent = effects.find((effect) => effect.uuid === current);
+    if (!parent) return false;
+    current = parent.parentUuid;
+  }
+  return true;
+}
+
 registerActionPlusFeature({
   id: FEATURE_ID,
   label: `${I18N_PREFIX}.ActionPlus.DegreeOfSuccess.FeatureLabel`,
@@ -111,6 +130,31 @@ Hooks.on("createChatMessage", (message) => {
   void processRollMessage(message).catch((error) => {
     console.error(`${MODULE_ID} | Degree of success automation failed`, error);
   });
+});
+
+// Target Helper parses raw @Check text before PF2e enriches it. Resolve dynamic
+// DCs first so its saved outcome uses the same DC as the displayed check link.
+Hooks.once("ready", () => {
+  const original = ChatMessage.createDocuments;
+  ChatMessage.createDocuments = async function (data, ...args) {
+    const prepared = await Promise.all(data.map(async (source) => {
+      const content = source.content;
+      if (typeof content !== "string" || !/@Check\[[^\]]*\bdc:\s*(?:\||\]|v[0-3]\b)/i.test(content)) return source;
+      const item = await resolveAutomation(source);
+      if (!item) return source;
+      const editor = game.pf2e?.TextEditor;
+      if (!editor?.enrichString) return source;
+      const rollData = { ...item.getRollData(), item, actor: item.actor };
+      const matches = [...content.matchAll(/@(Check)\[([^\]]+)\](?:\{([^}]+)\})?/gi)];
+      let enriched = content;
+      for (const match of matches.reverse()) {
+        const element = await editor.enrichString(match, { rollData, relativeTo: item });
+        if (element?.outerHTML) enriched = enriched.slice(0, match.index) + element.outerHTML + enriched.slice(match.index + match[0].length);
+      }
+      return { ...source, content: enriched };
+    }));
+    return original.call(this, prepared, ...args);
+  };
 });
 
 // PF2e Toolbelt's Target Helper rolls saves with createMessage: false, so the
@@ -168,6 +212,18 @@ function renderControls({ item }) {
               `).join("")}
             </select>
           </div>
+          ${effect.persistent ? `<div class="tsu-dos-persistent">
+            <input type="text" data-effect-field="persistentFormula" value="${escapeHtml(effect.persistent.formula)}" aria-label="${escapeHtml(localize("PersistentFormula"))}" placeholder="1d6">
+            <select data-effect-field="persistentType" aria-label="${escapeHtml(localize("PersistentType"))}">${Object.entries(CONFIG.PF2E.damageTypes).map(([type, label]) => `<option value="${escapeHtml(type)}" ${effect.persistent.damageType === type ? "selected" : ""}>${escapeHtml(game.i18n.localize(label))}</option>`).join("")}</select>
+            <input type="number" min="1" data-effect-field="persistentDC" value="${effect.persistent.dc}" aria-label="${escapeHtml(localize("PersistentDC"))}" title="${escapeHtml(localize("PersistentDC"))}">
+          </div>` : ""}
+          <label class="tsu-dos-link" title="${escapeHtml(localize("LinkedHint"))}">
+            <i class="fas fa-link"></i>
+            <select data-effect-field="parentUuid" aria-label="${escapeHtml(localize("LinkedTo"))}">
+              <option value="">${escapeHtml(localize("Independent"))}</option>
+              ${data.effects.filter((parent) => canLinkEffect(data.effects, effect.uuid, parent.uuid)).map((parent) => `<option value="${escapeHtml(parent.uuid)}" ${effect.parentUuid === parent.uuid ? "selected" : ""}>${escapeHtml(parent.name)}</option>`).join("")}
+            </select>
+          </label>
         </div>`).join("");
 
       return `
@@ -279,6 +335,14 @@ function activateListeners({ html, item }) {
       } else if (element.dataset.effectField === "durationUnit") {
         effect.durationUnit = element.value;
         if (element.value === "unlimited") effect.durationValue = "";
+      } else if (element.dataset.effectField === "parentUuid") {
+        const effects = config[section.dataset.degree][section.dataset.recipient].effects;
+        if (!canLinkEffect(effects, effect.uuid, element.value)) return;
+        effect.parentUuid = element.value;
+      } else if (effect.persistent) {
+        if (element.dataset.effectField === "persistentFormula") effect.persistent.formula = element.value.trim() || "1";
+        if (element.dataset.effectField === "persistentType") effect.persistent.damageType = element.value;
+        if (element.dataset.effectField === "persistentDC") effect.persistent.dc = Math.max(1, Math.trunc(Number(element.value) || 15));
       }
       await item.setFlag(MODULE_ID, FLAG_KEY, config);
     });
@@ -289,7 +353,8 @@ function activateListeners({ html, item }) {
       const config = getConfig(item);
       const effects = config[target.dataset.degree]?.[target.dataset.recipient]?.effects;
       if (!effects) return;
-      effects.splice(Number(target.dataset.effectIndex), 1);
+      const [removed] = effects.splice(Number(target.dataset.effectIndex), 1);
+      for (const effect of effects) if (effect.parentUuid === removed?.uuid) effect.parentUuid = "";
       await item.setFlag(MODULE_ID, FLAG_KEY, config);
     });
   }
@@ -318,6 +383,12 @@ function activateListeners({ html, item }) {
           value: "",
           durationValue: "",
           durationUnit: "unlimited",
+          parentUuid: "",
+          persistent: dropped.slug === "persistent-damage" ? {
+            formula: dropped.system.persistent?.formula || "1d6",
+            damageType: dropped.system.persistent?.damageType ?? "bleed",
+            dc: dropped.system.persistent?.dc ?? 15,
+          } : null,
         });
         await item.setFlag(MODULE_ID, FLAG_KEY, config);
       }
@@ -389,7 +460,7 @@ async function resolveAutomation(message) {
   const originActor = actorFromReference(origin.actor ?? origin.actorUuid);
   const rollerActor = message.actor ?? actorFromReference(message.speaker?.actor);
   const actors = [originActor, rollerActor].filter(Boolean);
-  const candidates = [message.item, origin.item, origin.itemUuid, context.item, context.itemUuid, toolbelt.item];
+  const candidates = [message.item, origin.item, origin.itemUuid, origin.uuid, context.item, context.itemUuid, toolbelt.item];
   for (const candidate of candidates) {
     const rawId = typeof candidate === "string" && !candidate.includes(".") ? candidate : null;
     const item = (rawId ? actors.map((actor) => actor.items?.get(rawId)).find(Boolean) : null)
@@ -436,7 +507,18 @@ async function processRollMessage(message, overrides = {}) {
 async function applyRecipient(config, actor, speakerActor, item, outcome, recipient, sourceTokenUuid) {
   if (!config?.enabled || !actor?.canUserModify?.(game.user, "update")) return;
   if (config.damage) await rollDamage(config.damage, actor, speakerActor, item, outcome, recipient);
-  for (const effect of config.effects) await applyEffect(effect, actor);
+  const applied = new Map();
+  for (const effect of config.effects) {
+    const result = await applyEffect(effect, actor, Boolean(effect.parentUuid));
+    if (result) applied.set(effect.uuid, result);
+  }
+  for (const effect of config.effects) {
+    if (!effect.parentUuid || !canLinkEffect(config.effects, effect.uuid, effect.parentUuid)) continue;
+    const child = applied.get(effect.uuid);
+    const parent = applied.get(effect.parentUuid);
+    if (child && parent) await child.root.setFlag(MODULE_ID, "degreeOfSuccessParent", parent.anchor.id);
+    else if (child) await actor.deleteEmbeddedDocuments("Item", [child.root.id]);
+  }
   if (config.immunity?.enabled) await applyDegreeImmunity(config.immunity, actor, item, sourceTokenUuid);
 }
 
@@ -463,7 +545,17 @@ async function rollDamage(formula, actor, speakerActor, item, outcome, recipient
   }
 }
 
-async function applyEffect(reference, actor) {
+// Track the actual condition, including conditions owned by a duration wrapper.
+// Recovery from persistent damage or removal of a timed condition must end its
+// dependants immediately, even while its duration wrapper still exists.
+Hooks.on("deleteItem", async (item) => {
+  const actor = item.actor;
+  if (!actor || (game.users?.activeGM ? game.user.id !== game.users.activeGM.id : !actor.isOwner)) return;
+  const children = actor.items.filter((entry) => entry.getFlag(MODULE_ID, "degreeOfSuccessParent") === item.id);
+  if (children.length) await actor.deleteEmbeddedDocuments("Item", children.map((entry) => entry.id));
+});
+
+async function applyEffect(reference, actor, separate = false) {
   const source = await documentFromReference(reference.uuid);
   if (!source || !["condition", "effect"].includes(source.type)) return;
   const durationUnit = reference.durationUnit ?? "unlimited";
@@ -482,20 +574,24 @@ async function applyEffect(reference, actor) {
         level: { value: 1 }, rules: [grant], slug: null, tokenIcon: { show: true }, traits: { value: [] }, unidentified: false,
       },
     };
-    await actor.createEmbeddedDocuments("Item", [wrapper]);
-    return;
+    const [root] = await actor.createEmbeddedDocuments("Item", [wrapper]);
+    if (!root) return null;
+    const grantId = Object.values(root.flags.pf2e?.itemGrants ?? {})[0]?.id;
+    const anchor = actor.items.get(grantId) ?? root;
+    if (reference.persistent && anchor !== root) await anchor.update({ "system.persistent": reference.persistent });
+    return { root, anchor };
   }
   const data = source.toObject();
   delete data._id;
-  if (foundry.utils.hasProperty(data, "system.value.value")) {
+  if (reference.persistent) foundry.utils.setProperty(data, "system.persistent", reference.persistent);
+  if (foundry.utils.hasProperty(data, "system.value.value") && source.slug !== "persistent-damage") {
     const requested = reference.value === "" || reference.value == null ? null : Math.max(1, Math.trunc(Number(reference.value) || 1));
-    const existing = actor.getCondition?.(source.slug) ?? null;
+    const existing = separate ? null : actor.getCondition?.(source.slug) ?? null;
     const current = existing?.value ?? 0;
-    if (requested === null && existing) return;
-    if (requested !== null && current >= requested) return;
+    if (existing && (requested === null || current >= requested)) return { root: existing, anchor: existing };
     if (requested !== null && existing && !existing.isLocked) {
       await game.pf2e.ConditionManager.updateConditionValue(existing.id, actor, requested);
-      return;
+      return { root: existing, anchor: existing };
     }
     foundry.utils.setProperty(data, "system.value.value", requested);
   }
@@ -504,7 +600,8 @@ async function applyEffect(reference, actor) {
     ? -1
     : Math.max(1, Math.trunc(durationValue)));
   foundry.utils.setProperty(data, "system.duration.expiry", durationUnit === "unlimited" ? null : "turn-start");
-  await actor.createEmbeddedDocuments("Item", [data]);
+  const [created] = await actor.createEmbeddedDocuments("Item", [data]);
+  return created ? { root: created, anchor: created } : null;
 }
 
 function immunityData(effect) {
@@ -598,7 +695,7 @@ function auraAcceptsTarget(sourceActor, targetActor, mode) {
 function auraSources(scene = canvas.scene) {
   const sources = [];
   for (const token of scene?.tokens ?? []) {
-    const actor = token.actor; if (!actor) continue;
+    const actor = token.actor; if (!actor || actor.isDead || !token.inCombat) continue;
     for (const item of actor.itemTypes?.action ?? []) {
       const rawConfig = item.getFlag?.(MODULE_ID, FLAG_KEY);
       if (!rawConfig) continue;
@@ -641,6 +738,9 @@ function seedAuraMembership() {
 }
 
 Hooks.on("canvasReady", seedAuraMembership);
+for (const hook of ["createCombatant", "deleteCombatant", "updateCombat", "deleteCombat"]) {
+  Hooks.on(hook, seedAuraMembership);
+}
 for (const hook of ["createItem", "updateItem", "deleteItem"]) {
   Hooks.on(hook, (item) => {
     if (item?.type === "action" && item.actor?.getActiveTokens?.().length) seedAuraMembership();

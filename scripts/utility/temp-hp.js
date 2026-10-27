@@ -74,9 +74,19 @@ async function enrichTempHealingDamage(match, options) {
   const normalizedMatch = Array.from(match);
   normalizedMatch[0] = String(match[0]).replace(formula, normalizedFormula);
   normalizedMatch[2] = normalizedFormula;
+  const autoLabel = !match[3];
+  if (autoLabel && !/\|shortLabel(?:\||$)/i.test(normalizedMatch[2])) {
+    normalizedMatch[2] += "|shortLabel";
+    normalizedMatch[0] = normalizedMatch[0].replace(normalizedFormula, normalizedMatch[2]);
+  }
 
   const element = await CONFIG.ux.TextEditor.enrichString(normalizedMatch, options);
-  if (!game.settings.get(MODULE_ID, SETTING_ENABLE)) return element;
+  const enabled = game.settings.get(MODULE_ID, SETTING_ENABLE);
+  if (autoLabel && element instanceof HTMLElement) {
+    const label = element.querySelector("span");
+    if (label) label.textContent += ` ${localize(enabled ? "TemporaryShort" : "HitPointsShort")}`;
+  }
+  if (!enabled) return element;
   if (element instanceof HTMLElement) {
     element.dataset.tempHealing = mode;
     element.dataset.tooltip = localize(mode === "overflow" ? "OverflowTitle" : "TemporaryTitle");

@@ -143,7 +143,7 @@ async function removeFogConcealed(actor) {
   if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
 }
 
-async function syncActor(actor, { getFogPolygons, getFloorNumber }) {
+async function syncActor(actor, { getFogPolygons, getFloorNumber, isSpellFog = () => false }) {
   if (!creatureActor(actor) || game.user !== actor.primaryUpdater) return;
   const pending = synchronization.get(actor);
   if (pending) return pending;
@@ -151,7 +151,7 @@ async function syncActor(actor, { getFogPolygons, getFloorNumber }) {
     const tokens = (canvas?.tokens?.placeables ?? []).filter((token) => token.actor === actor);
     const inFog = tokens.some((token) => {
       const scene = token.document?.parent ?? canvas?.scene;
-      return tokenOverlapsFog(token, getFogPolygons(scene, getFloorNumber(token.document, scene)));
+      return isSpellFog(token.document, scene) || tokenOverlapsFog(token, getFogPolygons(scene, getFloorNumber(token.document, scene)));
     });
     if (inFog) await addFogConcealed(actor);
     else await removeFogConcealed(actor);
@@ -160,17 +160,17 @@ async function syncActor(actor, { getFogPolygons, getFloorNumber }) {
   try { await task; } finally { synchronization.delete(actor); }
 }
 
-export function installFogConcealment({ getFogPolygons, getFloorNumber }) {
+export function installFogConcealment({ getFogPolygons, getFloorNumber, isSpellFog = () => false }) {
   installFogRulePreparation();
   const syncAll = () => {
     if (!canvas?.ready) return;
     const actors = new Set((canvas.tokens?.placeables ?? []).map((token) => token.actor).filter(Boolean));
-    for (const actor of actors) void syncActor(actor, { getFogPolygons, getFloorNumber });
+    for (const actor of actors) void syncActor(actor, { getFogPolygons, getFloorNumber, isSpellFog });
   };
   Hooks.on("canvasReady", syncAll);
   const syncTokenActor = (token) => {
     const actor = token?.actor;
-    if (actor) setTimeout(() => void syncActor(actor, { getFogPolygons, getFloorNumber }), 0);
+    if (actor) setTimeout(() => void syncActor(actor, { getFogPolygons, getFloorNumber, isSpellFog }), 0);
   };
   Hooks.on("createToken", syncTokenActor);
   Hooks.on("deleteToken", syncTokenActor);
