@@ -8,6 +8,65 @@ const scene = {id:'s',levels:{get:()=>({index:0})},getFlag:()=>({floors:[{style:
 const token = (x,y,senses=[])=>({parent:scene,level:'ground',actor:{perception:{senses:new Set(senses)}},object:{center:{x,y}}});
 const c = vm.createContext({MODULE_ID:'test',Hooks:{once:()=>{}}});
 vm.runInContext(source,c);
+test('magical light recognizes crystals and active spell rules, not inventory or inactive effects',()=>{
+ const light={object:{document:{flags:{test:{sceneAsset:{preset:'torch'}}}}},data:{}};
+ assert.equal(c.isMagicalLight(light),false);
+ light.object.document.flags.test.sceneAsset.preset='everlight';
+ assert.equal(c.isMagicalLight(light),true);
+ delete light.object.document.flags.test.sceneAsset;
+ const torch={key:'TokenLight',test:()=>true,item:{slug:'torch',traits:new Set()}};
+ const spell={key:'TokenLight',test:()=>true,item:{slug:'spell-effect-light',traits:new Set(['light','magical'])}};
+ light.object.document.actor={rules:[torch,spell]};
+ assert.equal(c.isMagicalLight(light),true);
+ spell.test=()=>false;
+ assert.equal(c.isMagicalLight(light),false);
+ spell.test=()=>true;spell.ignored=true;
+ assert.equal(c.isMagicalLight(light),false);
+ light.data.priority=1;
+ assert.equal(c.isMagicalLight(light),true);
+ light.object.document.flags.test.magicalLight=false;
+ assert.equal(c.isMagicalLight(light),false);
+});
+
+test('an equipped Everlight Crystal is magical without a Light spell; an inactive crystal does not bless a torch',()=>{
+ const crystal={key:'TokenLight',test:()=>true,item:{type:'equipment',slug:'everlight-crystal',traits:new Set()}};
+ const light={object:{document:{actor:{rules:[crystal]}}},data:{}};
+ assert.equal(c.isMagicalLight(light),true);
+ crystal.ignored=true;
+ light.object.document.actor.rules.unshift({key:'TokenLight',test:()=>true,item:{slug:'torch',traits:new Set()}});
+ assert.equal(c.isMagicalLight(light),false);
+});
+
+test('nonmagical light is clipped by both darkness styles; crystals, other floors and heights are unaffected',()=>{
+ class Light {
+  constructor(document){this.object={document};this.x=0;this.y=15;this.elevation=10;this.level={id:'ground'};this.data={};}
+  _createShapes(){this.shape={contains:()=>true};return 'native';}
+ }
+ const ctx=vm.createContext({MODULE_ID:'test',Hooks:{once:()=>{}},CONFIG:{Canvas:{lightSourceClass:Light}},
+  PIXI:{Polygon:class {constructor(points){this.points=points;}}},canvas:{dimensions:{width:100,height:100,maxR:150}}});
+ vm.runInContext(source,ctx);vm.runInContext('installDarknessLightBoundary()',ctx);
+ const world=spellScene();
+ const document={parent:world,flags:{test:{sceneAsset:{preset:'torch'}}}};
+ const light=new Light(document);
+ for(const style of ['weather-darkness','weather-deep-darkness']){
+  world.regions[0].flags.test.spellFloor.style=style;
+  assert.equal(light._createShapes(),'native');
+  assert.equal(light.shape.contains(5,15),true);
+  assert.equal(light.shape.contains(15,15),false);
+  assert.equal(light.shape.contains(30,15),true);
+  light.x=15;light._createShapes();
+  assert.equal(light.shape.contains(5,15),true);
+  assert.equal(light.shape.contains(15,15),false);
+  assert.equal(light.shape.contains(30,15),true);light.x=0;
+ }
+ document.flags.test.sceneAsset.preset='everlight';light._createShapes();assert.equal(light.shape.contains(15,15),true);
+ document.flags.test.sceneAsset.preset='torch';
+ light.elevation=20;light._createShapes();assert.equal(light.shape.contains(15,15),true);
+ light.elevation=10;light.level.id='up';light._createShapes();assert.equal(light.shape.contains(15,15),true);
+ light.level.id='ground';world.regions[0].flags.test.spellFloor.placement=true;
+ light._createShapes();assert.equal(light.shape.contains(15,15),true);
+ document.parent=scene;light._createShapes();assert.equal(light.shape.contains(15,15),false);
+});
 test('ordinary darkvision cannot see targets inside or across deep darkness; greater can',()=>{
  const target=token(15,15);
  for(const senses of [[],['low-light-vision'],['darkvision']]) assert.equal(c.blockedByDeepDarkness(token(0,15,senses),target),true);

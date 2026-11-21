@@ -8,7 +8,7 @@ const source = readFileSync(new URL("../scripts/actionplus/debilitating-strike.j
   .split('Hooks.on("preUpdateItem"')[0];
 const context = vm.createContext({
   MODULE_ID: "ts-pf2e-utility",
-  Hooks: { once: () => {} },
+  Hooks: { once: () => {}, on: () => {} },
   isSupportedActionPlusItem: (item) => item.type === "action",
   isActionPlusFeatureEnabled: (item) => item.enabled === true,
   foundry: { utils: {
@@ -47,6 +47,30 @@ test("startup refresh repairs existing actions once and only on the active GM", 
 });
 vm.runInContext(source, context);
 const passes = (predicate, level) => predicate.every((entry) => !entry.gte || level >= entry.gte[1]);
+
+test("description follows actor level and preserves original text when regenerated", () => {
+  const item = {
+    actor: { level: 20 },
+    getFlag: () => ({ selected: ["clumsy", "bloody"] }),
+    _source: { system: { rules: [], description: { value: "<p>Original</p>" } } },
+  };
+  for (const level of [20, 8, 9, 10, 12, 14, 15, 19, 20]) {
+    item.actor.level = level;
+    const changed = {};
+    context.syncGeneratedData(item, changed);
+    const description = changed.system.description.value;
+    for (const threshold of [9, 10, 12, 15, 20]) {
+      assert.equal(description.includes(`<h4>${threshold} уровень`), level >= threshold);
+    }
+    assert.ok(description.startsWith("<p>Original</p>"));
+    assert.equal(description.split("<h3>Ослабляющий удар</h3>").length - 1, 1);
+    item._source.system = changed.system;
+  }
+  delete item.actor;
+  const changed = {};
+  context.syncGeneratedData(item, changed);
+  assert.ok(changed.system.description.value.includes("20 уровень"));
+});
 
 test("level gates constrain generated and pre-existing merged controls", () => {
   const item = {

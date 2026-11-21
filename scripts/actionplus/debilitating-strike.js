@@ -158,8 +158,9 @@ function buildGeneratedRules(config) {
   return rules;
 }
 
-function buildDescriptionHtml(config) {
-  const byLevel = [9, 10, 12].map((level) => OPTIONS.filter((option) => option.level === level && optionEnabled(config, option)));
+function buildDescriptionHtml(config, actorLevel = Infinity) {
+  const byLevel = [9, 10, 12].filter((level) => level <= actorLevel)
+    .map((level) => OPTIONS.filter((option) => option.level === level && optionEnabled(config, option)));
   const sections = [
     "<h3>Ослабляющий удар</h3>",
     "<p><strong>Триггер</strong> Ваш «Удар» попадает по застигнутой врасплох цели и наносит урон.</p>",
@@ -168,10 +169,14 @@ function buildDescriptionHtml(config) {
     sections.push(`<h4>${options[0].level} уровень</h4>`);
     sections.push(`<ul>${options.map((option) => `<li>${option.summary ?? option.label}.</li>`).join("")}</ul>`);
   }
-  sections.push("<h4>15 уровень — Двойное ослабление</h4>");
-  sections.push("<p>Выберите второе ослабление, отличное от первого.</p>");
-  sections.push("<h4>20 уровень — Мастерский удар</h4>");
-  sections.push("<p>За два ослабления вы можете выдать своему ослабляющему удару эффект @UUID[Compendium.pf2e.actionspf2e.Item.Rlp7ND33yYfxiEWi]{Мастерский удар / Master Strike}.</p>");
+  if (actorLevel >= 15) {
+    sections.push("<h4>15 уровень — Двойное ослабление</h4>");
+    sections.push("<p>Выберите второе ослабление, отличное от первого.</p>");
+  }
+  if (actorLevel >= 20) {
+    sections.push("<h4>20 уровень — Мастерский удар</h4>");
+    sections.push("<p>За два ослабления вы можете выдать своему ослабляющему удару эффект @UUID[Compendium.pf2e.actionspf2e.Item.Rlp7ND33yYfxiEWi]{Мастерский удар / Master Strike}.</p>");
+  }
   return `${DESCRIPTION_START}<section data-tsu-debilitating-strike>${sections.join("")}</section>${DESCRIPTION_END}`;
 }
 
@@ -182,9 +187,9 @@ function stripGeneratedDescription(value) {
     .trim();
 }
 
-function mergeGeneratedDescription(value, config) {
+function mergeGeneratedDescription(value, config, actorLevel) {
   const original = stripGeneratedDescription(value);
-  return `${original}${original ? "\n" : ""}${buildDescriptionHtml(config)}`;
+  return `${original}${original ? "\n" : ""}${buildDescriptionHtml(config, actorLevel)}`;
 }
 
 function isGeneratedRule(rule) {
@@ -265,7 +270,8 @@ function syncGeneratedData(item, changed) {
     ?? item._source?.system?.description?.value
     ?? "";
   foundry.utils.setProperty(changed, "system.rules", rules);
-  foundry.utils.setProperty(changed, "system.description.value", mergeGeneratedDescription(description, config));
+  const actorLevel = item.actor?.level ?? item.actor?.system?.details?.level?.value;
+  foundry.utils.setProperty(changed, "system.description.value", mergeGeneratedDescription(description, config, actorLevel));
 }
 
 function renderControls({ flags }) {
@@ -317,15 +323,15 @@ async function cleanup({ item }) {
   }
 }
 
-async function refreshExistingDebilitations() {
+async function refreshExistingDebilitations(actorToRefresh = null) {
   if (game.users.activeGM?.id !== game.user.id) return;
-  const actors = new Set(game.actors?.contents ?? []);
-  for (const scene of game.scenes?.contents ?? []) {
+  const actors = new Set(actorToRefresh ? [actorToRefresh] : game.actors?.contents ?? []);
+  for (const scene of actorToRefresh ? [] : game.scenes?.contents ?? []) {
     for (const token of scene.tokens?.contents ?? []) {
       if (!token.actorLink && token.actor) actors.add(token.actor);
     }
   }
-  const items = new Set(game.items?.contents ?? []);
+  const items = new Set(actorToRefresh ? [] : game.items?.contents ?? []);
   for (const actor of actors) {
     for (const item of actor.items?.contents ?? []) items.add(item);
   }
@@ -343,7 +349,13 @@ async function refreshExistingDebilitations() {
   }
 }
 
-Hooks.once("ready", refreshExistingDebilitations);
+Hooks.once("ready", () => refreshExistingDebilitations());
+
+Hooks.on("updateActor", (actor, changed) => {
+  if (foundry.utils.hasProperty(changed, "system.details.level")) {
+    void refreshExistingDebilitations(actor);
+  }
+});
 
 Hooks.on("preUpdateItem", (item, changed) => {
   if (CLEANING_ITEMS.has(item.uuid)) return;

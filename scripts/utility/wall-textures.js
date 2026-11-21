@@ -1,5 +1,6 @@
 import { MODULE_ID, i18nKey, t } from "../core.js";
-import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20261026-spell-floors-v111";
+import { buildWallShadowBands } from "./wall-shadow-geometry.js?v=20261116-selected-wall-shadows-v1";
+import { resolvePresetTexture, TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20261116-floor-hazards-v8";
 
 const SETTING_ENABLE = "enableWallTextures";
 const SETTING_DOOR_PRESETS = "enableDoorTexturePresets";
@@ -22,6 +23,8 @@ const DOOR_SWING_INDICATOR_LENGTH_RATIO = 0.4;
 const TEXTURE_ASSET_BASE = `modules/${MODULE_ID}/images/scene-walls`;
 const WALL_CONTROL_NAME = "walls";
 const WALL_TEXTURE_TOOL = "tsu-wall-texture";
+const WALL_SHADOW_FLAG = "wallShadows";
+const wallShadowUpdates = new Set();
 const BULK_PICKER_CLASS = "tsu-wall-texture-bulk-picker";
 const BULK_SELECTION_DRAG_CLASS = "tsu-wall-texture-selection-drag";
 const BULK_SELECTION_CONTAINER = "tsu-wall-texture-selection";
@@ -169,7 +172,77 @@ Hooks.on("getSceneControlButtons", (controls) => {
       else activateBulkWallTool();
     },
   };
+  for (const [index, side] of ["inner", "outer"].entries()) {
+    const name = `tsu-wall-shadow-${side}`;
+    walls.tools[name] = {
+      name,
+      order: 100 + index,
+      title: t(`${I18N_ROOT}.${side === "inner" ? "InnerShadow" : "OuterShadow"}`,
+        side === "inner" ? "Inner wall shadow" : "Outer wall shadow"),
+      icon: side === "inner" ? "fa-solid fa-compress" : "fa-solid fa-expand",
+      visible: true,
+      toggle: true,
+      active: selectedWallsHaveShadow(side),
+      onChange: (_event, active) => { void setWallShadowEnabled(side, active); },
+    };
+  }
 });
+
+function selectedShadowWallDocuments() {
+  return bulkToolActive ? selectedBulkWallDocuments()
+    : Array.from(canvas?.walls?.controlled ?? []).map(bulkWallDocument).filter(wall => wall?.id);
+}
+
+function wallShadowEnabled(wall, side) {
+  // Retain existing scene-wide shadows until a wall receives an explicit override.
+  return isEnabled(wall.getFlag?.(MODULE_ID, WALL_SHADOW_FLAG)?.[side]
+    ?? canvas?.scene?.getFlag?.(MODULE_ID, WALL_SHADOW_FLAG)?.[side]);
+}
+
+function selectedWallsHaveShadow(side) {
+  const walls = selectedShadowWallDocuments();
+  return walls.length > 0 && walls.every(wall => wallShadowEnabled(wall, side));
+}
+
+function syncWallShadowControls() {
+  for (const side of ["inner", "outer"]) {
+    const name = `tsu-wall-shadow-${side}`;
+    const active = selectedWallsHaveShadow(side);
+    const tool = ui.controls?.controls?.walls?.tools?.[name];
+    if (tool) tool.active = active;
+    for (const button of document.querySelectorAll(`#scene-controls [data-tool="${name}"]`)) {
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+  }
+}
+
+async function setWallShadowEnabled(side, active) {
+  const scene = canvas?.scene;
+  if (!scene || !bulkToolEnabled() || !["inner", "outer"].includes(side)) return;
+  const walls = selectedShadowWallDocuments();
+  if (!walls.length) {
+    ui.controls?.render?.({ reset: true });
+    return;
+  }
+  const key = `${scene.id}:${side}`;
+  if (wallShadowUpdates.has(key)) return;
+  wallShadowUpdates.add(key);
+  try {
+    const current = walls.every(wall => wallShadowEnabled(wall, side));
+    const enabled = typeof active === "boolean" ? active : !current;
+    const updates = walls.filter(wall => wallShadowEnabled(wall, side) !== enabled)
+      .map(wall => ({ _id: wall.id, [`flags.${MODULE_ID}.${WALL_SHADOW_FLAG}.${side}`]: enabled }));
+    if (updates.length) await scene.updateEmbeddedDocuments("Wall", updates);
+  } catch (error) {
+    console.error(`${MODULE_ID} | Could not update wall shadows`, error);
+    ui.notifications.error(t(`${I18N_ROOT}.ShadowFailed`, "Could not update wall shadows."));
+  } finally {
+    wallShadowUpdates.delete(key);
+    scheduleWallTextureRedraw();
+    ui.controls?.render?.({ reset: true });
+  }
+}
 
 Hooks.on("renderSceneControls", (_app, element) => {
   queueMicrotask(() => {
@@ -432,6 +505,7 @@ function syncBulkWallSelection() {
   }
   drawBulkWallSelection();
   updateBulkWallPickerSummary();
+  syncWallShadowControls();
 }
 
 function releaseBulkWalls() {
@@ -440,6 +514,7 @@ function releaseBulkWalls() {
   bulkSelectedWallIds.clear();
   drawBulkWallSelection();
   updateBulkWallPickerSummary();
+  syncWallShadowControls();
 }
 
 function bulkWallDistance(point, wall) {
@@ -2015,6 +2090,9 @@ function redrawWallTextures() {
     const borderContainer = getTextureContainer(true, level);
     if (!wallContainer || !borderContainer) continue;
 
+    const shadows = createWallShadows(level);
+    if (shadows) wallContainer.addChild(shadows);
+
     const texturedWalls = getTexturedWalls(level);
     const windows = texturedWalls.filter(isWindowWall);
     const walls = texturedWalls.filter((wall) => !isWindowWall(wall));
@@ -2032,6 +2110,61 @@ function redrawWallTextures() {
       if (sprite) wallContainer.addChild(sprite);
     }
   }
+}
+
+function wallShadowSegments(level) {
+  const sceneWalls = canvas?.scene?.walls?.contents ?? Array.from(canvas?.scene?.walls ?? []);
+  return sceneWalls.filter(wall => !level || wall.includedInLevel?.(level) !== false)
+    .filter(wall => [wall.move, wall.sight, wall.light, wall.sound].some(value => Number(value ?? 0) !== 0)
+      || Number(wall.door ?? 0) !== 0)
+    .flatMap(wall => {
+      const c = getWallCoords(wall);
+      if (!c || Math.hypot(c.x2 - c.x1, c.y2 - c.y1) < 0.01) return [];
+      const flags = getFlagData(wall);
+      const textured = isEnabled(flags.enabled);
+      const style = textured ? getStyleDefinition(flags.style, wall) : null;
+      // Open doors leave a gap in the shadow on both sides.
+      const open = Number(wall.door ?? 0) !== 0
+        && Number(wall.ds ?? 0) === Number(globalThis.CONST?.WALL_DOOR_STATES?.OPEN ?? 1);
+      return [{
+        a: { x: c.x1, y: c.y1 }, b: { x: c.x2, y: c.y2 },
+        halfWidth: textured ? getStyleTargetWidth(style) / 2 : 0.5,
+        inner: wallShadowEnabled(wall, "inner"),
+        outer: wallShadowEnabled(wall, "outer"),
+        castsShadow: !open && !isWindowWall(wall) && !style?.borderOnly,
+      }];
+    });
+}
+
+function createWallShadows(level) {
+  const segments = wallShadowSegments(level);
+  if (!segments.some(wall => wall.castsShadow && (wall.inner || wall.outer))) return null;
+  const bands = buildWallShadowBands(segments, { inner: true, outer: true, width: getGridSize() * 0.14 });
+  const graphics = new PIXI.Graphics();
+  graphics.name = "tsu-wall-shadows";
+  graphics.eventMode = "none";
+  graphics.interactive = false;
+  for (const band of bands) {
+    const modern = typeof graphics.poly === "function" && typeof graphics.fill === "function";
+    if (!modern) graphics.beginFill(0x000000, band.alpha);
+    for (const polygon of band.polygons) {
+      const vertices = polygon.points.flatMap(p => [p.x, p.y]);
+      const holes = [];
+      for (const hole of polygon.holes) {
+        holes.push(vertices.length / 2);
+        vertices.push(...hole.flatMap(p => [p.x, p.y]));
+      }
+      const triangles = PIXI.utils.earcut(vertices, holes, 2);
+      for (let i = 0; i < triangles.length; i += 3) {
+        const points = triangles.slice(i, i + 3).flatMap(index => vertices.slice(index * 2, index * 2 + 2));
+        if (modern) graphics.poly(points);
+        else graphics.drawPolygon(points);
+      }
+    }
+    if (modern) graphics.fill({ color: 0x000000, alpha: band.alpha });
+    else graphics.endFill();
+  }
+  return graphics;
 }
 
 function scheduleWallTextureRedraw() {
@@ -2060,7 +2193,9 @@ Hooks.on("deleteWall", (wall) => {
 Hooks.on("controlWall", syncBulkWallSelection);
 Hooks.on("releaseWall", syncBulkWallSelection);
 Hooks.on("updateScene", (_scene, change) => {
-  if (change.walls || change.grid || change.dimensions) scheduleWallTextureRedraw();
+  const shadowsChanged = foundry.utils.hasProperty(change, `flags.${MODULE_ID}.${WALL_SHADOW_FLAG}`);
+  if (change.walls || change.grid || change.dimensions || shadowsChanged) scheduleWallTextureRedraw();
+  if (shadowsChanged) ui.controls?.render?.({ reset: true });
 });
 Hooks.on("activateCanvasLayer", scheduleDoorSwingIndicatorRedraw);
 Hooks.on("deactivateWallsLayer", scheduleDoorSwingIndicatorRedraw);

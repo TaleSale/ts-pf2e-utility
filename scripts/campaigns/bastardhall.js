@@ -3,7 +3,7 @@ import { PHOBIA_PRESETS, presetPhobia, presetRules, phobiaEnvironment, installPh
 import {
   BASTION_TEXTURE_PRESET,
   TEXTURE_PRESET_FLAG,
-} from "../utility/texture-presets.js?v=20261026-spell-floors-v111";
+} from "../utility/texture-presets.js?v=20261116-floor-hazards-v8";
 
 const ENABLE_SETTING = "enableBastardhallSheet";
 const DATA_SETTING = "bastardhallData";

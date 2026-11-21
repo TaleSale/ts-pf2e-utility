@@ -197,7 +197,11 @@
         "AuraEnters": "Enters",
         "AuraStartTurn": "Starts turn",
         "AuraEndTurn": "Ends turn",
-        "AuraTrigger": { "enters": "Enters the aura", "startTurn": "Starts turn in the aura", "endTurn": "Ends turn in the aura" },
+        "AuraTrigger": {
+          "enters": "Enters the aura",
+          "startTurn": "Starts turn in the aura",
+          "endTurn": "Ends turn in the aura"
+        },
         "DropHint": "Drop a condition/effect here",
         "OnlyEffectsWarning": "Only conditions and effects can be dropped here.",
         "InvalidDamage": "Invalid damage formula: {formula}",
@@ -219,12 +223,20 @@
         "FeatureLabel": "Affliction",
         "Hint": "Automatically parses and tracks a poison. Manual values take precedence over the description.",
         "Type": "Affliction type",
-        "Types": { "poison": "Poison", "disease": "Disease — later", "curse": "Curse — later" },
+        "Types": {
+          "poison": "Poison",
+          "disease": "Disease — later",
+          "curse": "Curse — later"
+        },
         "Name": "Poison name",
         "Save": "Save and DC",
         "CounteractRank": "Counteract rank",
         "EffectName": "{name} (DC {dc}; Rank {rank})",
-        "Saves": { "fortitude": "Fortitude", "reflex": "Reflex", "will": "Will" },
+        "Saves": {
+          "fortitude": "Fortitude",
+          "reflex": "Reflex",
+          "will": "Will"
+        },
         "Onset": "Onset",
         "MaxDuration": "Maximum duration",
         "Virulent": "Virulent",
@@ -260,7 +272,13 @@
         "RollSave": "Saving throw",
         "InitialSave": "Initial saving throw",
         "Receives": "receives",
-        "Units": { "rounds": "rounds", "seconds": "seconds", "minutes": "minutes", "hours": "hours", "days": "days" },
+        "Units": {
+          "rounds": "rounds",
+          "seconds": "seconds",
+          "minutes": "minutes",
+          "hours": "hours",
+          "days": "days"
+        },
         "Errors": {
           "unsupportedType": "This affliction type is not supported yet.",
           "save": "A valid save and DC are required.",
@@ -401,6 +419,14 @@
         "FixedIntroArea": "The troop makes coordinated strikes against creatures in an {area}, dealing the damage below with a {check}. When the troop is reduced to 2 segments, the area shrinks to a {small}.",
         "VariableEnding": "Damage depends on the number of actions spent and the number of troop segments, while its type depends on the selection at the top of the character sheet.",
         "FixedEnding": "Damage depends on the number of troop segments, while its type depends on the selection at the top of the character sheet."
+      },
+      "CoInitiative": {
+        "FeatureLabel": "Co-initiative",
+        "Hint": "Drop actors or tokens sharing this ability owner’s turn, or paste a UUID. For multiple copies of an actor, select a specific token. Scene creatures are added to combat automatically (a connected GM is required).",
+        "Add": "Add",
+        "Remove": "Remove",
+        "Placeholder": "Actor or token UUID",
+        "Invalid": "Choose another character, NPC, or familiar."
       }
     }
   }

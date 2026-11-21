@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core.js";
-import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20261026-spell-floors-v111";
+import { TEXTURE_PRESET_CHANGE_HOOK } from "./texture-presets.js?v=20261116-floor-hazards-v8";
 
 const ASSET_FLAG = "sceneAsset";
 const CONTAINER_NAME = "tsu-mirror-reflections";

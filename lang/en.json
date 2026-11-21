@@ -111,6 +111,10 @@
         "ActorTraits": {
           "Name": "Traits",
           "Hint": "Adds an Action extra feature that grants selected actor traits."
+        },
+        "CoInitiative": {
+          "Name": "Co-initiative",
+          "Hint": "Show co-initiative in ability extra functions."
         }
       },
       "SceneEye": {
@@ -143,6 +147,8 @@
         "Control": "Floors",
         "FillRoom": "Fill room",
         "DrawBoundary": "Draw boundary",
+        "DrawBrush": "Floor brush — paint while dragging, double-click to save",
+        "BrushWidth": "Brush width (grid cells)",
         "EraseFloor": "Erase floor",
         "ChangeFloorLevel": "Change floor level",
         "FloorLevelChanged": "Floor level changed.",
@@ -185,7 +191,8 @@
           "Paths": "Paths",
           "FloorDecorations": "Floor Decorations",
           "Cobwebs": "Cobwebs",
-          "Weather": "Weather"
+          "Weather": "Weather",
+          "HazardousTerrain": "Hazardous terrain"
         },
         "Directions": {
           "VerticalUp": "Vertical stairs ↑",
@@ -325,7 +332,9 @@
           "WeatherDarkness": "Darkness",
           "WeatherDeepDarkness": "Deep darkness",
           "WeatherFog": "Fog",
-          "WeatherSnow": "Snow — difficult terrain"
+          "WeatherSnow": "Snow — difficult terrain",
+          "HazardFire": "Fire",
+          "HazardAcid": "Acid"
         }
       },
       "ObstructingForest": {
@@ -334,6 +343,9 @@
         "CoverLabel": "Obstructing forest cover"
       },
       "WallTextures": {
+        "InnerShadow": "Inner wall shadow",
+        "OuterShadow": "Outer wall shadow",
+        "ShadowFailed": "Could not update wall shadows.",
         "Name": "Enable wall texture editing",
         "Hint": "Adds wall or border texture controls to every wall, plus dedicated window textures. Existing textured walls remain visible regardless of this setting.",
         "Fieldset": "Wall texture",

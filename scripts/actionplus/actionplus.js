@@ -279,6 +279,7 @@ Hooks.once("init", () => {
     ["appearances", "Appearances"],
     ["mountedCombat", "MountedCombat"],
     ["familiarOwner", "FamiliarOwner"],
+    ["coInitiative", "CoInitiative"],
   ]) {
     game.settings.register(MODULE_ID, getFeatureVisibilitySettingKey(featureId), {
       name: i18nKey(`${SETTINGS_ROOT}.${i18nRoot}.Name`),

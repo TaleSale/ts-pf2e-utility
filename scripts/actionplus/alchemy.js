@@ -3,8 +3,12 @@ import { getPendingActionPlusOptions, isActionPlusFeatureEnabled, registerAction
 
 const FEATURE_ID = "alchemy";
 const FLAG_KEY = "alchemyRanges";
+const DC_FLAG_KEY = "alchemyCreatureDC";
+// Moderate creature DCs, indexed by level + 1 (-1 through 24).
+const MODERATE_DCS = [13, 13, 14, 15, 17, 18, 19, 21, 22, 23, 25, 26, 27, 29, 30, 31, 33, 34, 35, 37, 38, 39, 41, 42, 43, 45];
 const USE_OPTION = "tsPf2eUtilityAlchemyUse";
 const DESCRIPTION_MARKER = "<!-- ts-pf2e-utility:alchemy -->";
+const DESCRIPTION_CLASS = "ts-alchemy-generated-description";
 const creatingDailyItems = new Set();
 
 const uid = () => foundry.utils.randomID();
@@ -19,6 +23,7 @@ function normalizeFormula(value) {
     id: String(source.id || uid()), uuid, name: String(source.name || "Алхимический предмет"),
     img: String(source.img || "icons/consumables/potions/potion-jar-corked-labeled-poison-skull-green.webp"),
     quantity: Math.max(1, Math.trunc(Number(source.quantity) || 1)), source: itemSource,
+    useCreatureDC: source.useCreatureDC === true,
   };
 }
 
@@ -35,7 +40,7 @@ export function getAlchemyRanges(item) {
 }
 
 function renderFormula(formula) {
-  return `<li class="ts-alchemy-row" data-formula-id="${formula.id}"><img src="${escapeHtml(formula.img)}"><span>${escapeHtml(formula.name)}</span><label>Кол-во <input class="ts-alchemy-quantity" type="number" min="1" max="999" value="${formula.quantity}"></label><button type="button" class="ts-alchemy-remove-formula" title="Удалить"><i class="fas fa-trash"></i></button></li>`;
+  return `<li class="ts-alchemy-row" data-formula-id="${formula.id}"><img src="${escapeHtml(formula.img)}"><span>${escapeHtml(formula.name)}</span><label title="КС предмета не ниже КС существа"><input class="ts-alchemy-use-creature-dc" type="checkbox" ${formula.useCreatureDC ? "checked" : ""}>КС ≥ существа</label><label>Кол-во <input class="ts-alchemy-quantity" type="number" min="1" max="999" value="${formula.quantity}"></label><button type="button" class="ts-alchemy-remove-formula" title="Удалить"><i class="fas fa-trash"></i></button></li>`;
 }
 
 function renderRange(range) {
@@ -47,7 +52,31 @@ function renderRange(range) {
 
 function renderControls({ flags }) {
   const ranges = Array.isArray(flags?.[FLAG_KEY]) ? flags[FLAG_KEY].map(normalizeRange) : [];
-  return `<div class="ts-alchemy-editor"><p class="hint">При использовании действия создаются насыщенные расходники из подходящего диапазона уровня. Частота действия автоматически устанавливается на 1 раз в день.</p><div class="ts-alchemy-ranges">${ranges.map(renderRange).join("") || '<p class="ts-alchemy-no-ranges">Диапазоны пока не настроены.</p>'}</div><button type="button" class="ts-alchemy-add-range"><i class="fas fa-plus"></i> Добавить диапазон уровней</button></div>`;
+  return `<div class="ts-alchemy-editor"><p class="hint">При использовании действия создаются насыщенные расходники из подходящего диапазона уровня. Частота действия автоматически устанавливается на 1 раз в день.</p><label class="ts-alchemy-dc-setting">КС существа <input class="ts-alchemy-creature-dc" type="number" min="1" step="1" value="${normalizeDC(flags?.[DC_FLAG_KEY]) ?? ""}" placeholder="Авто"><span class="hint">если отличается от среднего по уровню</span></label><div class="ts-alchemy-ranges">${ranges.map(renderRange).join("") || '<p class="ts-alchemy-no-ranges">Диапазоны пока не настроены.</p>'}</div><button type="button" class="ts-alchemy-add-range"><i class="fas fa-plus"></i> Добавить диапазон уровней</button></div>`;
+}
+
+function normalizeDC(value) {
+  const dc = Number(value);
+  return Number.isFinite(dc) && dc >= 1 ? Math.trunc(dc) : null;
+}
+
+function getCreatureDC(action) {
+  const override = normalizeDC(action.getFlag?.(MODULE_ID, DC_FLAG_KEY) ?? action.flags?.[MODULE_ID]?.[DC_FLAG_KEY]);
+  const level = Math.max(-1, Math.min(24, Math.trunc(Number(action.actor?.level ?? action.actor?.system?.details?.level?.value) || 0)));
+  return override ?? MODERATE_DCS[level + 1];
+}
+
+function applyCreatureDC(source, dc) {
+  // Change only explicit save DCs; leave other checks and dynamic formulas intact.
+  const description = source.system?.description;
+  if (typeof description?.value === "string") {
+    description.value = description.value.replace(/@Check\[([^\]]+)\]/giu, (match, parameters) => {
+      if (!/(?:^|\|)(?:type:)?(?:fortitude|reflex|will)(?:\||$)/iu.test(parameters)) return match;
+      return `@Check[${parameters.replace(/(^|\|)dc:(\d+)(?=\||$)/giu, (_match, prefix, value) => `${prefix}dc:${Math.max(Number(value), dc)}`)}]`;
+    });
+  }
+  const save = source.system?.savingThrow;
+  if (normalizeDC(save?.dc)) save.dc = Math.max(Number(save.dc), dc);
 }
 
 function formatFormulaLink(formula) {
@@ -60,12 +89,22 @@ function generatedDescription(ranges) {
   const rows = ranges.map(normalizeRange)
     .filter((range) => range.items.length)
     .map((range) => `<p><strong>${range.start}–${range.end} уровень:</strong> ${range.items.map((formula) => `${formatFormulaLink(formula)} ×${formula.quantity}`).join(", ")}</p>`);
-  return rows.length ? `${DESCRIPTION_MARKER}<h3>Продвинутая алхимия</h3>${rows.join("")}` : "";
+  return rows.length ? `<div class="${DESCRIPTION_CLASS}" data-ts-alchemy-generated="true"><h3>Продвинутая алхимия</h3>${rows.join("")}</div>` : "";
+}
+
+function removeGeneratedAlchemy(description) {
+  // HTML comments may be stripped on save. Use a persistent wrapper instead,
+  // and recognize the old heading + level rows to repair existing duplicates.
+  return String(description ?? "")
+    .replace(/<div\b[^>]*(?:class=["'][^"']*\bts-alchemy-generated-description\b[^"']*["']|data-ts-alchemy-generated=["']true["'])[^>]*>[\s\S]*?<\/div>/giu, "")
+    .split(DESCRIPTION_MARKER).join("")
+    .replace(/<h3\b[^>]*>\s*Продвинутая алхимия\s*<\/h3>(?:\s*<p\b[^>]*>\s*<strong\b[^>]*>\s*\d+\s*[–-]\s*\d+\s+уровень:\s*<\/strong>(?:(?!<\/p>)[\s\S])*?×\s*\d+\s*<\/p>)+/giu, "")
+    .trim();
 }
 
 function descriptionWithGeneratedAlchemy(item, ranges) {
   const current = String(item.system?.description?.value ?? "");
-  const manual = current.includes(DESCRIPTION_MARKER) ? current.split(DESCRIPTION_MARKER, 1)[0].trimEnd() : current.trimEnd();
+  const manual = removeGeneratedAlchemy(current);
   return [manual, generatedDescription(ranges)].filter(Boolean).join("\n");
 }
 
@@ -76,7 +115,10 @@ function readEditor(editor, previous) {
     for (const input of section.querySelectorAll(".ts-alchemy-level")) range[input.dataset.field] = Number(input.value);
     for (const row of section.querySelectorAll("[data-formula-id]")) {
       const formula = range.items.find((entry) => entry.id === row.dataset.formulaId);
-      if (formula) formula.quantity = Number(row.querySelector(".ts-alchemy-quantity")?.value);
+      if (formula) {
+        formula.quantity = Number(row.querySelector(".ts-alchemy-quantity")?.value);
+        formula.useCreatureDC = row.querySelector(".ts-alchemy-use-creature-dc")?.checked === true;
+      }
     }
   }
   return ranges.map(normalizeRange);
@@ -100,6 +142,7 @@ function activateListeners({ app, html, item, optionIndex }) {
     void item.update({ "system.description.value": expectedDescription }, { render: false });
   }
   const save = async () => {
+    await item.update({ [`flags.${MODULE_ID}.${DC_FLAG_KEY}`]: normalizeDC(editor.querySelector(".ts-alchemy-creature-dc")?.value) }, { render: false });
     await persist(item, readEditor(editor, getAlchemyRanges(item)));
     app.render(false);
   };
@@ -129,9 +172,10 @@ function activateListeners({ app, html, item, optionIndex }) {
 
 async function cleanup({ item }) {
   const current = String(item.system?.description?.value ?? "");
-  const manual = current.includes(DESCRIPTION_MARKER) ? current.split(DESCRIPTION_MARKER, 1)[0].trimEnd() : current;
+  const manual = removeGeneratedAlchemy(current);
   await item.update({ "system.description.value": manual }, { render: false });
   await item.unsetFlag(MODULE_ID, FLAG_KEY);
+  await item.unsetFlag(MODULE_ID, DC_FLAG_KEY);
 }
 
 function dailyFrequencyUpdate(item, changed) {
@@ -157,6 +201,7 @@ async function createDailyItems(action) {
   const sources = range.items.map((formula) => {
     const source = foundry.utils.deepClone(formula.source); delete source._id; delete source.folder; delete source.sort; delete source.ownership;
     source.system ??= {}; source.system.quantity = formula.quantity; source.system.traits ??= {}; source.system.traits.value = Array.from(new Set([...(source.system.traits.value ?? []), "infused"]));
+    if (formula.useCreatureDC) applyCreatureDC(source, getCreatureDC(action));
     return source;
   });
   await actor.createEmbeddedDocuments("Item", sources);

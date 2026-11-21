@@ -28,22 +28,22 @@ export function crossesDarkness(start, end, polygons) {
   });
 }
 
-function polygonsForToken(token) {
+function polygonsForToken(token, styles = [STYLE]) {
   const scene = token?.parent;
   const level = scene?.levels?.get?.(token.level);
   const floorLevel = Number(level?.flags?.[MODULE_ID]?.floorLevelNumber ?? level?.index ?? 0);
   return (scene?.getFlag?.(MODULE_ID, "floorTextures")?.floors ?? [])
-    .filter(f => f.style === STYLE && Number(f.level ?? 0) === floorLevel && f.points?.length >= 3)
+    .filter(f => styles.includes(f.style) && Number(f.level ?? 0) === floorLevel && f.points?.length >= 3)
     .map(f => f.points);
 }
 
-function darknessVolumes(token) {
-  const volumes = polygonsForToken(token).map(points => ({
+function darknessVolumes(token, styles = [STYLE]) {
+  const volumes = polygonsForToken(token, styles).map(points => ({
     contours: [points], contains: point => containsPoint(point, points), bottom: null, top: null,
   }));
   for (const region of token?.parent?.regions ?? []) {
     const flag = region.flags?.[MODULE_ID]?.spellFloor;
-    if (flag?.style !== STYLE || flag.placement) continue;
+    if (!styles.includes(flag?.style) || flag.placement) continue;
     const levels = Array.from(region._source?.levels ?? region.levels ?? [], entry => entry.id ?? entry);
     if (levels.length && !levels.includes(token.level?.id ?? token.level)) continue;
     const contours = [...region.polygonTree].filter(node => node.points?.length >= 6).map(node =>
@@ -52,7 +52,33 @@ function darknessVolumes(token) {
       bottom: region.elevation?.bottom ?? null, top: region.elevation?.top ?? null,
       topInclusive: region.elevation?.topInclusive ?? false });
   }
-  return volumes;
+  return styles.length === 1 && styles[0] === STYLE ? unlitDarknessVolumes(token, volumes) : volumes;
+}
+
+// Deep darkness obstructs sight only where no active magical light reaches it.
+// Use the light's wall-constrained shape, so illumination cannot cross walls.
+export function unlitDarknessVolumes(token, volumes) {
+  const sources = [...(globalThis.canvas?.effects?.lightSources?.values?.() ?? [])].filter(source =>
+    source.active && isMagicalLight(source) && source.shape?.points?.length >= 6
+    && (source.level?.id ?? source.data?.level) === (token.level?.id ?? token.level));
+  if (!sources.length || !volumes.length) return volumes;
+  const scale = 1000;
+  const path = points => points.map(point => ({ X: Math.round(point.x * scale), Y: Math.round(point.y * scale) }));
+  return volumes.flatMap(volume => {
+    let contours = volume.contours;
+    for (const source of sources) {
+      const operation = new ClipperLib.Clipper();
+      operation.AddPaths(contours.map(path), ClipperLib.PolyType.ptSubject, true);
+      const points = source.shape.points;
+      operation.AddPath(path(Array.from({ length: points.length / 2 }, (_, i) => ({ x: points[i * 2], y: points[i * 2 + 1] }))), ClipperLib.PolyType.ptClip, true);
+      const solution = new ClipperLib.Paths();
+      operation.Execute(ClipperLib.ClipType.ctDifference, solution,
+        ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
+      contours = solution.map(contour => contour.map(point => ({ x: point.X / scale, y: point.Y / scale })));
+      if (!contours.length) return [];
+    }
+    return [{ ...volume, contours, contains: point => contours.reduce((inside, contour) => inside !== containsPoint(point, contour), false) }];
+  });
 }
 
 function withinHeight(volume, elevation) {
@@ -139,6 +165,111 @@ function installDarknessVisionBoundary() {
   };
 }
 
+export function isMagicalLight(source) {
+  const document = source.object?.document;
+  const flags = document?.flags?.[MODULE_ID];
+  if (typeof flags?.magicalLight === "boolean") return flags.magicalLight;
+  if (Number(source.data?.priority ?? 0) > 0) return true;
+  if (flags?.sceneAsset?.preset === "everlight") return true;
+  // PF2e applies the last active TokenLight rule to the token. Merely carrying
+  // a magical item (or having an inactive Light effect) must not bless a torch.
+  const rules = document?.actor?.rules ?? [];
+  const rule = rules.filter(rule => rule.key === "TokenLight" && !rule.ignored && rule.test?.()).at(-1);
+  const item = rule?.item;
+  if (!item) return false;
+  const traits = new Set(item.traits ?? item.system?.traits?.value ?? []);
+  return item.isMagical === true || item.type === "spell"
+    || ["magical", "arcane", "divine", "occult", "primal"].some(trait => traits.has(trait))
+    || ["everlight-crystal", "evercursed-crystal", "light", "spell-effect-light"].includes(item.slug);
+}
+
+function installDarknessLightBoundary() {
+  const prototype = CONFIG.Canvas.lightSourceClass.prototype;
+  const createShapes = prototype._createShapes;
+  prototype._createShapes = function(...args) {
+    const result = createShapes.apply(this, args);
+    this._tsuDarknessVolumes = [];
+    if (!this.shape || isMagicalLight(this)) return result;
+    const document = this.object?.document;
+    const volumes = darknessVolumes({
+      parent: document?.parent ?? canvas.scene,
+      level: this.level?.id ?? this.data?.level ?? document?.level,
+    }, ["weather-darkness", STYLE]).filter(volume => withinHeight(volume, Number(this.elevation ?? 0)));
+    if (!volumes.length) return result;
+    this._tsuDarknessVolumes = volumes;
+    const contains = this.shape.contains;
+    this.shape.contains = function(x, y) {
+      return contains.call(this, x, y) && !volumes.some(volume => volume.contains({ x, y }));
+    };
+    return result;
+  };
+  const updateGeometry = prototype._updateGeometry;
+  prototype._updateGeometry = function(...args) {
+    const result = updateGeometry.apply(this, args);
+    if (!this._tsuDarknessVolumes?.length || !this.shape.config.radius) return result;
+    const geometry = this._geometry;
+    const positions = geometry.getBuffer("aVertexPosition");
+    const depth = geometry.getBuffer("aDepthValue");
+    const indices = geometry.getIndex();
+    const clipped = maskDarknessGeometry(positions.data, depth.data, indices.data,
+      this.shape.origin, this.shape.config.radius, this._tsuDarknessVolumes);
+    positions.update(new Float32Array(clipped.positions));
+    depth.update(new Float32Array(clipped.depth));
+    indices.update(new Uint32Array(clipped.indices));
+    return result;
+  };
+}
+
+// Subtract darkness from the rendered mesh, not from rays travelling from the
+// source. Keep every lit island outside the zone, even when the torch is inside.
+export function maskDarknessGeometry(positions, depth, indices, origin, radius, volumes) {
+  const scale = 1e6;
+  const clips = volumes.map(volume => volume.contours.map(contour => contour.map(point => ({
+    X: Math.round((point.x - origin.x) / radius * scale),
+    Y: Math.round((point.y - origin.y) / radius * scale),
+  }))));
+  const output = { positions: [], depth: [], indices: [] };
+  for (let i = 0; i < indices.length; i += 3) {
+    const vertices = Array.from(indices.slice(i, i + 3), index => ({
+      X: Math.round(positions[index * 2] * scale), Y: Math.round(positions[index * 2 + 1] * scale), z: depth[index],
+    }));
+    const [a, b, c] = vertices;
+    const determinant = (b.Y - c.Y) * (a.X - c.X) + (c.X - b.X) * (a.Y - c.Y);
+    if (!determinant) continue;
+    let paths = [vertices], tree;
+    for (const clip of clips) {
+      const operation = new ClipperLib.Clipper();
+      operation.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+      operation.AddPaths(clip, ClipperLib.PolyType.ptClip, true);
+      tree = new ClipperLib.PolyTree();
+      operation.Execute(ClipperLib.ClipType.ctDifference, tree,
+        ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
+      paths = ClipperLib.Clipper.PolyTreeToPaths(tree);
+    }
+    const visit = node => {
+      if (!node.IsHole() && node.Contour().length) {
+        const points = [...node.Contour()], holes = [];
+        for (const hole of node.Childs()) {
+          holes.push(points.length);
+          points.push(...hole.Contour());
+        }
+        const flat = points.flatMap(point => [point.X / scale, point.Y / scale]);
+        const offset = output.depth.length;
+        output.positions.push(...flat);
+        for (const point of points) {
+          const u = ((b.Y - c.Y) * (point.X - c.X) + (c.X - b.X) * (point.Y - c.Y)) / determinant;
+          const v = ((c.Y - a.Y) * (point.X - c.X) + (a.X - c.X) * (point.Y - c.Y)) / determinant;
+          output.depth.push(u * a.z + v * b.z + (1 - u - v) * c.z);
+        }
+        output.indices.push(...PIXI.utils.earcut(flat, holes, 2).map(index => index + offset));
+      }
+      for (const child of node.Childs()) visit(child);
+    };
+    visit(tree);
+  }
+  return output;
+}
+
 function actorTokens(actor) {
   return (canvas?.tokens?.placeables ?? []).filter(t => t.actor === actor || t.actor?.uuid === actor?.uuid);
 }
@@ -178,6 +309,7 @@ export function installDeepDarkness() {
   if (prototype._tsuDeepDarknessInstalled) return;
   Object.defineProperty(prototype, "_tsuDeepDarknessInstalled", { value: true });
   installDarknessVisionBoundary();
+  installDarknessLightBoundary();
   const selfOptions = prototype.getSelfRollOptions;
   prototype.getSelfRollOptions = function(prefix = "self") {
     const options = selfOptions.call(this, prefix);
@@ -209,7 +341,7 @@ export function installDeepDarkness() {
     };
   }
   const refresh = () => {
-    if (canvas.ready) canvas.perception.update({ initializeVision: true, refreshVision: true, refreshLighting: true });
+    if (canvas.ready) canvas.perception.update({ initializeVision: true, initializeLighting: true, refreshVision: true, refreshLighting: true });
   };
   Hooks.on("updateScene", (scene, changed) => {
     if (scene.id === canvas.scene?.id && changed.flags?.[MODULE_ID]?.floorTextures) refresh();
@@ -218,6 +350,9 @@ export function installDeepDarkness() {
     if (region.parent?.id === canvas.scene?.id) refresh();
   });
   Hooks.on("updateActor", refresh);
+  for (const event of ["createItem", "updateItem", "deleteItem", "createAmbientLight", "updateAmbientLight", "deleteAmbientLight", "updateToken"]) {
+    Hooks.on(event, refresh);
+  }
   refresh();
 }
 

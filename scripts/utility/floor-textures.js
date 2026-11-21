@@ -1,4 +1,4 @@
-import { regionFloorOverlays, tokenInsideSpellFog, SPELL_FLOOR_FLAG } from "./spell-floors.js?v=20261026-spell-floors-v5";
+import { regionFloorOverlays, tokenInsideSpellFog, SPELL_FLOOR_FLAG } from "./spell-floors.js?v=20261116-floor-hazards-v8";
 import { MODULE_ID, i18nKey, t } from "../core.js";
 import {
   BASTION_TEXTURE_PRESET,
@@ -6,9 +6,9 @@ import {
   floorLoadingEnabled,
   resolvePresetTexture,
   TEXTURE_PRESET_CHANGE_HOOK,
-} from "./texture-presets.js?v=20261026-spell-floors-v111";
+} from "./texture-presets.js?v=20261116-floor-hazards-v8";
 import { installFogConcealment } from "./fog-visibility.js?v=20261026-spell-floors-v15";
-import { refreshFloorLightDepth } from "./floor-light-depth.js?v=20261027-floor-light-v1";
+import { refreshFloorLightDepth } from "./floor-light-depth.js?v=20261102-brush-size-menu-v4";
 
 const SETTING_ENABLE = "enableFloorTextures";
 const FLAG_ROOT = "floorTextures";
@@ -202,10 +202,16 @@ const FLOOR_STYLES = Object.freeze({
     alpha: 0.48,
     scale: 1,
   }),
+  "weather-blizzard": Object.freeze({ fallback: "Метель", labelKey: "SpellFloorBlizzard", overlay: true, weather: "blizzard", particles: "blizzard", alpha: 0.72 }),
+  "weather-smoke": Object.freeze({ fallback: "Дым", labelKey: "SpellFloorSmoke", overlay: true, weather: "smoke", particles: "smoke", alpha: 0.42 }),
+  "hazard-fire": Object.freeze({ ...floorStyle("HazardFire", "Огонь", "hazard-fire-v1.webp", null, 1, true), cellSized: true, sourceSize: 341.333, alpha: 0.65 }),
+  "hazard-acid": Object.freeze({ ...floorStyle("HazardAcid", "Кислота", "hazard-acid-v1.webp", null, 1, true), cellSized: true, sourceSize: 341.333, alpha: 0.65 }),
+  // Legacy stored style IDs render as fire without changing geometry or mechanics.
+  "devil-trails": Object.freeze({ ...floorStyle("HazardFire", "Огонь", "hazard-fire-v1.webp", null, 1, true), cellSized: true, sourceSize: 341.333, alpha: 0.65 }),
   "weather-snow": Object.freeze({
     labelKey: "Settings.FloorTextures.Choices.WeatherSnow", fallback: "Snow — difficult terrain",
     src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#dbe8f0"/><path d="M0 25 Q18 9 40 23 T64 18 M0 50 Q24 30 48 47 T64 40" fill="none" stroke="white" stroke-width="8"/></svg>')}`,
-    overlay: true, weather: "snow", snow: true, alpha: 0.45,
+    overlay: true, weather: "snow", snow: true, alpha: 0.72,
     difficultTerrain: true, movementCost: DIFFICULT_TERRAIN_COST,
   }),
   "garden-cabbage": gardenStyle("GardenCabbage", "Cabbage beds", "garden-cabbage-floor.webp", "garden-crop-cabbage-v2.webp", { cropSize: 0.19, spacingX: 0.27, spacingY: 0.19, missingChance: 0.015, cropBrightness: 1.24, cropSaturation: 0.14 }),
@@ -277,6 +283,7 @@ const FLOOR_STYLE_CATEGORIES = Object.freeze([
     "cobweb-below", "cobweb-below-corner", "cobweb-below-strip",
     "cobweb-above", "cobweb-above-corner", "cobweb-above-strip",
   ] }),
+  Object.freeze({ key: "HazardousTerrain", fallback: "Опасная местность", styles: ["hazard-fire", "hazard-acid"] }),
   Object.freeze({ key: "Weather", fallback: "Weather", styles: ["weather-fog", "weather-snow", "weather-bright", "weather-dim", "weather-darkness", "weather-deep-darkness"] }),
 ]);
 
@@ -615,9 +622,64 @@ function shrubEdge() {
 
 let activeTool = null;
 let selectedStyle = DEFAULT_STYLE;
+const hazardBrushSettings = new Map();
+function isHazardFloorStyle(style) { return ["hazard-fire", "hazard-acid", "devil-trails"].includes(style); }
+function selectedFloorHazard() {
+  if (!isHazardFloorStyle(selectedStyle)) return null;
+  if (!hazardBrushSettings.has(selectedStyle)) hazardBrushSettings.set(selectedStyle, { damage: "", save: "", dc: 20 });
+  return { ...hazardBrushSettings.get(selectedStyle) };
+}
+function validSelectedFloorHazard() {
+  const config = selectedFloorHazard();
+  if (!config) return true;
+  const DamageRoll = game.pf2e?.DamageRoll ?? CONFIG.Dice.rolls.find(cls => cls.name === "DamageRoll");
+  if (config.damage.trim() && DamageRoll?.validate(config.damage)) return true;
+  ui.notifications.warn(game.i18n.lang === "ru" ? "Введите корректную формулу урона опасной местности." : "Enter a valid hazardous terrain damage formula.");
+  return false;
+}
+function renderFloorHazardSettings(wrapper) {
+  wrapper.querySelector(".tsu-floor-hazard-settings")?.remove();
+  const config = selectedFloorHazard();
+  if (!config) return;
+  const ru = game.i18n.lang === "ru";
+  const panel = document.createElement("div");
+  panel.className = "tsu-floor-hazard-settings";
+  const field = (title, input) => {
+    const row = document.createElement("label");
+    const caption = document.createElement("span"); caption.textContent = title;
+    row.append(caption, input); panel.append(row); return row;
+  };
+  const damage = document.createElement("input");
+  damage.type = "text"; damage.value = config.damage;
+  damage.placeholder = selectedStyle === "hazard-acid" ? "2d6[acid]" : "2d6[fire]";
+  field(ru ? "Урон" : "Damage", damage);
+  const save = document.createElement("select");
+  for (const [value, title] of [["", ru ? "Без спасброска" : "No save"], ["fortitude", ru ? "Стойкость" : "Fortitude"], ["reflex", ru ? "Рефлекс" : "Reflex"], ["will", ru ? "Воля" : "Will"]]) {
+    const option = document.createElement("option"); option.value = value; option.textContent = title; save.append(option);
+  }
+  save.value = config.save; field(ru ? "Спасбросок" : "Saving throw", save);
+  const dc = document.createElement("input"); dc.type = "number"; dc.min = "1"; dc.step = "1"; dc.value = config.dc;
+  const dcRow = field(ru ? "КС" : "DC", dc); dcRow.hidden = !config.save;
+  const hint = document.createElement("small");
+  hint.textContent = ru ? "Введите урон. Спасбросок — простой, кнопкой в чате. Настройки применяются к новым покрытиям." : "Enter damage. Basic saves appear in chat. Settings apply to new floors.";
+  panel.append(hint);
+  const style = selectedStyle;
+  const store = () => {
+    hazardBrushSettings.set(style, { damage: damage.value.trim(), save: save.value, dc: Math.max(1, Math.trunc(Number(dc.value)) || 20) });
+    dcRow.hidden = !save.value;
+  };
+  for (const input of [damage, save, dc]) { input.addEventListener("input", store); input.addEventListener("change", store); }
+  panel.addEventListener("pointerdown", event => event.stopPropagation());
+  panel.addEventListener("keydown", event => event.stopPropagation());
+  wrapper.append(panel);
+}
 let selectedLevel = 0;
 let currentLevel = 0;
 let draftPoints = [];
+let brushPointerId = null;
+let brushStrokes = [];
+let brushWidth = 1;
+let brushPolygonCache = null;
 let selectedEdge = null;
 let redrawTimer = null;
 let redrawNeedsFullPass = false;
@@ -728,7 +790,7 @@ function rotateStylePreview(image, style) {
 }
 
 function toolDefinition(name, title, icon) {
-  const orders = { fill: 0, draw: 1, level: 2, erase: 3 };
+  const orders = { fill: 0, draw: 1, brush: 2, level: 3, erase: 4 };
   return {
     name,
     order: orders[name] ?? 99,
@@ -746,11 +808,12 @@ Hooks.on("getSceneControlButtons", (controls) => {
   const tools = [
     toolDefinition("fill", "FillRoom", "fa-solid fa-fill-drip"),
     toolDefinition("draw", "DrawBoundary", "fa-solid fa-draw-polygon"),
+    toolDefinition("brush", "DrawBrush", "fa-solid fa-paintbrush"),
     toolDefinition("level", "ChangeFloorLevel", "fa-solid fa-layer-group"),
     toolDefinition("erase", "EraseFloor", "fa-solid fa-eraser"),
     {
       name: "base",
-      order: 4,
+      order: 5,
       title: localize("BaseFloor", "Base floor"),
       icon: "fa-solid fa-expand",
       visible: true,
@@ -759,7 +822,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     },
     {
       name: "undo",
-      order: 5,
+      order: 6,
       title: localize("Undo", "Undo last action"),
       icon: "fa-solid fa-rotate-left",
       visible: true,
@@ -815,8 +878,15 @@ function syncActiveControl() {
 function activateTool(name) {
   if (!enabled()) return;
   canvas?.activeLayer?.deactivate?.();
-  activeTool = ["fill", "draw", "level", "erase"].includes(name) ? name : "fill";
-  if (activeTool !== "draw") draftPoints = [];
+  const nextTool = ["fill", "draw", "brush", "level", "erase"].includes(name) ? name : "fill";
+  if (nextTool !== activeTool) {
+    draftPoints = [];
+    brushStrokes = [];
+    brushPointerId = null;
+    lastClick = null;
+  }
+  activeTool = nextTool;
+  if (nextTool !== "brush") document.querySelector(".tsu-floor-brush-sizes")?.remove();
   selectedEdge = null;
   bindStageEvents();
   redrawEditor();
@@ -824,8 +894,11 @@ function activateTool(name) {
 }
 
 function deactivateTool() {
-  activeTool = null;
+  document.querySelector(".tsu-floor-brush-sizes")?.remove();  activeTool = null;
   draftPoints = [];
+  brushStrokes = [];
+  brushPointerId = null;
+  lastClick = null;
   selectedEdge = null;
   redrawEditor();
   document.querySelector(".tsu-floor-style-picker")?.classList.add("hidden");
@@ -896,6 +969,7 @@ function renderStyleSelect(element) {
       choice.addEventListener("click", (event) => {
         event.stopPropagation();
         selectedStyle = styleKey;
+        renderFloorHazardSettings(wrapper);
         wrapper.querySelectorAll("[data-style]").forEach((item) => item.classList.toggle("selected", item.dataset.style === styleKey));
         updateTrigger();
         wrapper.classList.remove("open");
@@ -922,6 +996,7 @@ function renderStyleSelect(element) {
   });
   levelLabel.append(levelInput);
   wrapper.append(levelLabel);
+  renderFloorHazardSettings(wrapper);
   const targetLevelLabel = document.createElement("label");
   targetLevelLabel.className = "tsu-floor-level";
   targetLevelLabel.textContent = localize("FloorLevel", "Floor level");
@@ -953,9 +1028,52 @@ function positionStyleSelect() {
 }
 
 window.addEventListener("resize", () => requestAnimationFrame(positionStyleSelect));
+// Capture even a second click on the active brush: Foundry normally ignores it.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest?.('#scene-controls [data-tool="brush"]');
+  if (!button || !enabled() || currentControlName() !== CONTROL_NAME) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  toggleBrushSizeMenu(button);
+}, true);
+
+function toggleBrushSizeMenu(anchor) {
+  const existing = document.querySelector(".tsu-floor-brush-sizes");
+  if (existing) { existing.remove(); return; }
+  const menu = document.createElement("div");
+  menu.className = "tsu-floor-brush-sizes";
+  const label = document.createElement("span");
+  label.textContent = localize("BrushWidth", "Brush width (grid cells)");
+  menu.append(label);
+  for (const size of [0.5, 1, 2, 3, 5]) {
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.textContent = String(size);
+    choice.classList.toggle("selected", size === brushWidth);
+    choice.setAttribute("aria-pressed", String(size === brushWidth));
+    choice.addEventListener("click", async () => {
+      brushWidth = size;
+      menu.remove();
+      await ui.controls.activate({ tool: "brush" });
+      activateTool("brush");
+    });
+    menu.append(choice);
+  }
+  menu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { event.stopPropagation(); menu.remove(); anchor.focus(); }
+  });
+  document.body.append(menu);
+  const rect = anchor.getBoundingClientRect();
+  menu.style.left = `${Math.max(8, Math.min(rect.right + 8, window.innerWidth - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(rect.top, window.innerHeight - menu.offsetHeight - 8))}px`;
+  menu.querySelector("button.selected")?.focus();
+}
+
 document.addEventListener("pointerdown", (event) => {
   const picker = document.querySelector(".tsu-floor-style-picker");
   if (picker && !picker.contains(event.target)) picker.classList.remove("open");
+  const sizes = document.querySelector(".tsu-floor-brush-sizes");
+  if (sizes && !sizes.contains(event.target) && !event.target.closest?.('#scene-controls [data-tool="brush"]')) sizes.remove();
 });
 
 function getSceneDataForScene(scene) {
@@ -1029,6 +1147,8 @@ async function undoFloorAction() {
   }
   await setSceneData(foundry.utils.deepClone(entry.before), { recordUndo: false });
   draftPoints = [];
+  brushStrokes = [];
+  brushPointerId = null;
   selectedEdge = null;
   lastClick = null;
   redrawEditor();
@@ -1104,6 +1224,7 @@ function floorRegionSignature(floor) {
   const points = normalizePolygon(floor?.points).map((point) => [Number(point.x), Number(point.y)]);
   return JSON.stringify({
     style: floor?.style ?? "",
+    hazard: floor?.hazard ?? null,
     level: Number(floor?.level ?? 0),
     points,
   });
@@ -1528,6 +1649,7 @@ function queueFloorSurfaceSync(scene, scope = null) {
     async () => {
       await synchronizeFloorSurfaceRegions(scene, scope);
       await synchronizeWeatherLightingRegions(scene, scope);
+      await synchronizeHazardFloorRegions(scene, scope);
     },
     "Failed to synchronize procedural floor surfaces",
   );
@@ -1762,6 +1884,7 @@ function storedFloor(source, points) {
     id: randomId(),
     source,
     style: selectedStyle,
+    hazard: selectedFloorHazard(),
     level: selectedLevel,
     points: normalized,
     lines: source === "manual" ? normalized.map((point, index) => ({
@@ -1773,6 +1896,7 @@ function storedFloor(source, points) {
 }
 
 async function addFloor(source, points, { replaceAt = null } = {}) {
+  if (!validSelectedFloorHazard()) return;
   const data = getSceneData();
   const polygon = normalizePolygon(points);
   if (polygon.length < 3 || Math.abs(polygonArea(polygon)) < 1) {
@@ -1788,6 +1912,7 @@ async function addFloor(source, points, { replaceAt = null } = {}) {
       .sort((a, b) => Math.abs(polygonArea(a.points)) - Math.abs(polygonArea(b.points)))[0];
     if (existing) {
       existing.style = selectedStyle;
+      existing.hazard = selectedFloorHazard();
       existing.level = selectedLevel;
       if (existing.source === "walls") {
         existing.points = polygon;
@@ -1802,6 +1927,7 @@ async function addFloor(source, points, { replaceAt = null } = {}) {
     && polygonsEquivalent(floor.points, polygon));
   if (duplicate) {
     duplicate.style = selectedStyle;
+    duplicate.hazard = selectedFloorHazard();
     duplicate.level = selectedLevel;
     await setSceneData(data);
     return;
@@ -1852,6 +1978,7 @@ async function replaceFloorStyleAt(point) {
     .sort((a, b) => Math.abs(polygonArea(a.points)) - Math.abs(polygonArea(b.points)))[0];
   if (!existing) return false;
   existing.style = selectedStyle;
+  existing.hazard = selectedFloorHazard();
   existing.level = selectedLevel;
   await setSceneData(data);
   return true;
@@ -1879,14 +2006,19 @@ function bindStageEvents() {
   stageBound = element;
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointermove", onPointerMove, true);
+  document.addEventListener("pointerup", onPointerUp, true);
+  document.addEventListener("pointercancel", onPointerUp, true);
 }
 
 function unbindStageEvents() {
   if (stageBound) {
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
+    document.removeEventListener("pointercancel", onPointerUp, true);
   }
   stageBound = null;
+  brushPointerId = null;
 }
 
 function eventPoint(event) {
@@ -1939,6 +2071,24 @@ async function onPointerDown(event) {
     return addFloor("walls", polygon, { replaceAt: overlay ? null : rawPoint });
   }
 
+  if (activeTool === "brush") {
+    event.preventDefault?.();
+    const now = Date.now();
+    const doubleClick = lastClick && now - lastClick.time < 350
+      && distance(lastClick.point, rawPoint) < brushWorldDistance(8);
+    if (doubleClick) {
+      await finishDraft();
+    } else {
+      draftPoints = [];
+      brushStrokes.push(draftPoints);
+      appendBrushPoint(rawPoint, true);
+      brushPointerId = event.pointerId;
+      lastClick = { time: now, point: rawPoint };
+    }
+    redrawEditor(rawPoint);
+    return;
+  }
+
   const hit = findManualEdge(rawPoint);
   if (hit && draftPoints.length === 0) {
     selectedEdge = hit;
@@ -1960,18 +2110,123 @@ function onPointerMove(event) {
   if (!eventOnCanvas(event)) return;
   const point = eventPoint(event);
   if (!point) return;
+  if (activeTool === "brush" && brushPointerId === event.pointerId) {
+    if (!(event.buttons & 1)) brushPointerId = null;
+    else {
+      event.stopPropagation?.();
+      event.preventDefault?.();
+      appendBrushPoint(point);
+    }
+  }
   redrawEditor(point);
 }
 
+function brushWorldDistance(pixels) {
+  const transform = canvas?.stage?.worldTransform;
+  const zoom = Math.hypot(Number(transform?.a ?? 1), Number(transform?.b ?? 0)) || 1;
+  return pixels / zoom;
+}
+
+function appendBrushPoint(point, force = false) {
+  // Store the stroke centreline without grid snapping.
+  if (lastClick && distance(lastClick.point, point) >= brushWorldDistance(8)) lastClick = null;
+  const previous = draftPoints.at(-1);
+  if (!previous || distance(previous, point) >= (force ? EPSILON : brushWorldDistance(4))) {
+    draftPoints.push({ x: point.x, y: point.y });
+  }
+}
+
+function onPointerUp(event) {
+  if (brushPointerId === null || brushPointerId !== event.pointerId) return;
+  if (event.type !== "pointercancel" && event.button !== 0) return;
+  if (event.type !== "pointercancel" && eventOnCanvas(event)) {
+    const point = eventPoint(event);
+    if (point) appendBrushPoint(point, true);
+  }
+  brushPointerId = null;
+  if (event.type === "pointercancel") lastClick = null;
+  redrawEditor();
+}
+
 async function finishDraft() {
+  if (!validSelectedFloorHazard()) return;
+  if (activeTool === "brush") {
+    const polygons = buildBrushPolygons();
+    if (!polygons.length) return;
+    const data = getSceneData();
+    for (const points of polygons) data.floors.push(storedFloor("manual", points));
+    // Save every connected area together so one undo removes the entire brush action.
+    await setSceneData(data);
+    draftPoints = [];
+    brushStrokes = [];
+    brushPointerId = null;
+    lastClick = null;
+    return;
+  }
   const points = normalizePolygon(draftPoints);
   draftPoints = [];
+  brushStrokes = [];
+  brushPointerId = null;
   lastClick = null;
   if (points.length < 3) {
     ui.notifications.warn(localize("NeedThreePoints", "A floor needs at least three points."));
     return;
   }
   await addFloor("manual", points);
+}
+
+function brushDiameter() {
+  return brushWidth * Math.max(1, Number(canvas?.dimensions?.size ?? 100));
+}
+
+function buildBrushPolygons() {
+  const diameter = brushDiameter();
+  const pointCount = brushStrokes.reduce((sum, stroke) => sum + stroke.length, 0);
+  if (brushPolygonCache?.strokes === brushStrokes && brushPolygonCache.pointCount === pointCount
+      && brushPolygonCache.diameter === diameter) return brushPolygonCache.polygons;
+  const scale = 100;
+  const offset = new ClipperLib.ClipperOffset(2, 0.25 * scale);
+  for (const stroke of brushStrokes) {
+    if (!stroke.length) continue;
+    offset.AddPath(stroke.map(({ x, y }) => ({ X: Math.round(x * scale), Y: Math.round(y * scale) })),
+      ClipperLib.JoinType.jtRound, ClipperLib.EndType.etOpenRound);
+  }
+  const paths = new ClipperLib.Paths();
+  offset.Execute(paths, diameter * scale / 2);
+  const polygons = brushSimplePolygons(paths).map(path => path.map(({ X, Y }) => ({ x: X / scale, y: Y / scale })))
+    .filter(points => points.length >= 3 && Math.abs(polygonArea(points)) >= 1);
+  brushPolygonCache = { strokes: brushStrokes, pointCount, diameter, polygons };
+  return polygons;
+}
+
+function brushSimplePolygons(paths) {
+  if (!paths.length) return [];
+  const clipper = new ClipperLib.Clipper(ClipperLib.Clipper.ioStrictlySimple);
+  clipper.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+  const tree = new ClipperLib.PolyTree();
+  clipper.Execute(ClipperLib.ClipType.ctUnion, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  let hole = tree.GetFirst();
+  while (hole && !hole.IsHole()) hole = hole.GetNext();
+  if (!hole) return ClipperLib.Clipper.PolyTreeToPaths(tree);
+
+  // Floor records have one boundary. Split a painted loop through its hole,
+  // preserving the unpainted interior as several ordinary floor polygons.
+  const bounds = ClipperLib.Clipper.GetBounds(paths);
+  const holeBounds = ClipperLib.Clipper.GetBounds([hole.Contour()]);
+  const splitX = (holeBounds.left + holeBounds.right) / 2;
+  const result = [];
+  for (const [left, right] of [[bounds.left - 1, splitX], [splitX, bounds.right + 1]]) {
+    const part = new ClipperLib.Clipper(ClipperLib.Clipper.ioStrictlySimple);
+    part.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+    part.AddPath([
+      { X: left, Y: bounds.top - 1 }, { X: right, Y: bounds.top - 1 },
+      { X: right, Y: bounds.bottom + 1 }, { X: left, Y: bounds.bottom + 1 },
+    ], ClipperLib.PolyType.ptClip, true);
+    const clipped = new ClipperLib.Paths();
+    part.Execute(ClipperLib.ClipType.ctIntersection, clipped, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    result.push(...brushSimplePolygons(clipped));
+  }
+  return result;
 }
 
 function findManualEdge(point) {
@@ -1999,6 +2254,9 @@ document.addEventListener("keydown", async (event) => {
   if (!activeTool || currentControlName() !== CONTROL_NAME) return;
   if (event.key === "Escape") {
     draftPoints = [];
+    brushStrokes = [];
+    brushPointerId = null;
+    lastClick = null;
     selectedEdge = null;
     redrawEditor();
   }
@@ -2231,6 +2489,11 @@ function redrawFloors({ forestOnly = false, forestFloorIds = [] } = {}) {
         : getFloorContainer(true, floorNumber);
     floorParent?.addChild(floorLayer);
     clipSpellFloor(floorLayer, floor);
+    if (style.particles) {
+      floorLayer.addChild(createSpellParticles(points, floor.id, style.particles, texturePreset === BASTION_TEXTURE_PRESET));
+      floorLayer.alpha = style.alpha;
+      continue;
+    }
     if (style.snow) {
       floorLayer.addChild(createSnowFill(points, floor.id, texturePreset === BASTION_TEXTURE_PRESET));
       floorLayer.alpha = style.alpha;
@@ -3432,10 +3695,24 @@ function drawEditorData(data, cursor = null) {
       drawLine(graphics, point, next, chosen ? 0xffaa00 : 0x35c9ff, chosen ? 5 : 3, 0.95);
     });
   }
-  draftPoints.forEach((point, index) => {
-    if (index) drawLine(graphics, draftPoints[index - 1], point, 0x35c9ff, 3, 0.95);
-  });
-  if (draftPoints.length && cursor) drawLine(graphics, draftPoints.at(-1), snapPoint(cursor), 0xffffff, 2, 0.7);
+  if (activeTool === "brush") {
+    for (const points of buildBrushPolygons()) {
+      drawPolygon(graphics, points, 0x35c9ff, 0.25);
+      drawClosedStroke(graphics, points, 0x35c9ff, 2, 0.9);
+    }
+    if (cursor) {
+      const circle = Array.from({ length: 48 }, (_, index) => {
+        const angle = index * Math.PI / 24;
+        return { x: cursor.x + Math.cos(angle) * brushDiameter() / 2, y: cursor.y + Math.sin(angle) * brushDiameter() / 2 };
+      });
+      drawClosedStroke(graphics, circle, 0xffffff, 2, 0.8);
+    }
+  } else {
+    draftPoints.forEach((point, index) => {
+      if (index) drawLine(graphics, draftPoints[index - 1], point, 0x35c9ff, 3, 0.95);
+    });
+    if (draftPoints.length && cursor) drawLine(graphics, draftPoints.at(-1), snapPoint(cursor), 0xffffff, 2, 0.7);
+  }
   container.addChild(graphics);
 }
 
@@ -3576,6 +3853,7 @@ Hooks.on("canvasTearDown", () => {
   forestRenderSignatures.clear();
   trackedWallStates.clear();
   draftPoints = [];
+  brushStrokes = [];
   selectedEdge = null;
   lastClick = null;
   unbindStageEvents();
@@ -3861,29 +4139,56 @@ function clipSpellFloor(container, floor) {
   container.mask = mask;
 }
 
+// Continuous, world-anchored powder coverage instead of overlapping ellipse decals.
+// Render one bounded texture per region, not thousands of individual sprites.
 function createSnowFill(points, seed, bastion = false) {
   const container = new PIXI.Container();
-  const graphic = newGraphics();
-  const mask = newGraphics();
-  drawPolygon(mask, points, 0xffffff);
-  drawPolygon(graphic, points, bastion ? 0xc7d0d9 : 0xe1edf5);
   const bounds = polygonBounds(points);
   const grid = Number(canvas.dimensions.size ?? 100);
-  const random = seededRandom(`${seed}:snow`);
-  const count = Math.min(1200, Math.ceil(bounds.width * bounds.height / (grid * grid) * 5));
-  for (let i = 0; i < count; i++) {
-    const x = bounds.x + random() * bounds.width;
-    const y = bounds.y + random() * bounds.height;
-    const width = grid * (0.15 + random() * 0.55);
-    const height = width * (0.18 + random() * 0.15);
-    const drift = Array.from({ length: 16 }, (_, index) => {
-      const angle = index * Math.PI / 8;
-      return { x: x + Math.cos(angle) * width, y: y + Math.sin(angle) * height };
-    });
-    drawPolygon(graphic, drift, i % 3 ? 0xffffff : 0xa8bdcc, i % 3 ? 0.6 : 0.18);
+  const resolution = Math.min(1, 1536 / Math.max(bounds.width, bounds.height, 1));
+  const surface = document.createElement("canvas");
+  surface.width = Math.max(1, Math.ceil(bounds.width * resolution));
+  surface.height = Math.max(1, Math.ceil(bounds.height * resolution));
+  const context = surface.getContext("2d");
+  const pixels = context.createImageData(surface.width, surface.height);
+  const hash = (x, y) => {
+    const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return value - Math.floor(value);
+  };
+  const smooth = value => value * value * (3 - 2 * value);
+  const noise = (x, y) => {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = smooth(x - ix), fy = smooth(y - iy);
+    const top = hash(ix, iy) * (1 - fx) + hash(ix + 1, iy) * fx;
+    const bottom = hash(ix, iy + 1) * (1 - fx) + hash(ix + 1, iy + 1) * fx;
+    return top * (1 - fy) + bottom * fy;
+  };
+  for (let y = 0; y < surface.height; y++) for (let x = 0; x < surface.width; x++) {
+    const wx = (bounds.x + x / resolution) / grid;
+    const wy = (bounds.y + y / resolution) / grid;
+    const field = noise(wx * 2.4, wy * 2.4) * 0.52
+      + noise(wx * 7.2 + 19, wy * 7.2 - 11) * 0.30
+      + noise(wx * 22.5, wy * 22.5) * 0.18;
+    const coverage = smooth(Math.max(0, Math.min(1, (field - 0.33) / 0.28)));
+    const grain = hash(Math.floor(wx * 110), Math.floor(wy * 110));
+    const shade = Math.round(220 + field * 26 + grain * 9);
+    const offset = (y * surface.width + x) * 4;
+    pixels.data[offset] = shade - (bastion ? 12 : 4);
+    pixels.data[offset + 1] = shade - (bastion ? 8 : 1);
+    pixels.data[offset + 2] = Math.min(255, shade + 3);
+    pixels.data[offset + 3] = Math.round(coverage * (180 + grain * 65));
   }
-  graphic.mask = mask;
-  container.addChild(graphic, mask);
+  context.putImageData(pixels, 0, 0);
+  const texture = PIXI.Texture.from(surface);
+  const sprite = new PIXI.Sprite(texture);
+  sprite._tsuOwnedTexture = texture;
+  sprite.position.set(bounds.x, bounds.y);
+  sprite.width = bounds.width;
+  sprite.height = bounds.height;
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  sprite.mask = mask;
+  container.addChild(sprite, mask);
   return container;
 }
 
@@ -3893,4 +4198,77 @@ for (const event of ["createRegion", "updateRegion", "deleteRegion"]) {
     scheduleRedraw();
     refreshFogConcealment?.();
   });
+}
+
+// Transparent procedural overlays share geometry across texture presets.
+function createSpellParticles(points, seed, kind, bastion) {
+  const container = new PIXI.Container();
+  const graphic = newGraphics();
+  const mask = newGraphics();
+  drawPolygon(mask, points, 0xffffff);
+  const bounds = polygonBounds(points);
+  const grid = Number(canvas.dimensions.size ?? 100);
+  const random = seededRandom(`${seed}:${kind}`);
+  const density = kind === "blizzard" ? 32 : kind === "smoke" ? 7 : 3;
+  const count = Math.min(7000, Math.ceil(bounds.width * bounds.height / (grid * grid) * density));
+  for (let i = 0; i < count; i++) {
+    const x = bounds.x + random() * bounds.width, y = bounds.y + random() * bounds.height;
+    if (kind === "blizzard") {
+      const length = grid * (0.025 + random() * 0.16);
+      graphic.lineStyle(Math.max(0.7, grid * (0.006 + random() * 0.009)), bastion ? 0xd9e6ee : 0xffffff, 0.25 + random() * 0.65);
+      graphic.moveTo(x, y); graphic.lineTo(x + length, y + length * 0.4);
+    } else if (kind === "smoke") {
+      const radius = grid * (0.16 + random() * 0.24);
+      for (let layer = 5; layer > 0; layer--) {
+        graphic.beginFill(bastion ? 0x55505b : 0x686b70, 0.045);
+        graphic.drawCircle(x, y, radius * layer / 5); graphic.endFill();
+      }
+    } else {
+      // Paired cloven hoof scorch marks with a thin ember rim.
+      for (const side of [-1, 1]) {
+        graphic.lineStyle(grid * 0.012, bastion ? 0xbc411e : 0xf06424, 0.8);
+        graphic.beginFill(0x28140f, 0.75);
+        graphic.drawEllipse(x + side * grid * 0.035, y, grid * 0.028, grid * 0.075);
+        graphic.endFill();
+      }
+    }
+  }
+  graphic.mask = mask;
+  container.addChild(graphic, mask);
+  return container;
+}
+
+// Geometry and lifetime follow the drawn floor; damage uses the spell-floor engine.
+async function synchronizeHazardFloorRegions(scene, scope = null) {
+  if (!scene || !canManageFloorSurfaces() || !scene.regions) return;
+  const floors = getSceneDataForScene(scene).floors.filter(floor => isHazardFloorStyle(floor.style) && floor.hazard?.damage && normalizePolygon(floor.points).length >= 3);
+  const ids = new Set(floors.map(floor => floor.id));
+  const managed = new Map(), stale = new Set();
+  for (const region of scene.regions) {
+    const id = region.flags?.[MODULE_ID]?.drawnHazardFloor?.floorId;
+    if (!id) continue;
+    if (!ids.has(id) || managed.has(id)) stale.add(region.id);
+    else managed.set(id, region.id);
+  }
+  await deleteLiveRegions(scene, stale);
+  for (const floor of floors) {
+    if (!floorTouchesSyncScope(floor, scope)) continue;
+    const data = floorSurfaceRegionData(scene, floor);
+    if (!data) continue;
+    data.name = styleLabel(FLOOR_STYLES[floor.style]);
+    data.behaviors = [];
+    data.flags = { [MODULE_ID]: {
+      drawnHazardFloor: { floorId: floor.id },
+      [SPELL_FLOOR_FLAG]: { ...floor.hazard, style: floor.style, effect: "hazardous", persistent: true, managedFloor: true },
+    } };
+    const region = liveRegion(scene, managed.get(floor.id));
+    if (!region) { await scene.createEmbeddedDocuments("Region", [data]); continue; }
+    const update = { _id: region.id };
+    if (!regionMatchesRubble(region, floor)) update.shapes = data.shapes;
+    if (!sameStringSet(region._source?.levels ?? [], data.levels)) update.levels = data.levels;
+    if (JSON.stringify(region._source?.elevation) !== JSON.stringify(data.elevation)) update.elevation = data.elevation;
+    if (region.name !== data.name) update.name = data.name;
+    if (JSON.stringify(region.flags[MODULE_ID][SPELL_FLOOR_FLAG]) !== JSON.stringify(data.flags[MODULE_ID][SPELL_FLOOR_FLAG])) update[`flags.${MODULE_ID}.${SPELL_FLOOR_FLAG}`] = data.flags[MODULE_ID][SPELL_FLOOR_FLAG];
+    if (Object.keys(update).length > 1) await updateLiveRegion(scene, update);
+  }
 }
